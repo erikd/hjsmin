@@ -1,0 +1,14 @@
+
+
+Look at 
+
+  http://dean.edwards.name/download/#packer
+
+  http://code.google.com/p/minify/
+
+Examples of parsers
+
+  JSon parser in Parsec
+    http://snippets.dzone.com/posts/show/3660
+
+EOF

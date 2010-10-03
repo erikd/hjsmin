@@ -23,7 +23,7 @@ library
                    , utf8-string      >= 0.3.4   && < 0.4
                    , parsec           >= 2       && < 4
     exposed-modules: Text.HJsMin
-    other-modules:   
+    other-modules:   Text.HJsMin.Parse
     ghc-options:     -Wall
 
 executable             runtests
