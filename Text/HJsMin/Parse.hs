@@ -15,6 +15,13 @@ import Data.Data
 import Data.List (intercalate)
 import Text.ParserCombinators.Parsec hiding (Line)
 
+-- import Text.Parsec
+--import qualified Text.Parsec.Token as P
+import qualified Text.ParserCombinators.Parsec.Token as P
+import Text.ParserCombinators.Parsec.Language
+--import Text.Parsec.Language (haskellDef)
+
+
 -- ---------------------------------------------------------------------
 
 data Result v = Error String | Ok v
@@ -32,7 +39,7 @@ instance Applicative Result where
 
 -- ---------------------------------------------------------------------
 
-data Script = ScriptForall [Statements]
+data Script = ScriptForall [String]
     deriving (Show, Eq, Read, Data, Typeable)
 
 data Statement = Statement 
@@ -88,4 +95,82 @@ parseLine set = do
         eol
         return $ LineForall ""
 
+-- ---------------------------------------------------------------------
+-- | A lexer for the javascript language.
+
+javascript :: P.TokenParser st
+javascript  = P.makeTokenParser javascriptDef
+
+-- | The language definition for the language Javascript
+
+javascriptDef :: LanguageDef st
+javascriptDef = javaStyle
+		{ reservedNames = [ 
+                     "break",
+                     "case", "catch", "const", "continue",
+                     "debugger", "default", "delete", "do",
+                     "else", "enum",
+                     "false", "finally", "for", "function",
+                     "if", "in", "instanceof",
+                     "new", "null",
+                     "return",
+                     "switch",
+                     "this", "throw", "true", "try", "typeof",
+                     "var", "void",
+                     "while", "with"
+                     ]
+                -- TODO: make the following constants, so the parser defn is simpler. e,g op_COMMA = ","
+                , reservedOpNames= [
+                     ";"	, -- "SEMICOLON",
+                     ","	, -- "COMMA",
+                     "?"	, -- "HOOK",
+                     ":"	, -- "COLON",
+                     "||"	, -- "OR",
+                     "&&"	, -- "AND",
+                     "|"	, -- "BITWISE_OR",
+                     "^"	, -- "BITWISE_XOR",
+                     "&"	, -- "BITWISE_AND",
+                     "==="	, -- "STRICT_EQ",
+                     "=="	, -- "EQ",
+                     "="	, -- "ASSIGN",
+                     "!=="	, -- "STRICT_NE",
+                     "!="	, -- "NE",
+                     "<<"	, -- "LSH",
+                     "<="	, -- "LE",
+                     "<"	, -- "LT",
+                     ">>>"	, -- "URSH",
+                     ">>"	, -- "RSH",
+                     ">="	, -- "GE",
+                     ">"	, -- "GT",
+                     "++"	, -- "INCREMENT",
+                     "--"	, -- "DECREMENT",
+                     "+"	, -- "PLUS",
+                     "-"	, -- "MINUS",
+                     "*"	, -- "MUL",
+                     "/"	, -- "DIV",
+                     "%"	, -- "MOD",
+                     "!"	, -- "NOT",
+                     "~"	, -- "BITWISE_NOT",
+                     "."	, -- "DOT",
+                     "["	, -- "LEFT_BRACKET",
+                     "]"	, -- "RIGHT_BRACKET",
+                     "{"	, -- "LEFT_CURLY",
+                     "}"	, -- "RIGHT_CURLY",
+                     "("	, -- "LEFT_PAREN",
+                     ")"	, -- "RIGHT_PAREN",
+                     "@*/"	  -- "CONDCOMMENT_END"
+                ]
+                                  
+                , caseSensitive  = True
+		}
+        
+ -- The lexer
+lexer       = P.makeTokenParser javascriptDef
+      
+parens      = P.parens lexer
+braces      = P.braces lexer
+identifier  = P.identifier lexer
+reserved    = P.reserved lexer
+reservedOp  = P.reservedOp lexer
+        
 -- EOF
