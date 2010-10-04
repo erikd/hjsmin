@@ -11,4 +11,7 @@ Examples of parsers
   JSon parser in Parsec
     http://snippets.dzone.com/posts/show/3660
 
+GOLD Parser, using the Javascript.grm from
+http://www.devincook.com/GOLDParser/grammars/index.htm
+
 EOF

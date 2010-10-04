@@ -1,4 +1,4 @@
-module Text.HJsMin
+module Text.Jasmine
     (       
     blah      
     ) where      
