@@ -5,6 +5,10 @@ module Text.Jasmine.Parse
       readJs
     , JasmineSettings (..)
     , defaultJasmineSettings
+    -- For testing      
+    , doParse
+    , functionDeclaration
+    , identifier
     ) where
 
 -- ---------------------------------------------------------------------
@@ -76,11 +80,6 @@ defaultJasmineSettings :: JasmineSettings
 defaultJasmineSettings = JasmineSettings "foo"
 
 -- ---------------------------------------------------------------------
--- | A lexer for the javascript language.
-
-javascript :: P.TokenParser st
-javascript  = P.makeTokenParser javascriptDef
-
 -- | The language definition for the language Javascript
 
 javascriptDef :: LanguageDef st
@@ -144,16 +143,12 @@ javascriptDef = javaStyle
                 , caseSensitive  = True
 		}
         
- -- The lexer
+-- ---------------------------------------------------------------------
+-- | A lexer for the javascript language.
+
 lexer :: P.TokenParser st
-lexer       = P.makeTokenParser javascriptDef
+lexer = P.makeTokenParser javascriptDef
       
-parens :: CharParser st a -> CharParser st a
-parens      = P.parens lexer
-
-braces :: CharParser st a -> CharParser st a
-braces      = P.braces lexer
-
 identifier :: CharParser st JSNode
 identifier  = do{ val <- P.identifier lexer;
                   return (JSNode JS_value (JSValue (show val)) [] [] [])}
@@ -161,6 +156,7 @@ identifier  = do{ val <- P.identifier lexer;
 reserved :: String -> CharParser st ()
 reserved    = P.reserved lexer
 
+rOp :: String -> GenParser Char st JSNode
 rOp x = do{ val <- P.reservedOp lexer x;
            return (JSNode JS_value (JSValue (show val)) [] [] [])}
        
@@ -171,7 +167,7 @@ rOp x = do{ val <- P.reservedOp lexer x;
 -- Filling the gaps       
 stringLiteral :: CharParser st JSNode
 stringLiteral = do{ val <- P.stringLiteral lexer;
-                   return (JSNode JS_value (JSValue "null") [] [] [])}
+                   return (JSNode JS_value (JSValue val) [] [] [])}
 
 
 decimalLiteral :: CharParser st Integer
@@ -187,7 +183,7 @@ hexIntegerLiteral = P.hexadecimal lexer -- TODO: check prefix etc for Javascript
 
 -- TODO: do this properly, it is late now, want to move on
 regExp :: GenParser Char st JSNode
-regExp = do { rOp "/"; v1 <- many (noneOf "/"); rOp "/"; v2 <- optional (oneOf "gim");
+regExp = do { _ <- rOp "/"; v1 <- many (noneOf "/"); _ <- rOp "/"; v2 <- optional (oneOf "gim"); -- TODO: remove optional
               return (JSNode JS_value (JSValue ("/" ++ v1 ++ "/" ++ (show(v2)))) [] [] [])}
        
 
@@ -248,8 +244,7 @@ primaryExpression = do {reserved "this";
                 <|> literal
                 <|> arrayLiteral
                 <|> objectLiteral
-                <|> do{ rOp "("; val <- expression; rOp ")"; 
-                        -- return [""]} 
+                <|> do{ _ <- rOp "("; val <- expression; _ <- rOp ")"; 
                         return (JSNode JS_value (JSValue "()") [val] [] [])}
                 <|> regularExpressionLiteral
 
@@ -259,13 +254,13 @@ primaryExpression = do {reserved "this";
 --                   | '[' <Element List> ']'
 --                   | '[' <Element List> ',' <Elision> ']'
 arrayLiteral :: GenParser Char st JSNode
-arrayLiteral = do {rOp "["; rOp "]"; 
+arrayLiteral = do {_ <- rOp "["; _ <- rOp "]"; 
                    return (JSNode JS_value (JSValue "[]") [] [] [])}
-           <|> do {rOp "["; val <- elision; rOp "]"; 
+           <|> do {_ <- rOp "["; val <- elision; _ <- rOp "]"; 
                    return (JSNode JS_value (JSValue "[]") [val] [] [])}
-           <|> do {rOp "["; val <- elementList; rOp "]"; 
+           <|> do {_ <- rOp "["; val <- elementList; _ <- rOp "]"; 
                    return (JSNode JS_value (JSValue "[]") [val] [] [])}
-           <|> do {rOp "["; v1 <- elementList; rOp ","; v2 <- elision; rOp "]"; 
+           <|> do {_ <- rOp "["; v1 <- elementList; _ <- rOp ","; v2 <- elision; _ <- rOp "]"; 
                    return (JSNode JS_value (JSValue "[]") [v1,v2] [] [])}
 
 
@@ -283,27 +278,27 @@ elision = do{ val <- many1 (rOp ",");
 elementList :: GenParser Char st JSNode
 elementList = do{ v1 <- elision; v2 <- assignmentExpression;
               return (JSNode JS_value (JSValue "elementList") [v1,v2] [] [])}
-          <|> do{ v1 <- elementList; rOp ","; v2 <- elision; v3 <- assignmentExpression;
+          <|> do{ v1 <- elementList; _ <- rOp ","; v2 <- elision; v3 <- assignmentExpression;
               return (JSNode JS_value (JSValue "elementList") [v1,v2,v3] [] [])}
-          <|> do{ v1 <- elementList; rOp ","; v2 <- assignmentExpression;
+          <|> do{ v1 <- elementList; _ <- rOp ","; v2 <- assignmentExpression;
               return (JSNode JS_value (JSValue "elementList") [v1,v2] [] [])}
           <|> assignmentExpression
 
 
 -- <Object Literal> ::= '{' <Property Name and Value List> '}'
 objectLiteral :: GenParser Char st JSNode
-objectLiteral = do{ rOp "{"; val <- propertyNameandValueList; rOp "}"; 
+objectLiteral = do{ _ <- rOp "{"; val <- propertyNameandValueList; _ <- rOp "}"; 
                     --return [""]} -- TODO: proper return
                    return (JSNode JS_value (JSValue "{}") [val] [] [])}
 
 -- <Property Name and Value List> ::= <Property Name> ':' <Assignment Expression>
 --                                  | <Property Name and Value List> ',' <Property Name> ':' <Assignment Expression>
 propertyNameandValueList :: GenParser Char st JSNode
-propertyNameandValueList = do{ val <- sepBy1 propertyNameandValueList (rOp ",");
+propertyNameandValueList = do{ val <- sepBy1 propertyNameandValue (rOp ",");
                            return (JSNode JS_value (JSValue "propertyNameandValueList") val [] [])}
                            
 propertyNameandValue :: GenParser Char st JSNode
-propertyNameandValue = do{ v1 <- propertyName; rOp ":"; v2 <- assignmentExpression;
+propertyNameandValue = do{ v1 <- propertyName; _ <- rOp ":"; v2 <- assignmentExpression;
                            return (JSNode JS_value (JSValue "propertyNameandValue") [v1,v2] [] [])}
 
 -- <Property Name> ::= Identifier
@@ -323,9 +318,9 @@ propertyName = identifier
 memberExpression :: GenParser Char st JSNode
 memberExpression = primaryExpression
                 <|> functionExpression
-                <|> do{ v1 <- memberExpression; rOp "["; v2 <- expression; rOp "]"; 
+                <|> do{ v1 <- memberExpression; _ <- rOp "["; v2 <- expression; _ <- rOp "]"; 
                         return (JSNode JS_value (JSValue "memberExpression[]") [v1,v2] [] [])}
-                <|> do{ v1 <- memberExpression; rOp "."; v2 <- identifier ; 
+                <|> do{ v1 <- memberExpression; _ <- rOp "."; v2 <- identifier ; 
                         return (JSNode JS_value (JSValue "memberExpression.") [v1,v2] [] [])}
                 <|> do{ reserved "new"; v1 <- memberExpression; v2 <- arguments; 
                         return (JSNode JS_value (JSValue "memberExpression.new") [v1,v2] [] [])}
@@ -347,18 +342,18 @@ callExpression = do{ v1 <- memberExpression; v2 <- arguments;
                      return (JSNode JS_value (JSValue "callExpression") [v1,v2] [] [])}
              <|> do{ v1 <- callExpression; v2 <- arguments ; 
                      return (JSNode JS_value (JSValue "callExpression") [v1,v2] [] [])}
-             <|> do{ v1 <- callExpression; rOp "["; v2 <- expression; rOp "]"; 
+             <|> do{ v1 <- callExpression; _ <- rOp "["; v2 <- expression; _ <- rOp "]"; 
                      return (JSNode JS_value (JSValue "callExpression[]") [v1,v2] [] [])}
-             <|> do{ v1 <- callExpression; rOp "."; v2 <- identifier; 
+             <|> do{ v1 <- callExpression; _ <- rOp "."; v2 <- identifier; 
                      return (JSNode JS_value (JSValue "callExpression.") [v1,v2] [] [])}
 
 
 -- <Arguments> ::= '(' ')'
 --               | '(' <Argument List> ')'
 arguments :: GenParser Char st JSNode
-arguments = do{ rOp "(";  rOp ")";
+arguments = do{ _ <- rOp "(";  _ <- rOp ")";
                 return (JSNode JS_value (JSValue "arguments") [] [] [])}
-        <|> do{ rOp "("; v1 <- argumentList; rOp ")";
+        <|> do{ _ <- rOp "("; v1 <- argumentList; _ <- rOp ")";
                 return (JSNode JS_value (JSValue "arguments") [v1] [] [])}
 
 -- <Argument List> ::= <Assignment Expression>
@@ -381,9 +376,9 @@ leftHandSideExpression = newExpression
 postfixExpression :: GenParser Char st JSNode
 postfixExpression = do{ v1 <- leftHandSideExpression;
                       return (JSNode JS_value (JSValue "postfixExpression") [v1] [] [])}
-                <|> do{ v1 <- postfixExpression; rOp "++"; 
+                <|> do{ v1 <- postfixExpression; _ <- rOp "++"; 
                       return (JSNode JS_value (JSValue "postfixExpression++") [v1] [] [])}
-                <|> do{ v1 <- postfixExpression; rOp "--"; 
+                <|> do{ v1 <- postfixExpression; _ <- rOp "--"; 
                       return (JSNode JS_value (JSValue "postfixExpression--") [v1] [] [])}
 
 
@@ -406,17 +401,17 @@ unaryExpression = do{ v1 <- postfixExpression;
                       return (JSNode JS_value (JSValue "unaryExpression.void") [v1] [] [])}
               <|> do{ reserved "typeof"; v1 <- unaryExpression;
                       return (JSNode JS_value (JSValue "unaryExpression.typeof") [v1] [] [])}
-              <|> do{ rOp "++"; v1 <- unaryExpression;
+              <|> do{ _ <- rOp "++"; v1 <- unaryExpression;
                       return (JSNode JS_value (JSValue "unaryExpression++") [v1] [] [])}
-              <|> do{ rOp "--"; v1 <- unaryExpression;
+              <|> do{ _ <- rOp "--"; v1 <- unaryExpression;
                       return (JSNode JS_value (JSValue "unaryExpression--") [v1] [] [])}
-              <|> do{ rOp "+"; v1 <- unaryExpression;
+              <|> do{ _ <- rOp "+"; v1 <- unaryExpression;
                       return (JSNode JS_value (JSValue "unaryExpression+") [v1] [] [])}
-              <|> do{ rOp "-"; v1 <- unaryExpression;
+              <|> do{ _ <- rOp "-"; v1 <- unaryExpression;
                       return (JSNode JS_value (JSValue "unaryExpression-") [v1] [] [])}
-              <|> do{ rOp "~"; v1 <- unaryExpression;
+              <|> do{ _ <- rOp "~"; v1 <- unaryExpression;
                       return (JSNode JS_value (JSValue "unaryExpression~") [v1] [] [])}
-              <|> do{ rOp "!"; v1 <- unaryExpression;
+              <|> do{ _ <- rOp "!"; v1 <- unaryExpression;
                       return (JSNode JS_value (JSValue "unaryExpression!") [v1] [] [])}
 
 
@@ -427,11 +422,11 @@ unaryExpression = do{ v1 <- postfixExpression;
 multiplicativeExpression :: GenParser Char st JSNode
 multiplicativeExpression = do{ v1 <- unaryExpression;
                                return (JSNode JS_value (JSValue "multiplicativeExpression") [v1] [] [])}
-                       <|> do{ v1 <- unaryExpression; rOp "*"; v2 <- multiplicativeExpression;
+                       <|> do{ v1 <- unaryExpression; _ <- rOp "*"; v2 <- multiplicativeExpression;
                                return (JSNode JS_value (JSValue "multiplicativeExpression*") [v1,v2] [] [])}
-                       <|> do{ v1 <- unaryExpression; rOp "/"; v2 <- multiplicativeExpression;
+                       <|> do{ v1 <- unaryExpression; _ <- rOp "/"; v2 <- multiplicativeExpression;
                                return (JSNode JS_value (JSValue "multiplicativeExpression/") [v1,v2] [] [])}
-                       <|> do{ v1 <- unaryExpression; rOp "%"; v2 <- multiplicativeExpression;
+                       <|> do{ v1 <- unaryExpression; _ <- rOp "%"; v2 <- multiplicativeExpression;
                                return (JSNode JS_value (JSValue "multiplicativeExpression%") [v1,v2] [] [])}
 
 
@@ -439,9 +434,9 @@ multiplicativeExpression = do{ v1 <- unaryExpression;
 --                         | <Additive Expression>'-'<Multiplicative Expression>  
 --                         | <Multiplicative Expression>
 additiveExpression :: GenParser Char st JSNode
-additiveExpression = do {v1 <- additiveExpression; rOp "+"; v2 <- multiplicativeExpression;
+additiveExpression = do {v1 <- additiveExpression; _ <- rOp "+"; v2 <- multiplicativeExpression;
                       return (JSNode JS_value (JSValue "additiveExpression+") [v1,v2] [] [])}
-                 <|> do {v1 <- additiveExpression; rOp "-"; v2 <- multiplicativeExpression;
+                 <|> do {v1 <- additiveExpression; _ <- rOp "-"; v2 <- multiplicativeExpression;
                       return (JSNode JS_value (JSValue "additiveExpression-") [v1,v2] [] [])}
                  <|> do{ v1 <- multiplicativeExpression;
                       return (JSNode JS_value (JSValue "additiveExpression") [v1] [] [])}
@@ -451,11 +446,11 @@ additiveExpression = do {v1 <- additiveExpression; rOp "+"; v2 <- multiplicative
 --                      | <Shift Expression> '>>>' <Additive Expression>
 --                      | <Additive Expression>
 shiftExpression :: GenParser Char st JSNode
-shiftExpression = do{ v1 <- shiftExpression; rOp "<<"; v2 <- additiveExpression;
+shiftExpression = do{ v1 <- shiftExpression; _ <- rOp "<<"; v2 <- additiveExpression;
                       return (JSNode JS_value (JSValue "shiftExpression<<") [v1,v2] [] [])}
-              <|> do{ v1 <- shiftExpression; rOp ">>"; v2 <- additiveExpression;
+              <|> do{ v1 <- shiftExpression; _ <- rOp ">>"; v2 <- additiveExpression;
                       return (JSNode JS_value (JSValue "shiftExpression>>") [v1,v2] [] [])}
-              <|> do{ v1 <- shiftExpression; rOp ">>>"; v2 <- additiveExpression;
+              <|> do{ v1 <- shiftExpression; _ <- rOp ">>>"; v2 <- additiveExpression;
                       return (JSNode JS_value (JSValue "shiftExpression>>>") [v1,v2] [] [])}
               <|> do{ v1 <- additiveExpression;    
                       return (JSNode JS_value (JSValue "shiftExpression") [v1] [] [])}
@@ -470,13 +465,13 @@ shiftExpression = do{ v1 <- shiftExpression; rOp "<<"; v2 <- additiveExpression;
 relationalExpression :: GenParser Char st JSNode
 relationalExpression = do{ v1 <- shiftExpression;
                          return (JSNode JS_value (JSValue "relationalExpression") [v1] [] [])}
-                  <|> do{ v1 <- relationalExpression; rOp "<"; v2 <- shiftExpression;
+                  <|> do{ v1 <- relationalExpression; _ <- rOp "<"; v2 <- shiftExpression;
                          return (JSNode JS_value (JSValue "relationalExpression<") [v1,v2] [] [])}
-                  <|> do{ v1 <- relationalExpression; rOp ">"; v2 <- shiftExpression;
+                  <|> do{ v1 <- relationalExpression; _ <- rOp ">"; v2 <- shiftExpression;
                          return (JSNode JS_value (JSValue "relationalExpression>") [v1,v2] [] [])}
-                  <|> do{ v1 <- relationalExpression; rOp "<="; v2 <- shiftExpression;
+                  <|> do{ v1 <- relationalExpression; _ <- rOp "<="; v2 <- shiftExpression;
                          return (JSNode JS_value (JSValue "relationalExpression<=") [v1,v2] [] [])}
-                  <|> do{ v1 <- relationalExpression; rOp ">="; v2 <- shiftExpression;
+                  <|> do{ v1 <- relationalExpression; _ <- rOp ">="; v2 <- shiftExpression;
                          return (JSNode JS_value (JSValue "relationalExpression>=") [v1,v2] [] [])}
                   <|> do{ v1 <- relationalExpression; reserved "instanceof"; v2 <- shiftExpression;
                          return (JSNode JS_value (JSValue "relationalExpression.instanceof") [v1,v2] [] [])}
@@ -490,13 +485,13 @@ relationalExpression = do{ v1 <- shiftExpression;
 equalityExpression :: GenParser Char st JSNode
 equalityExpression = do{ v1 <- relationalExpression;
                          return (JSNode JS_value (JSValue "equalityExpression") [v1] [] [])}
-                <|> do{ v1 <- equalityExpression; rOp "=="; v2 <- relationalExpression;
+                <|> do{ v1 <- equalityExpression; _ <- rOp "=="; v2 <- relationalExpression;
                          return (JSNode JS_value (JSValue "equalityExpression==") [v1,v2] [] [])}
-                <|> do{ v1 <- equalityExpression; rOp "!="; v2 <- relationalExpression;
+                <|> do{ v1 <- equalityExpression; _ <- rOp "!="; v2 <- relationalExpression;
                          return (JSNode JS_value (JSValue "equalityExpression!=") [v1,v2] [] [])}
-                <|> do{ v1 <- equalityExpression; rOp "==="; v2 <- relationalExpression;
+                <|> do{ v1 <- equalityExpression; _ <- rOp "==="; v2 <- relationalExpression;
                          return (JSNode JS_value (JSValue "equalityExpression===") [v1,v2] [] [])}
-                <|> do{ v1 <- equalityExpression; rOp "!=="; v2 <- relationalExpression;
+                <|> do{ v1 <- equalityExpression; _ <- rOp "!=="; v2 <- relationalExpression;
                          return (JSNode JS_value (JSValue "equalityExpression!==") [v1,v2] [] [])}
                         
 
@@ -505,7 +500,7 @@ equalityExpression = do{ v1 <- relationalExpression;
 bitwiseAndExpression :: GenParser Char st JSNode
 bitwiseAndExpression = do{ v1 <- equalityExpression;
                            return (JSNode JS_value (JSValue "bitwiseAndExpression") [v1] [] [])}
-                   <|> do{ v1 <- bitwiseAndExpression; rOp "&"; v2 <- equalityExpression;
+                   <|> do{ v1 <- bitwiseAndExpression; _ <- rOp "&"; v2 <- equalityExpression;
                            return (JSNode JS_value (JSValue "bitwiseAndExpression") [v1,v2] [] [])}
 
 
@@ -515,7 +510,7 @@ bitwiseAndExpression = do{ v1 <- equalityExpression;
 bitwiseXOrExpression :: GenParser Char st JSNode
 bitwiseXOrExpression = do{ v1 <- bitwiseAndExpression;
                            return (JSNode JS_value (JSValue "bitwiseXOrExpression") [v1] [] [])}
-                   <|> do{ v1 <- bitwiseXOrExpression; rOp "^"; v2 <- bitwiseAndExpression;
+                   <|> do{ v1 <- bitwiseXOrExpression; _ <- rOp "^"; v2 <- bitwiseAndExpression;
                            return (JSNode JS_value (JSValue "bitwiseXOrExpression") [v1,v2] [] [])}
 
 
@@ -524,7 +519,7 @@ bitwiseXOrExpression = do{ v1 <- bitwiseAndExpression;
 bitwiseOrExpression :: GenParser Char st JSNode
 bitwiseOrExpression = do{ v1 <- bitwiseXOrExpression;
                           return (JSNode JS_value (JSValue "bitwiseOrExpression") [v1] [] [])}
-                  <|> do{ v1 <- bitwiseOrExpression; rOp "|"; v2 <- bitwiseXOrExpression;
+                  <|> do{ v1 <- bitwiseOrExpression; _ <- rOp "|"; v2 <- bitwiseXOrExpression;
                           return (JSNode JS_value (JSValue "bitwiseOrExpression") [v1,v2] [] [])}
 
 
@@ -533,7 +528,7 @@ bitwiseOrExpression = do{ v1 <- bitwiseXOrExpression;
 logicalAndExpression :: GenParser Char st JSNode
 logicalAndExpression = do{ v1 <- bitwiseOrExpression;
                            return (JSNode JS_value (JSValue "logicalAndExpression") [v1] [] [])}
-                      <|> do{ v1 <- logicalAndExpression; rOp "&&"; v2 <- bitwiseOrExpression;
+                      <|> do{ v1 <- logicalAndExpression; _ <- rOp "&&"; v2 <- bitwiseOrExpression;
                            return (JSNode JS_value (JSValue "logicalAndExpression") [v1,v2] [] [])}
 
 
@@ -543,7 +538,7 @@ logicalAndExpression = do{ v1 <- bitwiseOrExpression;
 logicalOrExpression :: GenParser Char st JSNode
 logicalOrExpression =  do{ v1 <- logicalAndExpression;
                            return (JSNode JS_value (JSValue "logicalOrExpression") [v1] [] [])}
-                   <|> do{ v1 <- logicalOrExpression; rOp "||"; v2 <- logicalAndExpression;
+                   <|> do{ v1 <- logicalOrExpression; _ <- rOp "||"; v2 <- logicalAndExpression;
                            return (JSNode JS_value (JSValue "logicalOrExpression") [v1,v2] [] [])}
 
 -- <Conditional Expression> ::= <Logical Or Expression> 
@@ -551,7 +546,7 @@ logicalOrExpression =  do{ v1 <- logicalAndExpression;
 conditionalExpression :: GenParser Char st JSNode
 conditionalExpression = do{ v1 <- logicalOrExpression;
                            return (JSNode JS_value (JSValue "conditionalExpression") [v1] [] [])}
-                    <|> do{ v1 <- logicalOrExpression; rOp "?"; v2 <- assignmentExpression; rOp ":"; v3 <- assignmentExpression;
+                    <|> do{ v1 <- logicalOrExpression; _ <- rOp "?"; v2 <- assignmentExpression; _ <- rOp ":"; v3 <- assignmentExpression;
                            return (JSNode JS_value (JSValue "conditionalExpression.ternary") [v1,v2,v3] [] [])}
 
 
@@ -611,9 +606,9 @@ statement = block
 -- <Block > ::= '{' '}'
 --            | '{' <Statement List> '}'
 block :: GenParser Char st JSNode
-block = do {rOp "{"; rOp "}"; 
+block = do {_ <- rOp "{"; _ <- rOp "}"; 
             return (JSNode JS_BLOCK NoValue [] [] []) }
-    <|> do {rOp "{"; val <- statementList; rOp "}"; 
+    <|> do {_ <- rOp "{"; val <- statementList; _ <- rOp "}"; 
             return (JSNode JS_BLOCK NoValue val [] []) }
 
 
@@ -621,7 +616,7 @@ block = do {rOp "{"; rOp "}";
 --                    | <Statement List> <Statement>
 statementList :: GenParser Char st [JSNode]
 statementList = do{ val <- many1 statement;
-                    return [JSNode JS_BLOCK NoValue {-val-}[] [] []] }
+                    return [JSNode JS_BLOCK NoValue val [] []] }
 
 -- <Variable Statement> ::= var <Variable Declaration List> ';'
 variableStatement :: GenParser Char st JSNode
@@ -646,23 +641,23 @@ variableDeclaration = do{ val <- identifier;
 
 -- <Initializer> ::= '=' <Assignment Expression>
 initializer :: GenParser Char st JSNode
-initializer = do {rOp "="; val <- assignmentExpression; 
+initializer = do {_ <- rOp "="; val <- assignmentExpression; 
                   return (JSNode JS_value (JSValue "initializer") [val] [] []) }
 
 -- <Empty Statement> ::= ';'
 emptyStatement :: GenParser Char st JSNode
-emptyStatement = do { rOp ";"; 
+emptyStatement = do { _ <- rOp ";"; 
                       return (JSNode JS_value (JSValue "empty") [] [] []) }
 
 
 -- <If Statement> ::= 'if' '(' <Expression> ')' <Statement> 
 ifStatement :: GenParser Char st JSNode
-ifStatement = do{ reserved "if"; rOp "("; v1 <- expression; rOp ")"; v2 <- statement;
+ifStatement = do{ reserved "if"; _ <- rOp "("; v1 <- expression; _ <- rOp ")"; v2 <- statement;
                   return (JSNode JS_value (JSValue "if") [v1,v2] [] []) }
 
 -- <If Else Statement> ::= 'if' '(' <Expression> ')' <Statement> 'else' <Statement>
 ifElseStatement :: GenParser Char st JSNode
-ifElseStatement = do{ reserved "if"; rOp "("; v1 <- expression; rOp ")"; v2 <- statement; reserved "else"; v3 <- statement ;
+ifElseStatement = do{ reserved "if"; _ <- rOp "("; v1 <- expression; _ <- rOp ")"; v2 <- statement; reserved "else"; v3 <- statement ;
                       return (JSNode JS_value (JSValue "if_else") [v1,v2,v3] [] []) }
 
 
@@ -673,60 +668,60 @@ ifElseStatement = do{ reserved "if"; rOp "("; v1 <- expression; rOp ")"; v2 <- s
 --                         | 'for' '(' <Left Hand Side Expression> in <Expression> ')' <Statement> 
 --                         | 'for' '(' 'var' <Variable Declaration> in <Expression> ')' <Statement> 
 iterationStatement :: GenParser Char st JSNode
-iterationStatement = do{ reserved "do"; v1 <- statement; reserved "while"; rOp "("; v2 <- expression; rOp ")"; rOp ";" ; 
+iterationStatement = do{ reserved "do"; v1 <- statement; reserved "while"; _ <- rOp "("; v2 <- expression; _ <- rOp ")"; _ <- rOp ";" ; 
                          return (JSNode JS_value (JSValue "do_while") [v1,v2] [] []) }
-                 <|> do{ reserved "while"; rOp "("; v1 <- expression; rOp ")"; v2 <- statement; 
+                 <|> do{ reserved "while"; _ <- rOp "("; v1 <- expression; _ <- rOp ")"; v2 <- statement; 
                          return (JSNode JS_value (JSValue "while") [v1,v2] [] []) }
-                 <|> do{ reserved "for"; rOp "("; v1 <- expression; rOp ";"; v2 <- expression; rOp ";"; 
-                         v3 <- expression; rOp ")"; v4 <- statement; 
+                 <|> do{ reserved "for"; _ <- rOp "("; v1 <- expression; _ <- rOp ";"; v2 <- expression; _ <- rOp ";"; 
+                         v3 <- expression; _ <- rOp ")"; v4 <- statement; 
                          return (JSNode JS_value (JSValue "for") [v1,v2,v3,v4] [] []) }
-                 <|> do{ reserved "for"; rOp "("; reserved "var"; v1 <- variableDeclarationList; rOp ";"; v2 <- expression; 
-                         rOp ";"; v3 <- expression; rOp ")"; v4 <- statement; 
+                 <|> do{ reserved "for"; _ <- rOp "("; reserved "var"; v1 <- variableDeclarationList; _ <- rOp ";"; v2 <- expression; 
+                         _ <- rOp ";"; v3 <- expression; _ <- rOp ")"; v4 <- statement; 
                          return (JSNode JS_value (JSValue "for_var") [v1,v2,v3,v4] [] []) }
-                 <|> do{ reserved "for"; rOp "("; v1 <- leftHandSideExpression; reserved "in"; v2 <- expression; rOp ")"; 
+                 <|> do{ reserved "for"; _ <- rOp "("; v1 <- leftHandSideExpression; reserved "in"; v2 <- expression; _ <- rOp ")"; 
                          v3 <- statement; 
                          return (JSNode JS_value (JSValue "for_in") [v1,v2,v3] [] []) }
-                 <|> do{ reserved "for"; rOp "("; reserved "var"; v1 <- variableDeclaration; reserved "in"; 
-                         v2 <- expression; rOp ")"; v3 <- statement; 
+                 <|> do{ reserved "for"; _ <- rOp "("; reserved "var"; v1 <- variableDeclaration; reserved "in"; 
+                         v2 <- expression; _ <- rOp ")"; v3 <- statement; 
                          return (JSNode JS_value (JSValue "for_in_var") [v1,v2,v3] [] []) }
 
 
 -- <Continue Statement> ::= 'continue' ';'
 --                        | 'continue' Identifier ';'
 continueStatement :: GenParser Char st JSNode
-continueStatement = do {reserved "continue"; rOp ";"; 
+continueStatement = do {reserved "continue"; _ <- rOp ";"; 
                         return (JSNode JS_value (JSValue "continue") [] [] []) }
-                <|> do {reserved "continue"; val <- identifier; rOp ";"; 
+                <|> do {reserved "continue"; val <- identifier; _ <- rOp ";"; 
                         return (JSNode JS_value (JSValue "continue") [val] [] []) }
 
 
 -- <Break Statement> ::= 'break' ';'
 --                        | 'break' Identifier ';'
 breakStatement :: GenParser Char st JSNode
-breakStatement = do {reserved "break"; rOp ";"; 
+breakStatement = do {reserved "break"; _ <- rOp ";"; 
                      return (JSNode JS_value (JSValue "break") [] [] []) }
-            <|>  do {reserved "break"; val <- identifier; rOp ";"; 
+            <|>  do {reserved "break"; val <- identifier; _ <- rOp ";"; 
                      return (JSNode JS_value (JSValue "return") [val] [] []) }
 
 
 -- <Return Statement> ::= 'return' ';'
 --                        | 'return' <Expression> ';'
 returnStatement :: GenParser Char st JSNode
-returnStatement = do {reserved "return"; rOp ";"; 
+returnStatement = do {reserved "return"; _ <- rOp ";"; 
                       return (JSNode JS_value (JSValue "return") [] [] []) }
-              <|> do {reserved "return"; val <- expression; rOp ";"; 
+              <|> do {reserved "return"; val <- expression; _ <- rOp ";"; 
                       return (JSNode JS_value (JSValue "return") [val] [] []) }
 
 
 -- <With Statement> ::= 'with' '(' <Expression> ')' <Statement> ';'
 withStatement :: GenParser Char st JSNode
-withStatement = do{ reserved "with"; rOp "("; v1 <- expression; rOp ")"; v2 <- statement; rOp ";"; 
+withStatement = do{ reserved "with"; _ <- rOp "("; v1 <- expression; _ <- rOp ")"; v2 <- statement; _ <- rOp ";"; 
                     return (JSNode JS_value (JSValue "with") [v1,v2] [] []) }
 
 
 -- <Switch Statement> ::= 'switch' '(' <Expression> ')' <Case Block>  
 switchStatement :: GenParser Char st JSNode
-switchStatement = do{ reserved "switch"; rOp "("; v1 <- expression; rOp ")"; v2 <- caseBlock;
+switchStatement = do{ reserved "switch"; _ <- rOp "("; v1 <- expression; _ <- rOp ")"; v2 <- caseBlock;
                       return (JSNode JS_value (JSValue "switch") [v1,v2] [] []) }
 
 
@@ -737,17 +732,17 @@ switchStatement = do{ reserved "switch"; rOp "("; v1 <- expression; rOp ")"; v2 
 --                | '{' <Default Clause> <Case Clauses> '}'
 --                | '{' <Default Clause> '}'
 caseBlock :: GenParser Char st JSNode
-caseBlock = do{ rOp "{"; rOp "}"; 
+caseBlock = do{ _ <- rOp "{"; _ <- rOp "}"; 
                 return (JSNode JS_value (JSValue "case") [] [] []) }
-        <|> do{ rOp "{"; val <- caseClauses; rOp "}"; 
+        <|> do{ _ <- rOp "{"; val <- caseClauses; _ <- rOp "}"; 
                 return (JSNode JS_value (JSValue "case") [val] [] []) }
-        <|> do{ rOp "{"; v1 <- caseClauses; v2 <- defaultClause; rOp "}"; 
+        <|> do{ _ <- rOp "{"; v1 <- caseClauses; v2 <- defaultClause; _ <- rOp "}"; 
                 return (JSNode JS_value (JSValue "case_default") [v1,v2] [] []) }
-        <|> do{ rOp "{"; v1 <- caseClauses; v2 <- defaultClause; v3 <- caseClauses; rOp "}"; 
+        <|> do{ _ <- rOp "{"; v1 <- caseClauses; v2 <- defaultClause; v3 <- caseClauses; _ <- rOp "}"; 
                 return (JSNode JS_value (JSValue "case_default2") [v1,v2,v3] [] []) }
-        <|> do{ rOp "{"; v1 <- defaultClause; v2 <- caseClauses; rOp "}"; 
+        <|> do{ _ <- rOp "{"; v1 <- defaultClause; v2 <- caseClauses; _ <- rOp "}"; 
                 return (JSNode JS_value (JSValue "case_default3") [v1,v2] [] []) }
-        <|> do{ rOp "{"; v1 <- defaultClause; rOp "}"; 
+        <|> do{ _ <- rOp "{"; v1 <- defaultClause; _ <- rOp "}"; 
                 return (JSNode JS_value (JSValue "case_default4") [v1] [] []) }
 
 
@@ -760,23 +755,23 @@ caseClauses = do{ val <- many1 caseClause;
 -- <Case Clause> ::= 'case' <Expression> ':' <Statement List>
 --                 | 'case' <Expression> ':'
 caseClause :: GenParser Char st JSNode
-caseClause = do { reserved "case"; val <- expression; rOp ":"; 
+caseClause = do { reserved "case"; val <- expression; _ <- rOp ":"; 
                 return (JSNode JS_value (JSValue "case_clause") [val] [] []) }
-         <|> do { reserved "case"; v1 <- expression; rOp ":"; v2 <- statementList;
+         <|> do { reserved "case"; v1 <- expression; _ <- rOp ":"; v2 <- statementList;
                 return (JSNode JS_value (JSValue "case_clause") (v1:v2) [] []) }
 
 
 -- <Default Clause> ::= 'default' ':' 
 --                    | 'default' ':' <Statement List>
 defaultClause :: GenParser Char st JSNode
-defaultClause = do{ reserved "default"; rOp ":"; 
+defaultClause = do{ reserved "default"; _ <- rOp ":"; 
                     return (JSNode JS_value (JSValue "default") [] [] []) }
-            <|> do{ reserved "default"; rOp ":"; v1 <- statementList;
+            <|> do{ reserved "default"; _ <- rOp ":"; v1 <- statementList;
                     return (JSNode JS_value (JSValue "default") v1 [] []) }
 
 -- <Labelled Statement> ::= Identifier ':' <Statement> 
 labelledStatement :: GenParser Char st JSNode
-labelledStatement = do { v1 <- identifier; rOp ":"; v2 <- statement;
+labelledStatement = do { v1 <- identifier; _ <- rOp ":"; v2 <- statement;
                          return (JSNode JS_value (JSValue "labelled") [v1,v2] [] []) }
 
 -- <Throw Statement> ::= 'throw' <Expression>
@@ -797,7 +792,7 @@ tryStatement = do{ reserved "try"; v1 <- block; v2 <- catch;
 
 -- <Catch> ::= 'catch' '(' Identifier ')' <Block>
 catch :: GenParser Char st JSNode
-catch = do{ reserved "catch"; rOp "("; v1 <- identifier; rOp ")"; v2 <- block;
+catch = do{ reserved "catch"; _ <- rOp "("; v1 <- identifier; _ <- rOp ")"; v2 <- block;
             return (JSNode JS_value (JSValue "catch") [v1,v2] [] []) }
 
 -- <Finally> ::= 'finally' <Block>
@@ -809,11 +804,11 @@ finally = do{ reserved "finally"; v1 <- block;
 -- <Function Declaration> ::= 'function' Identifier '(' <Formal Parameter List> ')' '{' <Function Body> '}'
 --                          | 'function' Identifier '(' ')' '{' <Function Body> '}'
 functionDeclaration :: GenParser Char st JSNode
-functionDeclaration = try (do {reserved "function"; v1 <- identifier; rOp "("; v2 <- formalParameterList; rOp ")"; 
+functionDeclaration = {-try (-}do {reserved "function"; v1 <- identifier; _ <- rOp "("; v2 <- formalParameterList; _ <- rOp ")"; 
                                v3 <- functionBody; 
-                               return (JSNode JS_value (JSValue "function") ((v1:v2)++[v3]) [] []) })
+                               return (JSNode JS_value (JSValue "function") ((v1:v2)++[v3]) [] []) } --)
 
-                    <|>    do {reserved "function"; v1 <- identifier; rOp "(";                      rOp ")"; 
+                    <|>    do {reserved "function"; v1 <- identifier; _ <- rOp "(";                      _ <- rOp ")"; 
                                v2 <- functionBody; 
                                return (JSNode JS_value (JSValue "function_no_params") [v1,v2] [] []) }
 
@@ -821,7 +816,7 @@ functionDeclaration = try (do {reserved "function"; v1 <- identifier; rOp "("; v
 -- <Function Expression> ::= 'function' '(' ')' '{' <Function Body> '}'
 ---                        | 'function' '(' <Formal Parameter List> ')' '{' <Function Body> '}'
 functionExpression :: GenParser Char st JSNode
-functionExpression = do{ reserved "function"; rOp "("; optional formalParameterList; rOp ")"; functionBody; }
+functionExpression = do{ reserved "function"; _ <- rOp "("; optional formalParameterList; _ <- rOp ")"; functionBody; }
 
 -- <Formal Parameter List> ::= Identifier
 --                           | <Formal Parameter List> ',' Identifier
@@ -831,15 +826,14 @@ formalParameterList = sepBy1 identifier (rOp ",")
 -- <Function Body> ::= '{' <Source Elements> '}'
 --                   | '{' '}'
 functionBody :: GenParser Char st JSNode
-functionBody = do{ rOp "{"; v1 <- sourceElements; rOp "}";
-                   return (JSNode JS_value (JSValue "functionbody") [v1] [] []) }
-           <|> do{ rOp "{"; rOp "}";
+functionBody = do{ _ <- rOp "{"; _ <- rOp "}";
                    return (JSNode JS_value (JSValue "functionbody") [] [] []) }
-                                  
+           <|> do{ _ <- rOp "{"; v1 <- sourceElements; _ <- rOp "}";
+                   return (JSNode JS_value (JSValue "functionbody") [v1] [] []) }                   
 
 -- <Program> ::= <Source Elements>
 program :: GenParser Char st [JSNode]
-program = do {val <- many sourceElements; eof; return val}
+program = do {val <- many1 sourceElements; eof; return val}
 
 -- <Source Elements> ::= <Source Element>
 --                     | <Source Elements>  <Source Element>
@@ -856,10 +850,18 @@ sourceElement = statement
 -- ---------------------------------------------------------------
 -- Testing
 
-main :: IO ()
-main = do args <- getArgs
-          putStrLn (readJs (args !! 0))
+m :: IO ()
+m = do args <- getArgs
+       putStrLn (readJs (args !! 0))
 
+
+-- ---------------------------------------------------------------------
+
+main =
+  do args <- getArgs
+     x <- readFile (args !! 0)
+     putStrLn (readJs x)            
+    
 -- ---------------------------------------------------------------------
           
 readJs :: String -> String
@@ -867,7 +869,10 @@ readJs input = case parse program "js" input of
     Left err -> "No match: " ++ show err
     Right val -> "Parsed" ++ show(val)
 
-symbolp :: Parser Char
-symbolp = oneOf "!#$%&|*+-/:<=>?@^_~"
+doParse :: (Show a) => GenParser tok () a -> [tok] -> [Char]
+doParse p input = case parse p "js" input of
+    Left err -> "No match: " ++ show err
+    Right val -> "Parsed:" ++ show(val)
+
 
 -- EOF
