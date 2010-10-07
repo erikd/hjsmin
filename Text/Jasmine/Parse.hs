@@ -9,6 +9,7 @@ module Text.Jasmine.Parse
     , doParse
     , functionDeclaration
     , identifier
+    , statementList  
     ) where
 
 -- ---------------------------------------------------------------------
@@ -434,27 +435,28 @@ multiplicativeExpression = do{ v1 <- unaryExpression;
 --                         | <Additive Expression>'-'<Multiplicative Expression>  
 --                         | <Multiplicative Expression>
 additiveExpression :: GenParser Char st JSNode
-additiveExpression = do {v1 <- additiveExpression; _ <- rOp "+"; v2 <- multiplicativeExpression;
+additiveExpression = do{ v1 <- multiplicativeExpression;
+                      return (JSNode JS_value (JSValue "additiveExpression") [v1] [] [])}
+                 <|> do {v1 <- additiveExpression; _ <- rOp "+"; v2 <- multiplicativeExpression;
                       return (JSNode JS_value (JSValue "additiveExpression+") [v1,v2] [] [])}
                  <|> do {v1 <- additiveExpression; _ <- rOp "-"; v2 <- multiplicativeExpression;
                       return (JSNode JS_value (JSValue "additiveExpression-") [v1,v2] [] [])}
-                 <|> do{ v1 <- multiplicativeExpression;
-                      return (JSNode JS_value (JSValue "additiveExpression") [v1] [] [])}
+                  
 
 -- <Shift Expression> ::= <Shift Expression> '<<' <Additive Expression>
 --                      | <Shift Expression> '>>' <Additive Expression>
 --                      | <Shift Expression> '>>>' <Additive Expression>
 --                      | <Additive Expression>
 shiftExpression :: GenParser Char st JSNode
-shiftExpression = do{ v1 <- shiftExpression; _ <- rOp "<<"; v2 <- additiveExpression;
+shiftExpression = do{ v1 <- additiveExpression;    
+                      return (JSNode JS_value (JSValue "shiftExpression") [v1] [] [])}
+              <|> do{ v1 <- shiftExpression; _ <- rOp "<<"; v2 <- additiveExpression;
                       return (JSNode JS_value (JSValue "shiftExpression<<") [v1,v2] [] [])}
               <|> do{ v1 <- shiftExpression; _ <- rOp ">>"; v2 <- additiveExpression;
                       return (JSNode JS_value (JSValue "shiftExpression>>") [v1,v2] [] [])}
               <|> do{ v1 <- shiftExpression; _ <- rOp ">>>"; v2 <- additiveExpression;
                       return (JSNode JS_value (JSValue "shiftExpression>>>") [v1,v2] [] [])}
-              <|> do{ v1 <- additiveExpression;    
-                      return (JSNode JS_value (JSValue "shiftExpression") [v1] [] [])}
-
+               
 
 -- <Relational Expression>::= <Shift Expression> 
 --                          | <Relational Expression> '<' <Shift Expression> 
@@ -587,6 +589,7 @@ expression = do{ val <- sepBy1 assignmentExpression (rOp ",");
 --               | <Expression> 
 statement :: GenParser Char st JSNode
 statement = block
+        <|> expression 
         <|> variableStatement
         <|> emptyStatement 
         <|> ifElseStatement
@@ -600,14 +603,13 @@ statement = block
         <|> switchStatement
         <|> throwStatement 
         <|> tryStatement
-        <|> expression 
 
 
 -- <Block > ::= '{' '}'
 --            | '{' <Statement List> '}'
 block :: GenParser Char st JSNode
-block = do {_ <- rOp "{"; _ <- rOp "}"; 
-            return (JSNode JS_BLOCK NoValue [] [] []) }
+block = try (do {_ <- rOp "{"; _ <- rOp "}"; 
+            return (JSNode JS_BLOCK NoValue [] [] []) })
     <|> do {_ <- rOp "{"; val <- statementList; _ <- rOp "}"; 
             return (JSNode JS_BLOCK NoValue val [] []) }
 
@@ -804,13 +806,13 @@ finally = do{ reserved "finally"; v1 <- block;
 -- <Function Declaration> ::= 'function' Identifier '(' <Formal Parameter List> ')' '{' <Function Body> '}'
 --                          | 'function' Identifier '(' ')' '{' <Function Body> '}'
 functionDeclaration :: GenParser Char st JSNode
-functionDeclaration = {-try (-}do {reserved "function"; v1 <- identifier; _ <- rOp "("; v2 <- formalParameterList; _ <- rOp ")"; 
-                               v3 <- functionBody; 
-                               return (JSNode JS_value (JSValue "function") ((v1:v2)++[v3]) [] []) } --)
+functionDeclaration = do {reserved "function"; v1 <- identifier; _ <- rOp "("; v2 <- formalParameterList; _ <- rOp ")"; 
+                          v3 <- functionBody; 
+                          return (JSNode JS_value (JSValue "function") ((v1:v2)++[v3]) [] []) } --)
 
-                    <|>    do {reserved "function"; v1 <- identifier; _ <- rOp "(";                      _ <- rOp ")"; 
-                               v2 <- functionBody; 
-                               return (JSNode JS_value (JSValue "function_no_params") [v1,v2] [] []) }
+                  <|> do {reserved "function"; v1 <- identifier; _ <- rOp "(";  _ <- rOp ")"; 
+                          v2 <- functionBody; 
+                          return (JSNode JS_value (JSValue "function_no_params") [v1,v2] [] []) }
 
 
 -- <Function Expression> ::= 'function' '(' ')' '{' <Function Body> '}'
@@ -844,8 +846,8 @@ sourceElements = do{ val <- many1 sourceElement;
 -- <Source Element> ::= <Statement>
 --                    | <Function Declaration>
 sourceElement :: GenParser Char st JSNode
-sourceElement = statement
-             <|> functionDeclaration
+sourceElement = functionDeclaration
+            <|> statement
 
 -- ---------------------------------------------------------------
 -- Testing
