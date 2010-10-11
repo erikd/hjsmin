@@ -7,6 +7,7 @@ module Text.Jasmine.Parse
     , defaultJasmineSettings
     -- For testing      
     , doParse
+    , program  
     , functionDeclaration
     , identifier
     , statementList  
@@ -59,7 +60,7 @@ data JSType = JS_SCRIPT | JS_BLOCK | JS_LABEL | JS_FOR_IN | JS_CALL | JS_NEW_WIT
             | JS_value 
     deriving (Show, Eq, Read, Data, Typeable)
 
-data JSValue = NoValue | JSValue String | JSIdentifier String
+data JSValue = NoValue | JSValue String | JSIdentifier String | JSDecimal Integer | JSHexInteger Integer
     deriving (Show, Eq, Read, Data, Typeable)
 
 data JSFunDecl = JSFunDecl String
@@ -220,10 +221,10 @@ booleanLiteral = do{ reserved "true" ;
 numericLiteral :: GenParser Char st JSNode
 numericLiteral = do {val <- decimalLiteral; 
                      -- return [""]} -- TODO: proper return
-                     return (JSNode JS_value (JSValue (show val)) [] [] [])}
+                     return (JSNode JS_value (JSDecimal val) [] [] [])}
              <|> do {val <- hexIntegerLiteral; 
                      -- return [""]} -- TODO: proper return
-                     return (JSNode JS_value (JSValue (show val)) [] [] [])}
+                     return (JSNode JS_value (JSHexInteger val) [] [] [])}
 
 
 -- <Regular Expression Literal> ::= RegExp 
@@ -355,8 +356,8 @@ callExpression = do{ v1 <- memberExpression; v2 <- arguments;
 -- <Arguments> ::= '(' ')'
 --               | '(' <Argument List> ')'
 arguments :: GenParser Char st JSNode
-arguments = do{ rOp "(";  rOp ")";
-                return (JSNode JS_value (JSValue "arguments") [] [] [])}
+arguments = try(do{ rOp "(";  rOp ")";
+                return (JSNode JS_value (JSValue "arguments") [] [] [])})
         <|> do{ rOp "("; v1 <- argumentList; rOp ")";
                 return (JSNode JS_value (JSValue "arguments") [v1] [] [])}
 
@@ -379,7 +380,8 @@ leftHandSideExpression = newExpression
 --                        | <Postfix Expression> '--'
 postfixExpression :: GenParser Char st JSNode
 postfixExpression = do{ v1 <- leftHandSideExpression;
-                      return (JSNode JS_value (JSValue "postfixExpression") [v1] [] [])}
+                      -- return (JSNode JS_value (JSValue "postfixExpression") [v1] [] [])}
+                      return v1}
                 <|> do{ v1 <- postfixExpression; rOp "++"; 
                       return (JSNode JS_value (JSValue "postfixExpression++") [v1] [] [])}
                 <|> do{ v1 <- postfixExpression; rOp "--"; 
@@ -398,7 +400,8 @@ postfixExpression = do{ v1 <- leftHandSideExpression;
 --                      | '!' <Unary Expression>
 unaryExpression :: GenParser Char st JSNode
 unaryExpression = do{ v1 <- postfixExpression;
-                      return (JSNode JS_value (JSValue "unaryExpression") [v1] [] [])}
+                      -- return (JSNode JS_value (JSValue "unaryExpression") [v1] [] [])}
+                      return v1}
               <|> do{ reserved "delete"; v1 <- unaryExpression;
                       return (JSNode JS_value (JSValue "unaryExpression.delete") [v1] [] [])}
               <|> do{ reserved "void";   v1 <- unaryExpression;
@@ -425,7 +428,8 @@ unaryExpression = do{ v1 <- postfixExpression;
 --                               | <Unary Expression> '%' <Multiplicative Expression> 
 multiplicativeExpression :: GenParser Char st JSNode
 multiplicativeExpression = do{ v1 <- unaryExpression;
-                               return (JSNode JS_value (JSValue "multiplicativeExpression") [v1] [] [])}
+                               -- return (JSNode JS_value (JSValue "multiplicativeExpression") [v1] [] [])}
+                               return v1}
                        <|> do{ v1 <- unaryExpression; rOp "*"; v2 <- multiplicativeExpression;
                                return (JSNode JS_value (JSValue "multiplicativeExpression*") [v1,v2] [] [])}
                        <|> do{ v1 <- unaryExpression; rOp "/"; v2 <- multiplicativeExpression;
@@ -439,7 +443,8 @@ multiplicativeExpression = do{ v1 <- unaryExpression;
 --                         | <Multiplicative Expression>
 additiveExpression :: GenParser Char st JSNode
 additiveExpression = do{ v1 <- multiplicativeExpression;
-                      return (JSNode JS_value (JSValue "additiveExpression") [v1] [] [])}
+                      -- return (JSNode JS_value (JSValue "additiveExpression") [v1] [] [])}
+                      return v1}
                  <|> do {v1 <- additiveExpression; rOp "+"; v2 <- multiplicativeExpression;
                       return (JSNode JS_value (JSValue "additiveExpression+") [v1,v2] [] [])}
                  <|> do {v1 <- additiveExpression; rOp "-"; v2 <- multiplicativeExpression;
@@ -452,7 +457,8 @@ additiveExpression = do{ v1 <- multiplicativeExpression;
 --                      | <Additive Expression>
 shiftExpression :: GenParser Char st JSNode
 shiftExpression = do{ v1 <- additiveExpression;    
-                      return (JSNode JS_value (JSValue "shiftExpression") [v1] [] [])}
+                      -- return (JSNode JS_value (JSValue "shiftExpression") [v1] [] [])}
+                      return v1}
               <|> do{ v1 <- shiftExpression; rOp "<<"; v2 <- additiveExpression;
                       return (JSNode JS_value (JSValue "shiftExpression<<") [v1,v2] [] [])}
               <|> do{ v1 <- shiftExpression; rOp ">>"; v2 <- additiveExpression;
@@ -469,7 +475,8 @@ shiftExpression = do{ v1 <- additiveExpression;
 --                          | <Relational Expression> 'instanceof' <Shift Expression> 
 relationalExpression :: GenParser Char st JSNode
 relationalExpression = do{ v1 <- shiftExpression;
-                         return (JSNode JS_value (JSValue "relationalExpression") [v1] [] [])}
+                         --return (JSNode JS_value (JSValue "relationalExpression") [v1] [] [])}
+                         return v1}
                   <|> do{ v1 <- relationalExpression; rOp "<"; v2 <- shiftExpression;
                          return (JSNode JS_value (JSValue "relationalExpression<") [v1,v2] [] [])}
                   <|> do{ v1 <- relationalExpression; rOp ">"; v2 <- shiftExpression;
@@ -489,7 +496,8 @@ relationalExpression = do{ v1 <- shiftExpression;
 --                         | <Equality Expression> '!==' <Relational Expression>
 equalityExpression :: GenParser Char st JSNode
 equalityExpression = do{ v1 <- relationalExpression;
-                         return (JSNode JS_value (JSValue "equalityExpression") [v1] [] [])}
+                         -- return (JSNode JS_value (JSValue "equalityExpression") [v1] [] [])}
+                         return v1}
                 <|> do{ v1 <- equalityExpression; rOp "=="; v2 <- relationalExpression;
                          return (JSNode JS_value (JSValue "equalityExpression==") [v1,v2] [] [])}
                 <|> do{ v1 <- equalityExpression; rOp "!="; v2 <- relationalExpression;
@@ -504,7 +512,8 @@ equalityExpression = do{ v1 <- relationalExpression;
 --                            | <Bitwise And Expression> '&' <Equality Expression>
 bitwiseAndExpression :: GenParser Char st JSNode
 bitwiseAndExpression = do{ v1 <- equalityExpression;
-                           return (JSNode JS_value (JSValue "bitwiseAndExpression") [v1] [] [])}
+                           -- return (JSNode JS_value (JSValue "bitwiseAndExpression") [v1] [] [])}
+                           return v1}
                    <|> do{ v1 <- bitwiseAndExpression; rOp "&"; v2 <- equalityExpression;
                            return (JSNode JS_value (JSValue "bitwiseAndExpression") [v1,v2] [] [])}
 
@@ -514,7 +523,8 @@ bitwiseAndExpression = do{ v1 <- equalityExpression;
 --                            | <Bitwise XOr Expression> '^' <Bitwise And Expression>
 bitwiseXOrExpression :: GenParser Char st JSNode
 bitwiseXOrExpression = do{ v1 <- bitwiseAndExpression;
-                           return (JSNode JS_value (JSValue "bitwiseXOrExpression") [v1] [] [])}
+                           -- return (JSNode JS_value (JSValue "bitwiseXOrExpression") [v1] [] [])}
+                           return v1}
                    <|> do{ v1 <- bitwiseXOrExpression; rOp "^"; v2 <- bitwiseAndExpression;
                            return (JSNode JS_value (JSValue "bitwiseXOrExpression") [v1,v2] [] [])}
 
@@ -523,7 +533,8 @@ bitwiseXOrExpression = do{ v1 <- bitwiseAndExpression;
 --                           | <Bitwise Or Expression> '|' <Bitwise XOr Expression>
 bitwiseOrExpression :: GenParser Char st JSNode
 bitwiseOrExpression = do{ v1 <- bitwiseXOrExpression;
-                          return (JSNode JS_value (JSValue "bitwiseOrExpression") [v1] [] [])}
+                          -- return (JSNode JS_value (JSValue "bitwiseOrExpression") [v1] [] [])}
+                          return v1}
                   <|> do{ v1 <- bitwiseOrExpression; rOp "|"; v2 <- bitwiseXOrExpression;
                           return (JSNode JS_value (JSValue "bitwiseOrExpression") [v1,v2] [] [])}
 
@@ -532,7 +543,8 @@ bitwiseOrExpression = do{ v1 <- bitwiseXOrExpression;
 --                            | <Logical And Expression> '&&' <Bitwise Or Expression>
 logicalAndExpression :: GenParser Char st JSNode
 logicalAndExpression = do{ v1 <- bitwiseOrExpression;
-                           return (JSNode JS_value (JSValue "logicalAndExpression") [v1] [] [])}
+                           -- return (JSNode JS_value (JSValue "logicalAndExpression") [v1] [] [])}
+                           return v1}
                       <|> do{ v1 <- logicalAndExpression; rOp "&&"; v2 <- bitwiseOrExpression;
                            return (JSNode JS_value (JSValue "logicalAndExpression") [v1,v2] [] [])}
 
@@ -542,7 +554,8 @@ logicalAndExpression = do{ v1 <- bitwiseOrExpression;
 --                           | <Logical Or Expression> '||' <Logical And Expression>
 logicalOrExpression :: GenParser Char st JSNode
 logicalOrExpression =  do{ v1 <- logicalAndExpression;
-                           return (JSNode JS_value (JSValue "logicalOrExpression") [v1] [] [])}
+                           -- return (JSNode JS_value (JSValue "logicalOrExpression") [v1] [] [])}
+                           return v1}
                    <|> do{ v1 <- logicalOrExpression; rOp "||"; v2 <- logicalAndExpression;
                            return (JSNode JS_value (JSValue "logicalOrExpression") [v1,v2] [] [])}
 
@@ -550,7 +563,8 @@ logicalOrExpression =  do{ v1 <- logicalAndExpression;
 --                            | <Logical Or Expression> '?' <Assignment Expression> ':' <Assignment Expression>
 conditionalExpression :: GenParser Char st JSNode
 conditionalExpression = do{ v1 <- logicalOrExpression;
-                           return (JSNode JS_value (JSValue "conditionalExpression") [v1] [] [])}
+                           -- return (JSNode JS_value (JSValue "conditionalExpression") [v1] [] [])}
+                           return v1}
                     <|> do{ v1 <- logicalOrExpression; rOp "?"; v2 <- assignmentExpression; rOp ":"; v3 <- assignmentExpression;
                            return (JSNode JS_value (JSValue "conditionalExpression.ternary") [v1,v2,v3] [] [])}
 

@@ -19,4 +19,7 @@ http://www.devincook.com/GOLDParser/grammars/index.htm
 - Seems rOp consumes multiple of the same char.
   e.g (rOp ",") will consume one or more comma's.  Need to replace with something else
 
+- Generate output using standard pretty print library, so it can be
+  used with various backends
+
 EOF
