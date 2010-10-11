@@ -14,4 +14,9 @@ Examples of parsers
 GOLD Parser, using the Javascript.grm from
 http://www.devincook.com/GOLDParser/grammars/index.htm
 
+-------------------------
+
+- Seems rOp consumes multiple of the same char.
+  e.g (rOp ",") will consume one or more comma's.  Need to replace with something else
+
 EOF

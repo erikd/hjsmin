@@ -268,9 +268,11 @@ arrayLiteral = do {_ <- rOp "["; _ <- rOp "]";
 -- <Elision> ::= ','
 --             | <Elision> ','
 elision :: GenParser Char st JSNode
-elision = do{ val <- many1 (rOp ",");
-              return (JSNode JS_value (JSValue (show val)) [] [] [])}
-
+elision = do{ v1 <- (rOp ",");
+              return (JSNode JS_value (JSValue "elision") [] [] [])}
+      <|> do{ v1 <- elision; _ <- (rOp ",");
+              return (JSNode JS_value (JSValue "elisions") [v1] [] [])}
+    
 
 -- <Element List> ::= <Elision> <Assignment Expression>
 --                  | <Element List> ',' <Elision>  <Assignment Expression>
@@ -617,9 +619,11 @@ block = try (do {_ <- rOp "{"; _ <- rOp "}";
 -- <Statement List> ::= <Statement>
 --                    | <Statement List> <Statement>
 statementList :: GenParser Char st [JSNode]
-statementList = do{ val <- many1 statement;
-                    return [JSNode JS_BLOCK NoValue val [] []] }
-
+statementList = do { v1 <- statement;
+                    return [JSNode JS_BLOCK NoValue [v1] [] []] }
+             <|> do { v1 <- statementList; v2 <- statement;
+                    return [JSNode JS_BLOCK NoValue (v1++[v2]) [] []] }
+             
 -- <Variable Statement> ::= var <Variable Declaration List> ';'
 variableStatement :: GenParser Char st JSNode
 variableStatement = do {reserved "var"; val <- variableDeclarationList;
@@ -828,20 +832,27 @@ formalParameterList = sepBy1 identifier (rOp ",")
 -- <Function Body> ::= '{' <Source Elements> '}'
 --                   | '{' '}'
 functionBody :: GenParser Char st JSNode
-functionBody = do{ _ <- rOp "{"; _ <- rOp "}";
+functionBody = {-do{ _ <- rOp "{"; _ <- rOp "}";
                    return (JSNode JS_value (JSValue "functionbody") [] [] []) }
-           <|> do{ _ <- rOp "{"; v1 <- sourceElements; _ <- rOp "}";
+           <|> -}do{ _ <- rOp "{"; v1 <- sourceElements; _ <- rOp "}";
                    return (JSNode JS_value (JSValue "functionbody") [v1] [] []) }                   
 
 -- <Program> ::= <Source Elements>
-program :: GenParser Char st [JSNode]
-program = do {val <- many1 sourceElements; eof; return val}
+program :: GenParser Char st JSNode
+--program = do {val <- sourceElements; eof; return val}
+program = sourceElements
 
 -- <Source Elements> ::= <Source Element>
 --                     | <Source Elements>  <Source Element>
 sourceElements :: GenParser Char st JSNode
+{-
 sourceElements = do{ val <- many1 sourceElement;
                      return (JSNode JS_BLOCK NoValue val [] []) }
+-}
+sourceElements = sourceElement
+          <|> do{ v1 <- sourceElements; v2 <- sourceElement;
+                  return (JSNode JS_BLOCK NoValue [v1,v2] [] []) }
+                  
 
 -- <Source Element> ::= <Statement>
 --                    | <Function Declaration>
