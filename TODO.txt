@@ -22,4 +22,8 @@ http://www.devincook.com/GOLDParser/grammars/index.htm
 - Generate output using standard pretty print library, so it can be
   used with various backends
 
+- Why does identifier consume everything after it?
+  doParse identifier "ExpArray(1,1);}blahwhoohick"
+  "Parsed:JSNode JS_value (JSIdentifier \"ExpArray\") [] [] []"
+
 EOF

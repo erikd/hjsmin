@@ -373,6 +373,7 @@ argumentList = do{ vals <- sepBy1 assignmentExpression (rOp ",");
 leftHandSideExpression :: GenParser Char st JSNode
 leftHandSideExpression = newExpression
                      <|> callExpression
+                     <?> "leftHandSideExpression"
 
 
 -- <Postfix Expression> ::= <Left Hand Side Expression>
@@ -609,10 +610,11 @@ expression = do{ val <- sepBy1 assignmentExpression (rOp ",");
 --               | <Try Statement>
 --               | <Expression> 
 statement :: GenParser Char st JSNode
-statement = block
+statement = emptyStatement -- moved higher up
+        <|> block
         <|> expression 
         <|> variableStatement
-        <|> emptyStatement 
+        -- <|> emptyStatement 
         <|> ifElseStatement
         <|> ifStatement
         <|> iterationStatement
@@ -624,6 +626,7 @@ statement = block
         <|> switchStatement
         <|> throwStatement 
         <|> tryStatement
+        <?> "statement"
 
 
 -- <Block > ::= '{' '}'
@@ -633,6 +636,7 @@ block = try (do {rOp "{"; rOp "}";
             return (JSNode JS_BLOCK NoValue [] [] []) })
     <|> do {rOp "{"; val <- statementList; rOp "}"; 
             return (JSNode JS_BLOCK NoValue val [] []) }
+    <?> "block"
 
 
 -- <Statement List> ::= <Statement>
@@ -642,7 +646,12 @@ statementList = do { v1 <- statement;
                     return [JSNode JS_BLOCK NoValue [v1] [] []] }
              <|> do { v1 <- statementList; v2 <- statement;
                     return [JSNode JS_BLOCK NoValue (v1++[v2]) [] []] }
-             
+
+{-
+statementList = do { v <-  (many1 statement);
+                    return [JSNode JS_BLOCK NoValue v [] []] }
+-}                     
+
 -- <Variable Statement> ::= var <Variable Declaration List> ';'
 variableStatement :: GenParser Char st JSNode
 variableStatement = do {reserved "var"; val <- variableDeclarationList;
@@ -836,6 +845,7 @@ functionDeclaration = try(do {reserved "function"; v1 <- identifier; rOp "("; v2
                   <|> do {reserved "function"; v1 <- identifier; rOp "(";  rOp ")"; 
                           v2 <- functionBody; 
                           return (JSNode JS_value (JSValue "function_no_params") [v1,v2] [] []) }
+                  <?> "functionDeclaration"
 
 
 -- <Function Expression> ::= 'function' '(' ')' '{' <Function Body> '}'
@@ -853,13 +863,14 @@ formalParameterList = sepBy1 identifier (rOp ",")
 functionBody :: GenParser Char st JSNode
 functionBody = try (do{ rOp "{"; rOp "}";
                    return (JSNode JS_value (JSValue "functionbody") [] [] []) })
-           <|> do{ rOp "{"; v1 <- sourceElements; rOp "}";
-                   return (JSNode JS_value (JSValue "functionbody") [v1] [] []) }                   
+           <|> try(do{ rOp "{"; v1 <- sourceElements; rOp "}";
+                   return (JSNode JS_value (JSValue "functionbody") [v1] [] []) })
+           <?> "functionBody"    
 
 -- <Program> ::= <Source Elements>
 program :: GenParser Char st JSNode
---program = do {val <- sourceElements; eof; return val}
-program = sourceElements
+program = do {val <- sourceElements; eof; return val}
+--program = sourceElements
 
 -- <Source Elements> ::= <Source Element>
 --                     | <Source Elements>  <Source Element>
@@ -871,6 +882,7 @@ sourceElements = do{ val <- many1 sourceElement;
 sourceElements = sourceElement
           <|> do{ v1 <- sourceElements; v2 <- sourceElement;
                   return (JSNode JS_BLOCK NoValue [v1,v2] [] []) }
+          <?> "sourceElements"
                   
 
 -- <Source Element> ::= <Statement>
@@ -878,6 +890,7 @@ sourceElements = sourceElement
 sourceElement :: GenParser Char st JSNode
 sourceElement = functionDeclaration
             <|> statement
+            <?> "sourceElement"
 
 -- ---------------------------------------------------------------
 -- Testing
@@ -902,10 +915,17 @@ readJs input = case parse program "js" input of
     Left err -> "No match: " ++ show err
     Right val -> "Parsed" ++ show(val)
 
-doParse :: (Show a) => GenParser tok () a -> [tok] -> [Char]
-doParse p input = case parse p "js" input of
+-- ---------------------------------------------------------------------
+    
+doParse :: (Show a,Show tok) => GenParser tok () a -> [tok] -> [Char]
+doParse p input = case parse (p' p) "js" input of
     Left err -> "No match: " ++ show err
     Right val -> "Parsed:" ++ show(val)
 
+-- ---------------------------------------------------------------------
+    
+--p' :: GenParser Char st JSNode
+p' :: (Show tok) => GenParser tok st b -> GenParser tok st b
+p' p = do {val <- p; eof; return val}
 
 -- EOF
