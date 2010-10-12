@@ -336,7 +336,8 @@ memberExpression' = try(do{v1 <- primaryExpression; v2 <- rest;
                              return (JSNode JS_value (JSValue "memberExpression[]") [v1] [] [])}
                      <|> do{ rOp "."; v1 <- identifier ; 
                              return (JSNode JS_value (JSValue "memberExpression.") [v1] [] [])}
-
+                     <|> return (JSNode JS_value (JSValue "memberExpression") [] [] [])
+                         
 -- ---------------------------------------------------------------------
 -- From the HJS parser
 {-
@@ -364,17 +365,7 @@ newExpression = memberExpression
 --                     | <Call Expression> <Arguments> 
 --                     | <Call Expression> '[' <Expression> ']'
 --                     | <Call Expression> '.' Identifier
-{-
-callExpression :: GenParser Char st JSNode
-callExpression = do{ v1 <- memberExpression; v2 <- arguments; 
-                     return (JSNode JS_value (JSValue "callExpression") [v1,v2] [] [])}
-             <|> do{ v1 <- callExpression; v2 <- arguments ; 
-                     return (JSNode JS_value (JSValue "callExpression") [v1,v2] [] [])}
-             <|> do{ v1 <- callExpression; rOp "["; v2 <- expression; rOp "]"; 
-                     return (JSNode JS_value (JSValue "callExpression[]") [v1,v2] [] [])}
-             <|> do{ v1 <- callExpression; rOp "."; v2 <- identifier; 
-                     return (JSNode JS_value (JSValue "callExpression.") [v1,v2] [] [])}
--}
+
 callExpression :: GenParser Char st JSNode
 callExpression = do{ v1 <- memberExpression; v2 <- arguments; 
                       do { v3 <- rest; 
@@ -443,15 +434,6 @@ postfixExpression = do{ v1 <- leftHandSideExpression;
                            }
                         }
 
-{-
-postfixExpression = do{ v1 <- leftHandSideExpression;
-                      -- return (JSNode JS_value (JSValue "postfixExpression") [v1] [] [])}
-                      return v1}
-                <|> do{ v1 <- postfixExpression; rOp "++"; 
-                      return (JSNode JS_value (JSValue "postfixExpression++") [v1] [] [])}
-                <|> do{ v1 <- postfixExpression; rOp "--"; 
-                      return (JSNode JS_value (JSValue "postfixExpression--") [v1] [] [])}
--}
 
 -- <Unary Expression> ::= <Postfix Expression>
 --                      | 'delete' <Unary Expression>
@@ -922,13 +904,9 @@ finally = do{ reserved "finally"; v1 <- block;
 -- <Function Declaration> ::= 'function' Identifier '(' <Formal Parameter List> ')' '{' <Function Body> '}'
 --                          | 'function' Identifier '(' ')' '{' <Function Body> '}'
 functionDeclaration :: GenParser Char st JSNode
-functionDeclaration = try(do {reserved "function"; v1 <- identifier; rOp "("; v2 <- formalParameterList; rOp ")"; 
+functionDeclaration = do {reserved "function"; v1 <- identifier; rOp "("; v2 <- formalParameterList; rOp ")"; 
                           v3 <- functionBody; 
-                          return (JSNode JS_value (JSValue "function") ((v1:v2)++[v3]) [] []) } )
-
-                  <|> do {reserved "function"; v1 <- identifier; rOp "(";  rOp ")"; 
-                          v2 <- functionBody; 
-                          return (JSNode JS_value (JSValue "function_no_params") [v1,v2] [] []) }
+                          return (JSNode JS_value (JSValue "function") ((v1:v2)++[v3]) [] []) } 
                   <?> "functionDeclaration"
 
 
@@ -940,15 +918,19 @@ functionExpression = do{ reserved "function"; rOp "("; optional formalParameterL
 -- <Formal Parameter List> ::= Identifier
 --                           | <Formal Parameter List> ',' Identifier
 formalParameterList :: GenParser Char st [JSNode]
-formalParameterList = sepBy1 identifier (rOp ",")
+formalParameterList = sepBy identifier (rOp ",")
 
 -- <Function Body> ::= '{' <Source Elements> '}'
 --                   | '{' '}'
 functionBody :: GenParser Char st JSNode
-functionBody = try (do{ rOp "{"; rOp "}";
-                   return (JSNode JS_value (JSValue "functionbody") [] [] []) })
-           <|> try(do{ rOp "{"; v1 <- sourceElements; rOp "}";
-                   return (JSNode JS_value (JSValue "functionbody") [v1] [] []) })
+functionBody = do{ rOp "{"; 
+                 do {         
+                      do{ rOp "}";
+                       return (JSNode JS_value (JSValue "functionbody") [] [] []) }
+                  <|> do{ v1 <- sourceElements; rOp "}";
+                          return (JSNode JS_value (JSValue "functionbody") [v1] [] []) }
+                      }
+                 }
            <?> "functionBody"    
 
 -- <Program> ::= <Source Elements>

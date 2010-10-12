@@ -26,11 +26,11 @@ caseHelloWorld =
   @=? doParse functionDeclaration "function Hello(a) {}"
 
 caseHelloWorld2 =  
-  "Parsed:JSNode JS_value (JSValue \"function\") [JSNode JS_value (JSIdentifier \"Hello\") [] [] [],JSNode JS_value (JSIdentifier \"a\") [] [] [],JSNode JS_value (JSValue \"functionbody\") [JSNode JS_value (JSValue \"expression\") [JSNode JS_value (JSValue \"assignmentExpression\") [JSNode JS_value (JSIdentifier \"b\") [] [] [],JSNode JS_value (JSValue \"=\") [] [] [],JSNode JS_value (JSDecimal 1) [] [] []] [] []] [] []] [] []] [] []"
+  "Parsed:JSNode JS_value (JSValue \"function\") [JSNode JS_value (JSIdentifier \"Hello\") [] [] [],JSNode JS_value (JSIdentifier \"a\") [] [] [],JSNode JS_value (JSValue \"functionbody\") [JSNode JS_value (JSValue \"expression\") [JSNode JS_value (JSValue \"assignmentExpression\") [JSNode JS_value (JSValue \"assignmentStart\") [JSNode JS_value (JSValue \"memberExpression'\") [JSNode JS_value (JSIdentifier \"b\") [] [] [],JSNode JS_value (JSValue \"memberExpression\") [] [] []] [] [],JSNode JS_value (JSValue \"=\") [] [] []] [] [],JSNode JS_value (JSValue \"memberExpression'\") [JSNode JS_value (JSDecimal 1) [] [] [],JSNode JS_value (JSValue \"memberExpression\") [] [] []] [] []] [] []] [] []] [] []] [] []"
   @=? doParse functionDeclaration "function Hello(a) {b=1}"
   
 caseSimpleAssignment = 
-  "Parsed:[JSNode JS_BLOCK NoValue [JSNode JS_value (JSValue \"expression\") [JSNode JS_value (JSValue \"assignmentExpression\") [JSNode JS_value (JSIdentifier \"a\") [] [] [],JSNode JS_value (JSValue \"=\") [] [] [],JSNode JS_value (JSDecimal 1) [] [] []] [] []] [] []] [] []]"
+  "Parsed:[JSNode JS_value (JSValue \"expression\") [JSNode JS_value (JSValue \"assignmentExpression\") [JSNode JS_value (JSValue \"assignmentStart\") [JSNode JS_value (JSValue \"memberExpression'\") [JSNode JS_value (JSIdentifier \"a\") [] [] [],JSNode JS_value (JSValue \"memberExpression\") [] [] []] [] [],JSNode JS_value (JSValue \"=\") [] [] []] [] [],JSNode JS_value (JSValue \"memberExpression'\") [JSNode JS_value (JSDecimal 1) [] [] [],JSNode JS_value (JSValue \"memberExpression\") [] [] []] [] []] [] []] [] [],JSNode JS_value (JSValue \"empty\") [] [] []]"
   @=? doParse statementList "a=1;"  
 
 case0_f =
