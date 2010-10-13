@@ -374,12 +374,12 @@ callExpression = do{ v1 <- memberExpression; v2 <- arguments;
                    }
                  where
                    rest =
-                         do{ v1 <- arguments ; 
-                             return (JSNode JS_value (JSValue "callExpression.args") [v1] [] [])}
-                     <|> do{ rOp "["; v1 <- expression; rOp "]"; 
-                             return (JSNode JS_value (JSValue "callExpression[]") [v1] [] [])}
-                     <|> do{ rOp "."; v1 <- identifier; 
-                             return (JSNode JS_value (JSValue "callExpression.") [v1] [] [])}
+                         do{ v1 <- arguments ; v2 <- rest;
+                             return (JSNode JS_value (JSValue "callExpression.args") [v1,v2] [] [])}
+                     <|> do{ rOp "["; v1 <- expression; rOp "]"; v2 <- rest;
+                             return (JSNode JS_value (JSValue "callExpression[]") [v1,v2] [] [])}
+                     <|> do{ rOp "."; v1 <- identifier; v2 <- rest;
+                             return (JSNode JS_value (JSValue "callExpression.") [v1,v2] [] [])}
 
 -- ---------------------------------------------------------------------
 -- From HJS
@@ -417,8 +417,8 @@ argumentList = do{ vals <- sepBy1 assignmentExpression (rOp ",");
 -- <Left Hand Side Expression> ::= <New Expression> 
 --                               | <Call Expression>
 leftHandSideExpression :: GenParser Char st JSNode
-leftHandSideExpression = newExpression
-                     <|> callExpression
+leftHandSideExpression = try (callExpression)
+                     <|> newExpression
                      <?> "leftHandSideExpression"
 
 
@@ -645,6 +645,7 @@ assignmentExpression = try (do {v1 <- assignmentStart; v2 <- assignmentExpressio
                            return (JSNode JS_value (JSValue "assignmentExpression") [v1,v2] [] [])})
                     <|> conditionalExpression
                        
+assignmentStart :: GenParser Char st1 JSNode
 assignmentStart = do {v1 <- leftHandSideExpression; v2 <- assignmentOperator; 
                            return (JSNode JS_value (JSValue "assignmentStart") [v1,v2] [] [])}
 
@@ -941,15 +942,15 @@ program = do {val <- sourceElements; eof; return val}
 -- <Source Elements> ::= <Source Element>
 --                     | <Source Elements>  <Source Element>
 sourceElements :: GenParser Char st JSNode
-{-
+
 sourceElements = do{ val <- many1 sourceElement;
                      return (JSNode JS_BLOCK NoValue val [] []) }
--}
+{-
 sourceElements = sourceElement
           <|> do{ v1 <- sourceElements; v2 <- sourceElement;
                   return (JSNode JS_BLOCK NoValue [v1,v2] [] []) }
           <?> "sourceElements"
-                  
+-}                  
 
 -- <Source Element> ::= <Statement>
 --                    | <Function Declaration>
