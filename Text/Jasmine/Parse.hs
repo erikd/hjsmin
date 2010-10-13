@@ -5,6 +5,9 @@ module Text.Jasmine.Parse
       readJs
     , JasmineSettings (..)
     , defaultJasmineSettings
+    , JSNode(..)  
+    , JSType(..)  
+    , JSValue(..)  
     -- For testing      
     , doParse
     , program  
@@ -51,6 +54,8 @@ instance Applicative Result where
 -- ---------------------------------------------------------------------
 
 data JSNode = JSNode JSType JSValue [JSNode] [JSFunDecl] [JSVarDecl]
+              | JSFunctionBody [JSNode]
+              | JSEmpty
     deriving (Show, Eq, Read, Data, Typeable)
 
 data JSType = JS_SCRIPT | JS_BLOCK | JS_LABEL | JS_FOR_IN | JS_CALL | JS_NEW_WITH_ARGS
@@ -641,13 +646,13 @@ conditionalExpression = do{ v1 <- logicalOrExpression;
 -- <Assignment Expression> ::= <Conditional Expression>
 --                           | <Left Hand Side Expression> <Assignment Operator> <Assignment Expression> 
 assignmentExpression :: GenParser Char st JSNode
-assignmentExpression = try (do {v1 <- assignmentStart; v2 <- assignmentExpression;
-                           return (JSNode JS_value (JSValue "assignmentExpression") [v1,v2] [] [])})
+assignmentExpression = try (do {[v1,v2] <- assignmentStart; v3 <- assignmentExpression;
+                           return (JSNode JS_value (JSValue "assignmentExpression") [v1,v2,v3] [] [])})
                     <|> conditionalExpression
                        
-assignmentStart :: GenParser Char st1 JSNode
+assignmentStart :: GenParser Char st1 [JSNode]
 assignmentStart = do {v1 <- leftHandSideExpression; v2 <- assignmentOperator; 
-                           return (JSNode JS_value (JSValue "assignmentStart") [v1,v2] [] [])}
+                           return [v1,v2]}
 
 -- <Assignment Operator> ::= '=' | '*=' | '/=' | '%=' | '+=' | '-=' | '<<=' | '>>=' | '>>>=' | '&=' | '^=' | '|='
 assignmentOperator :: GenParser Char st JSNode
@@ -747,8 +752,7 @@ initializer = do {rOp "="; val <- assignmentExpression;
 
 -- <Empty Statement> ::= ';'
 emptyStatement :: GenParser Char st JSNode
-emptyStatement = do { rOp ";"; 
-                      return (JSNode JS_value (JSValue "empty") [] [] []) }
+emptyStatement = do { rOp ";"; return JSEmpty }
 
 
 -- <If Statement> ::= 'if' '(' <Expression> ')' <Statement> 
@@ -927,9 +931,9 @@ functionBody :: GenParser Char st JSNode
 functionBody = do{ rOp "{"; 
                  do {         
                       do{ rOp "}";
-                       return (JSNode JS_value (JSValue "functionbody") [] [] []) }
+                       return (JSFunctionBody []) }
                   <|> do{ v1 <- sourceElements; rOp "}";
-                          return (JSNode JS_value (JSValue "functionbody") [v1] [] []) }
+                          return (JSFunctionBody [v1]) }
                       }
                  }
            <?> "functionBody"    
