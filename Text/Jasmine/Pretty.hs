@@ -16,13 +16,13 @@ renderJS (JSEmpty) = text ";"
 -- doParse statementList "a=1;"  
 
 case1 = [JSExpression 
-         [JSNode JS_value (JSValue "assignmentExpression") 
-          [JSIdentifier "a",
-           JSNode JS_value (JSValue "=") [] [] [],
-           JSNode JS_value (JSDecimal 1) [] [] []
-          ] [] []
-         ],
-         JSEmpty]
+         [JSElement "assignmentExpression" 
+          [JSIdentifier "a",JSOperator "=",JSDecimal 1]
+         ]
+        ,JSEmpty
+        ]
+  
+  
   
 
 

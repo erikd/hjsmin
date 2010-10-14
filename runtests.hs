@@ -27,15 +27,15 @@ caseHelloWorld =
   @=? doParse functionDeclaration "function Hello(a) {}"
 
 caseHelloWorld2 =  
-  "Parsed:JSFunction (JSIdentifier \"Hello\") [JSIdentifier \"a\",JSFunctionBody [JSNode JS_BLOCK NoValue [JSExpression [JSNode JS_value (JSValue \"assignmentExpression\") [JSIdentifier \"b\",JSNode JS_value (JSValue \"=\") [] [] [],JSNode JS_value (JSDecimal 1) [] [] []] [] []]] [] []]]"
+  "Parsed:JSFunction (JSIdentifier \"Hello\") [JSIdentifier \"a\",JSFunctionBody [JSNode JS_BLOCK NoValue [JSExpression [JSElement \"assignmentExpression\" [JSIdentifier \"b\",JSOperator \"=\",JSDecimal 1]]] [] []]]"
   @=? doParse functionDeclaration "function Hello(a) {b=1}"
   
 caseSimpleAssignment = 
-  "Parsed:[JSExpression [JSNode JS_value (JSValue \"assignmentExpression\") [JSIdentifier \"a\",JSNode JS_value (JSValue \"=\") [] [] [],JSNode JS_value (JSDecimal 1) [] [] []] [] []],JSEmpty]"
+  "Parsed:[JSExpression [JSElement \"assignmentExpression\" [JSIdentifier \"a\",JSOperator \"=\",JSDecimal 1]],JSEmpty]"
   @=? doParse statementList "a=1;"  
 
 case0_f =
-  "Parsed:JSNode JS_BLOCK NoValue [JSFunction (JSIdentifier \"Hello\") [JSIdentifier \"a\",JSFunctionBody [JSNode JS_BLOCK NoValue [JSExpression [JSIdentifier \"ExprArray\",JSNode JS_value (JSValue \"arguments\") [JSNode JS_value (JSValue \"argumentList\") [JSNode JS_value (JSDecimal 1) [] [] [],JSNode JS_value (JSDecimal 1) [] [] []] [] []] [] []],JSEmpty] [] []]]] [] []"
+  "Parsed:JSNode JS_BLOCK NoValue [JSFunction (JSIdentifier \"Hello\") [JSIdentifier \"a\",JSFunctionBody [JSNode JS_BLOCK NoValue [JSExpression [JSIdentifier \"ExprArray\",JSNode JS_value (JSValue \"arguments\") [JSNode JS_value (JSValue \"argumentList\") [JSDecimal 1,JSDecimal 1] [] []] [] []],JSEmpty] [] []]]] [] []"
   @=? doParse program "function Hello(a) {ExprArray(1,1);}"
   
 case01_semi1 =

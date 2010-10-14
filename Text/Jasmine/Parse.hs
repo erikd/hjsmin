@@ -54,11 +54,14 @@ instance Applicative Result where
 -- ---------------------------------------------------------------------
 
 data JSNode = JSNode JSType JSValue [JSNode] [JSFunDecl] [JSVarDecl]
+              | JSElement String [JSNode]
               | JSFunction JSNode [JSNode]
               | JSFunctionBody [JSNode]
               | JSExpression [JSNode]
               | JSEmpty
               | JSIdentifier String  
+              | JSDecimal Integer   
+              | JSOperator String  
     deriving (Show, Eq, Read, Data, Typeable)
 
 data JSType = JS_SCRIPT | JS_BLOCK | JS_LABEL | JS_FOR_IN | JS_CALL | JS_NEW_WITH_ARGS
@@ -68,7 +71,7 @@ data JSType = JS_SCRIPT | JS_BLOCK | JS_LABEL | JS_FOR_IN | JS_CALL | JS_NEW_WIT
             | JS_value 
     deriving (Show, Eq, Read, Data, Typeable)
 
-data JSValue = NoValue | JSValue String | JSDecimal Integer | JSHexInteger Integer
+data JSValue = NoValue | JSValue String | JSHexInteger Integer
     deriving (Show, Eq, Read, Data, Typeable)
 
 data JSFunDecl = JSFunDecl String
@@ -229,7 +232,7 @@ booleanLiteral = do{ reserved "true" ;
 numericLiteral :: GenParser Char st JSNode
 numericLiteral = do {val <- decimalLiteral; 
                      -- return [""]} -- TODO: proper return
-                     return (JSNode JS_value (JSDecimal val) [] [] [])}
+                     return (JSDecimal val)}
              <|> do {val <- hexIntegerLiteral; 
                      -- return [""]} -- TODO: proper return
                      return (JSNode JS_value (JSHexInteger val) [] [] [])}
@@ -635,7 +638,7 @@ conditionalExpression = do{ v1 <- logicalOrExpression;
 --                           | <Left Hand Side Expression> <Assignment Operator> <Assignment Expression> 
 assignmentExpression :: GenParser Char st [JSNode]
 assignmentExpression = try (do {v1 <- assignmentStart; v2 <- assignmentExpression;
-                           return [(JSNode JS_value (JSValue "assignmentExpression") (v1++v2) [] [])]})
+                           return [(JSElement "assignmentExpression" (v1++v2))]})
                     <|> conditionalExpression
                        
 assignmentStart :: GenParser Char st1 [JSNode]
@@ -648,7 +651,7 @@ assignmentOperator = rOp' "=" <|> rOp' "*=" <|> rOp' "/=" <|> rOp' "%=" <|> rOp'
                  <|> rOp' "<<=" <|> rOp' ">>=" <|> rOp' ">>>=" <|> rOp' "&=" <|> rOp' "^=" <|> rOp' "|="
                      
 rOp' :: String -> GenParser Char st JSNode
-rOp' x = do{ rOp x; return $ JSNode JS_value (JSValue x) [] [] []}
+rOp' x = do{ rOp x; return $ JSOperator x}
 
 -- <Expression> ::= <Assignment Expression>
 --                | <Expression> ',' <Assignment Expression>
@@ -961,6 +964,7 @@ m = do args <- getArgs
 
 -- ---------------------------------------------------------------------
 
+flatten :: [[a]] -> [a]
 flatten xs = foldl' (++) [] xs
 
 -- ---------------------------------------------------------------------
