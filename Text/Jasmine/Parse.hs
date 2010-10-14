@@ -20,20 +20,21 @@ module Text.Jasmine.Parse
 
 -- ---------------------------------------------------------------------
 
-import Prelude hiding (catch)
-import System.Environment
-import Control.Applicative (Applicative (..))
-import Control.Monad
---import Control.Arrow
-import Data.Data
-import Data.List 
-import Text.ParserCombinators.Parsec hiding (Line)
 
 -- import Text.Parsec
---import qualified Text.Parsec.Token as P
-import qualified Text.ParserCombinators.Parsec.Token as P
-import Text.ParserCombinators.Parsec.Language
+--import Control.Arrow
 --import Text.Parsec.Language (haskellDef)
+--import qualified Text.Parsec.Token as P
+import Control.Applicative (Applicative (..))
+import Control.Monad
+import Data.Char
+import Data.Data
+import Data.List 
+import Prelude hiding (catch)
+import System.Environment
+import Text.ParserCombinators.Parsec hiding (Line)
+import Text.ParserCombinators.Parsec.Language
+import qualified Text.ParserCombinators.Parsec.Token as P
 
 
 -- ---------------------------------------------------------------------
@@ -59,6 +60,7 @@ data JSNode = JSNode JSType JSValue [JSNode] [JSFunDecl] [JSVarDecl]
               | JSFunctionBody [JSNode]
               | JSExpression [JSNode]
               | JSEmpty
+              | JSStringLiteral Char String  
               | JSIdentifier String  
               | JSDecimal Integer   
               | JSOperator String  
@@ -154,9 +156,12 @@ javascriptDef = javaStyle
                      ")"	, -- "RIGHT_PAREN",
                      "@*/"	  -- "CONDCOMMENT_END"
                 ]
+               , opLetter = oneOf "!%&()*+,-./:;<=>?[]^{|}~"
+               , opStart = opLetter javascriptDef 
                                   
                 , caseSensitive  = True
 		}
+                
         
 -- ---------------------------------------------------------------------
 -- | A lexer for the javascript language.
@@ -171,17 +176,38 @@ identifier  = do{ val <- P.identifier lexer;
 reserved :: String -> CharParser st ()
 reserved    = P.reserved lexer
 
-rOp :: String -> GenParser Char st ()
-rOp x = P.reservedOp lexer x
-       
+whiteSpace :: CharParser st ()
+whiteSpace = P.whiteSpace lexer
+
+
+-- Do not use the lexer, it is greedy and consumes following symbols, e.g. "!"
+rOp :: [Char] -> CharParser st ()
+rOp []     = fail "trying to parse empty token"
+rOp [x]    = do{ _ <- char x; optional whiteSpace; return () }
+rOp (x:xs) = do{ _ <- char x; rOp xs;}
+                 
 -- ---------------------------------------------------------------------
 -- The parser, based on the gold parser for Javascript
 -- http://www.devincook.com/GOLDParser/grammars/files/JavaScript.zip
  
--- Filling the gaps       
-stringLiteral :: CharParser st JSNode
-stringLiteral = do{ val <- P.stringLiteral lexer;
-                   return (JSNode JS_value (JSValue val) [] [] [])}
+-- ------------------------------------------------------------
+--Modified from HJS
+
+stringLiteral :: GenParser Char st JSNode
+stringLiteral = try( do { _ <- char '"'; val<- many stringCharDouble; _ <- char '"';
+                     return (JSStringLiteral '"' val)})
+            <|> do { _ <- char '\''; val<- many stringCharSingle; _ <- char '\'';
+                     return (JSStringLiteral '\'' val)}
+
+stringCharDouble :: CharParser st Char
+stringCharDouble = satisfy (\c -> isPrint c && c /= '"')
+
+stringCharSingle :: CharParser st Char
+stringCharSingle = satisfy (\c -> isPrint c && c /= '\'')
+
+
+
+-- ------------------------------------------------------------
 
 
 decimalLiteral :: CharParser st Integer
@@ -343,10 +369,10 @@ memberExpression' = try(do{v1 <- primaryExpression; v2 <- rest;
                         return (v1:v2)})
 
                 where
-                  rest = do{ rOp "["; v1 <- expression; rOp "]"; 
-                             return [(JSNode JS_value (JSValue "memberExpression[]") [v1] [] [])]}
-                     <|> do{ rOp "."; v1 <- identifier ; 
-                             return [(JSNode JS_value (JSValue "memberExpression.") [v1] [] [])]}
+                  rest = do{ rOp "["; v1 <- expression; rOp "]"; v2 <- rest;
+                             return [(JSNode JS_value (JSValue "memberExpression[]") (v1:v2) [] [])]}
+                     <|> do{ rOp "."; v1 <- identifier ; v2 <- rest;
+                             return [(JSNode JS_value (JSValue "memberExpression.") (v1:v2) [] [])]}
                      <|> return []
                          
 
@@ -549,14 +575,14 @@ relationalExpression = do{ v1 <- shiftExpression;
 equalityExpression :: GenParser Char st [JSNode]
 equalityExpression = do{ v1 <- relationalExpression;
                          do {
-                              do{ rOp "=="; v2 <- relationalExpression;
-                                  return [(JSNode JS_value (JSValue "equalityExpression==") (v1++v2) [] [])]}
-                          <|> do{ rOp "!="; v2 <- relationalExpression;
-                                  return [(JSNode JS_value (JSValue "equalityExpression!=") (v1++v2) [] [])]}
-                          <|> do{ rOp "==="; v2 <- relationalExpression;
-                                  return [(JSNode JS_value (JSValue "equalityExpression===") (v1++v2) [] [])]}
-                          <|> do{ rOp "!=="; v2 <- relationalExpression;
-                                  return [(JSNode JS_value (JSValue "equalityExpression!==") (v1++v2) [] [])]}
+                              try(do{ rOp "=="; v2 <- relationalExpression;
+                                  return [(JSNode JS_value (JSValue "equalityExpression==") (v1++v2) [] [])]})
+                          <|> try(do{ rOp "!="; v2 <- relationalExpression;
+                                  return [(JSNode JS_value (JSValue "equalityExpression!=") (v1++v2) [] [])]})
+                          <|> try(do{ rOp "==="; v2 <- relationalExpression;
+                                  return [(JSNode JS_value (JSValue "equalityExpression===") (v1++v2) [] [])]})
+                          <|> try(do{ rOp "!=="; v2 <- relationalExpression;
+                                  return [(JSNode JS_value (JSValue "equalityExpression!==") (v1++v2) [] [])]})
                           <|> return v1
                             }
                          }
@@ -680,7 +706,7 @@ statement = block
         <|> expression 
         <|> variableStatement
         <|> emptyStatement 
-        <|> ifElseStatement
+        <|> try(ifElseStatement)
         <|> ifStatement
         <|> iterationStatement
         <|> continueStatement 

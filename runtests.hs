@@ -16,7 +16,8 @@ testSuite = testGroup "Text.Jasmine.Parse"
     , testCase "helloWorld2"      caseHelloWorld2  
     , testCase "simpleAssignment" caseSimpleAssignment
     , testCase "0_f.js"           case0_f
-    , testCase "case01_semi1.js"  case01_semi1 
+    , testCase "01_semi1.js"      case01_semi1 
+    , testCase "min_100_animals"  case_min_100_animals
     ]
 
 caseFirst :: Assertion
@@ -48,5 +49,10 @@ case01_semi1 =
     "{{}} four;\n"++
     "// five\n"++
     "five")
+  
+case_min_100_animals =
+  ""
+  @=? doParse program 
+  "function Animal(name){if(!name)throw new Error('Must specify an animal name');this.name=name};Animal.prototype.toString=function(){return this.name};o=new Animal(\"bob\");o.toString()==\"bob\""
   
 -- EOF
