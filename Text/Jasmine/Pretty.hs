@@ -15,16 +15,17 @@ renderJS (JSEmpty) = text ";"
 
 -- doParse statementList "a=1;"  
 case1 = [JSNode JS_value (JSValue "expression") 
-          [JSNode JS_value (JSValue "assignmentExpression") 
-           [JSNode JS_value (JSValue "memberExpression'") 
-            [JSNode JS_value (JSIdentifier "a") [] [] [],
-             JSNode JS_value (JSValue "memberExpression") [] [] []] [] [],
-            JSNode JS_value (JSValue "=") [] [] [],
-            JSNode JS_value (JSValue "memberExpression'") 
-            [JSNode JS_value (JSDecimal 1) [] [] [],
-             JSNode JS_value (JSValue "memberExpression") [] [] []] [] []] [] []] [] [],
+         [JSNode JS_value (JSValue "assignmentExpression") 
+          [JIdentifier "a",
+           JSNode JS_value (JSValue "memberExpression") [] [] [],
+           JSNode JS_value (JSValue "=") [] [] [],
+           JSNode JS_value (JSValue "multiplicativeExpression%") 
+             [JSNode JS_value (JSDecimal 1) [] [] [],
+              JSNode JS_value (JSValue "memberExpression") [] [] []] 
+           [] []] [] []] [] [],
          JSEmpty]
-                                   
+
+
 
 
 

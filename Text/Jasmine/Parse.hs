@@ -54,8 +54,10 @@ instance Applicative Result where
 -- ---------------------------------------------------------------------
 
 data JSNode = JSNode JSType JSValue [JSNode] [JSFunDecl] [JSVarDecl]
+              | JSFunction JSNode [JSNode]
               | JSFunctionBody [JSNode]
               | JSEmpty
+              | JSIdentifier String  
     deriving (Show, Eq, Read, Data, Typeable)
 
 data JSType = JS_SCRIPT | JS_BLOCK | JS_LABEL | JS_FOR_IN | JS_CALL | JS_NEW_WITH_ARGS
@@ -65,7 +67,7 @@ data JSType = JS_SCRIPT | JS_BLOCK | JS_LABEL | JS_FOR_IN | JS_CALL | JS_NEW_WIT
             | JS_value 
     deriving (Show, Eq, Read, Data, Typeable)
 
-data JSValue = NoValue | JSValue String | JSIdentifier String | JSDecimal Integer | JSHexInteger Integer
+data JSValue = NoValue | JSValue String | JSDecimal Integer | JSHexInteger Integer
     deriving (Show, Eq, Read, Data, Typeable)
 
 data JSFunDecl = JSFunDecl String
@@ -160,7 +162,7 @@ lexer = P.makeTokenParser javascriptDef
       
 identifier :: CharParser st JSNode
 identifier  = do{ val <- P.identifier lexer;
-                  return (JSNode JS_value (JSIdentifier val) [] [] [])}
+                  return (JSIdentifier val)}
 
 reserved :: String -> CharParser st ()
 reserved    = P.reserved lexer
@@ -896,7 +898,7 @@ finally = do{ reserved "finally"; v1 <- block;
 functionDeclaration :: GenParser Char st JSNode
 functionDeclaration = do {reserved "function"; v1 <- identifier; rOp "("; v2 <- formalParameterList; rOp ")"; 
                           v3 <- functionBody; 
-                          return (JSNode JS_value (JSValue "function") ((v1:v2)++[v3]) [] []) } 
+                          return (JSFunction v1 (v2++[v3])) } 
                   <?> "functionDeclaration"
 
 
