@@ -59,7 +59,10 @@ data JSNode = JSNode JSType JSValue [JSNode] [JSFunDecl] [JSVarDecl]
               | JSFunction JSNode [JSNode]
               | JSFunctionBody [JSNode]
               | JSExpression [JSNode]
+              | JSIf JSNode JSNode  
+              | JSIfElse JSNode JSNode JSNode 
               | JSEmpty
+              | JSUnary String  
               | JSStringLiteral Char String  
               | JSIdentifier String  
               | JSDecimal Integer   
@@ -189,6 +192,7 @@ rOp (x:xs) = do{ _ <- char x; rOp xs;}
                  
 -- ---------------------------------------------------------------------
 
+autoSemi :: GenParser Char st ()
 autoSemi = try (rOp ";") <|> lookAhead (rOp "}")
 
 -- ---------------------------------------------------------------------
@@ -477,24 +481,23 @@ unaryExpression :: GenParser Char st [JSNode]
 unaryExpression = do{ v1 <- postfixExpression; 
                       return v1}
               <|> do{ reserved "delete"; v1 <- unaryExpression;
-                      return ((JSNode JS_value (JSValue "unaryExpression.delete") [] [] []):v1)}
+                      return ((JSUnary "delete"):v1)}
               <|> do{ reserved "void";   v1 <- unaryExpression;
-                      return ((JSNode JS_value (JSValue "unaryExpression.void") [] [] []):v1)}
+                      return ((JSUnary "void"):v1)}
               <|> do{ reserved "typeof"; v1 <- unaryExpression;
-                      return ((JSNode JS_value (JSValue "unaryExpression.typeof") [] [] []):v1)}
+                      return ((JSUnary "typeof"):v1)}
               <|> do{ rOp "++"; v1 <- unaryExpression;
-                      return ((JSNode JS_value (JSValue "unaryExpression++") [] [] []):v1)}
+                      return ((JSUnary "++"):v1)}
               <|> do{ rOp "--"; v1 <- unaryExpression;
-                      return ((JSNode JS_value (JSValue "unaryExpression--") [] [] []):v1)}
+                      return ((JSUnary "--"):v1)}
               <|> do{ rOp "+"; v1 <- unaryExpression;
-                      return ((JSNode JS_value (JSValue "unaryExpression+") [] [] []):v1)}
+                      return ((JSUnary "+"):v1)}
               <|> do{ rOp "-"; v1 <- unaryExpression;
-                      return ((JSNode JS_value (JSValue "unaryExpression-") [] [] []):v1)}
+                      return ((JSUnary "-"):v1)}
               <|> do{ rOp "~"; v1 <- unaryExpression;
-                      return ((JSNode JS_value (JSValue "unaryExpression~") [] [] []):v1)}
+                      return ((JSUnary "~"):v1)}
               <|> do{ rOp "!"; v1 <- unaryExpression;
-                      return ((JSNode JS_value (JSValue "unaryExpression!") [] [] []):v1)}
-
+                      return ((JSUnary "!"):v1)}
 
 -- <Multiplicative Expression> ::= <Unary Expression>
 --                               | <Unary Expression> '*' <Multiplicative Expression> 
@@ -780,12 +783,12 @@ emptyStatement = do { rOp ";"; return JSEmpty }
 -- <If Statement> ::= 'if' '(' <Expression> ')' <Statement> 
 ifStatement :: GenParser Char st JSNode
 ifStatement = do{ reserved "if"; rOp "("; v1 <- expression; rOp ")"; v2 <- statement;
-                  return (JSNode JS_value (JSValue "if") [v1,v2] [] []) }
+                  return (JSIf v1 v2) }
 
 -- <If Else Statement> ::= 'if' '(' <Expression> ')' <Statement> 'else' <Statement>
 ifElseStatement :: GenParser Char st JSNode
 ifElseStatement = do{ reserved "if"; rOp "("; v1 <- expression; rOp ")"; v2 <- statement; reserved "else"; v3 <- statement ;
-                      return (JSNode JS_value (JSValue "if_else") [v1,v2,v3] [] []) }
+                      return (JSIfElse v1 v2 v3) }
 
 
 -- <Iteration Statement> ::= 'do' <Statement> 'while' '(' <Expression> ')' ';'
