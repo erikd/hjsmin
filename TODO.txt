@@ -14,16 +14,32 @@ Examples of parsers
 GOLD Parser, using the Javascript.grm from
 http://www.devincook.com/GOLDParser/grammars/index.htm
 
--------------------------
+http://oss.org.cn/ossdocs/web/js/js20/formal/parser-grammar.html
 
-- Seems rOp consumes multiple of the same char.
-  e.g (rOp ",") will consume one or more comma's.  Need to replace with something else
+-------------------------
 
 - Generate output using standard pretty print library, so it can be
   used with various backends
 
-- Why does identifier consume everything after it?
-  doParse identifier "ExpArray(1,1);}blahwhoohick"
-  "Parsed:JSNode JS_value (JSIdentifier \"ExpArray\") [] [] []"
+
+- Sort out semicolon insertion, as per http://oss.org.cn/ossdocs/web/js/js20/rationale/syntax.html
+  Also: http://inimino.org/~inimino/blog/javascript_semicolons
+
+  Grammatical Semicolon Insertion
+
+    Semicolons before a closing } and the end of the program are
+    optional in both JavaScript 1.5 and 2.0. In addition, the
+    JavaScript 2.0 parser allows semicolons to be omitted before the
+    else of an if-else statement and before the while of a do-while
+    statement.
+
+  Line-Break Semicolon Insertion
+
+    If the first through the nth tokens of a JavaScript program form
+    are grammatically valid but the first through the n+1st tokens are
+    not and there is a line break between the nth tokens and the n+1st
+    tokens, then the parser tries to parse the program again after
+    inserting a VirtualSemicolon token between the nth and the n+1st
+    tokens.
 
 EOF

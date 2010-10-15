@@ -180,12 +180,17 @@ whiteSpace :: CharParser st ()
 whiteSpace = P.whiteSpace lexer
 
 
--- Do not use the lexer, it is greedy and consumes following symbols, e.g. "!"
+-- Do not use the lexer, it is greedy and consumes subsequent symbols, 
+--   e.g. "!" in a==!b
 rOp :: [Char] -> CharParser st ()
 rOp []     = fail "trying to parse empty token"
 rOp [x]    = do{ _ <- char x; optional whiteSpace; return () }
 rOp (x:xs) = do{ _ <- char x; rOp xs;}
                  
+-- ---------------------------------------------------------------------
+
+autoSemi = try (rOp ";") <|> lookAhead (rOp "}")
+
 -- ---------------------------------------------------------------------
 -- The parser, based on the gold parser for Javascript
 -- http://www.devincook.com/GOLDParser/grammars/files/JavaScript.zip
@@ -790,15 +795,15 @@ ifElseStatement = do{ reserved "if"; rOp "("; v1 <- expression; rOp ")"; v2 <- s
 --                         | 'for' '(' <Left Hand Side Expression> in <Expression> ')' <Statement> 
 --                         | 'for' '(' 'var' <Variable Declaration> in <Expression> ')' <Statement> 
 iterationStatement :: GenParser Char st JSNode
-iterationStatement = do{ reserved "do"; v1 <- statement; reserved "while"; rOp "("; v2 <- expression; rOp ")"; rOp ";" ; 
+iterationStatement = do{ reserved "do"; v1 <- statement; reserved "while"; rOp "("; v2 <- expression; rOp ")"; autoSemi ; 
                          return (JSNode JS_value (JSValue "do_while") [v1,v2] [] []) }
                  <|> do{ reserved "while"; rOp "("; v1 <- expression; rOp ")"; v2 <- statement; 
                          return (JSNode JS_value (JSValue "while") [v1,v2] [] []) }
-                 <|> do{ reserved "for"; rOp "("; v1 <- expression; rOp ";"; v2 <- expression; rOp ";"; 
+                 <|> do{ reserved "for"; rOp "("; v1 <- expression; autoSemi; v2 <- expression; autoSemi; 
                          v3 <- expression; rOp ")"; v4 <- statement; 
                          return (JSNode JS_value (JSValue "for") [v1,v2,v3,v4] [] []) }
-                 <|> do{ reserved "for"; rOp "("; reserved "var"; v1 <- variableDeclarationList; rOp ";"; v2 <- expression; 
-                         rOp ";"; v3 <- expression; rOp ")"; v4 <- statement; 
+                 <|> do{ reserved "for"; rOp "("; reserved "var"; v1 <- variableDeclarationList; autoSemi; v2 <- expression; 
+                         autoSemi; v3 <- expression; rOp ")"; v4 <- statement; 
                          return (JSNode JS_value (JSValue "for_var") [v1,v2,v3,v4] [] []) }
                  <|> do{ reserved "for"; rOp "("; v1 <- leftHandSideExpression; reserved "in"; v2 <- expression; rOp ")"; 
                          v3 <- statement; 
@@ -811,33 +816,36 @@ iterationStatement = do{ reserved "do"; v1 <- statement; reserved "while"; rOp "
 -- <Continue Statement> ::= 'continue' ';'
 --                        | 'continue' Identifier ';'
 continueStatement :: GenParser Char st JSNode
-continueStatement = do {reserved "continue"; rOp ";"; 
+continueStatement = do {reserved "continue"; autoSemi; 
                         return (JSNode JS_value (JSValue "continue") [] [] []) }
-                <|> do {reserved "continue"; val <- identifier; rOp ";"; 
+                <|> do {reserved "continue"; val <- identifier; autoSemi; 
                         return (JSNode JS_value (JSValue "continue") [val] [] []) }
 
 
 -- <Break Statement> ::= 'break' ';'
 --                        | 'break' Identifier ';'
 breakStatement :: GenParser Char st JSNode
-breakStatement = do {reserved "break"; rOp ";"; 
+breakStatement = do {reserved "break"; autoSemi; 
                      return (JSNode JS_value (JSValue "break") [] [] []) }
-            <|>  do {reserved "break"; val <- identifier; rOp ";"; 
+            <|>  do {reserved "break"; val <- identifier; autoSemi; 
                      return (JSNode JS_value (JSValue "return") [val] [] []) }
 
 
 -- <Return Statement> ::= 'return' ';'
 --                        | 'return' <Expression> ';'
 returnStatement :: GenParser Char st JSNode
-returnStatement = do {reserved "return"; rOp ";"; 
-                      return (JSNode JS_value (JSValue "return") [] [] []) }
-              <|> do {reserved "return"; val <- expression; rOp ";"; 
-                      return (JSNode JS_value (JSValue "return") [val] [] []) }
+returnStatement = do {reserved "return"; 
+                      do{
+                            do {autoSemi; return (JSNode JS_value (JSValue "return") [] [] []) }
+                        <|> do {val <- expression; autoSemi; 
+                                return (JSNode JS_value (JSValue "return") [val] [] []) }
+                        }
+                      }
 
 
 -- <With Statement> ::= 'with' '(' <Expression> ')' <Statement> ';'
 withStatement :: GenParser Char st JSNode
-withStatement = do{ reserved "with"; rOp "("; v1 <- expression; rOp ")"; v2 <- statement; rOp ";"; 
+withStatement = do{ reserved "with"; rOp "("; v1 <- expression; rOp ")"; v2 <- statement; autoSemi; 
                     return (JSNode JS_value (JSValue "with") [v1,v2] [] []) }
 
 
