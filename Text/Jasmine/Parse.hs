@@ -55,8 +55,11 @@ instance Applicative Result where
 -- ---------------------------------------------------------------------
 
 data JSNode = JSNode JSType JSValue [JSNode] [JSFunDecl] [JSVarDecl]
+              | JSBlock [JSNode]
+              | JSArguments [JSNode]  
+              | JSSourceElements [JSNode]
               | JSElement String [JSNode]
-              | JSFunction JSNode [JSNode]
+              | JSFunction JSNode [JSNode] JSNode -- name, parameter list, body
               | JSFunctionBody [JSNode]
               | JSExpression [JSNode]
               | JSIf JSNode JSNode  
@@ -435,15 +438,16 @@ callExpr = do { x <- memberExpr;
 --               | '(' <Argument List> ')'
 arguments :: GenParser Char st JSNode
 arguments = try(do{ rOp "(";  rOp ")";
-                return (JSNode JS_value (JSValue "arguments") [] [] [])})
+                return (JSArguments [])})
         <|> do{ rOp "("; v1 <- argumentList; rOp ")";
-                return (JSNode JS_value (JSValue "arguments") [v1] [] [])}
+                return (JSArguments v1)}
 
 -- <Argument List> ::= <Assignment Expression>
 --                   | <Argument List> ',' <Assignment Expression>
-argumentList :: GenParser Char st JSNode
+argumentList :: GenParser Char st [JSNode]
 argumentList = do{ vals <- sepBy1 assignmentExpression (rOp ",");
-                   return (JSNode JS_value (JSValue "argumentList") (flatten vals) [] [])}
+                   --return (JSNode JS_value (JSValue "argumentList") (flatten vals) [] [])}
+                   return (flatten vals)}
 
 
 -- <Left Hand Side Expression> ::= <New Expression> 
@@ -732,21 +736,15 @@ statement = block
 --            | '{' <Statement List> '}'
 block :: GenParser Char st JSNode
 block = try (do {rOp "{"; rOp "}"; 
-            return (JSNode JS_BLOCK NoValue [] [] []) })
+            return (JSBlock [])})
     <|> do {rOp "{"; val <- statementList; rOp "}"; 
-            return (JSNode JS_BLOCK NoValue val [] []) }
+            return (JSBlock val)}
     <?> "block"
 
 
 -- <Statement List> ::= <Statement>
 --                    | <Statement List> <Statement>
 statementList :: GenParser Char st [JSNode]
-{-
-statementList = try(do { v1 <- statement;
-                    return [JSNode JS_BLOCK NoValue [v1] [] []] })
-             <|> try(do { v1 <- statementList; v2 <- statement;
-                    return [JSNode JS_BLOCK NoValue (v1++[v2]) [] []] })
--}
 statementList = many1 statement
 
 -- <Variable Statement> ::= var <Variable Declaration List> ';'
@@ -939,7 +937,7 @@ finally = do{ reserved "finally"; v1 <- block;
 functionDeclaration :: GenParser Char st JSNode
 functionDeclaration = do {reserved "function"; v1 <- identifier; rOp "("; v2 <- formalParameterList; rOp ")"; 
                           v3 <- functionBody; 
-                          return (JSFunction v1 (v2++[v3])) } 
+                          return (JSFunction v1 v2 v3) } 
                   <?> "functionDeclaration"
 
 
@@ -969,20 +967,14 @@ functionBody = do{ rOp "{";
 -- <Program> ::= <Source Elements>
 program :: GenParser Char st JSNode
 program = do {val <- sourceElements; eof; return val}
---program = sourceElements
+
 
 -- <Source Elements> ::= <Source Element>
 --                     | <Source Elements>  <Source Element>
 sourceElements :: GenParser Char st JSNode
-
 sourceElements = do{ val <- many1 sourceElement;
-                     return (JSNode JS_BLOCK NoValue val [] []) }
-{-
-sourceElements = sourceElement
-          <|> do{ v1 <- sourceElements; v2 <- sourceElement;
-                  return (JSNode JS_BLOCK NoValue [v1,v2] [] []) }
-          <?> "sourceElements"
--}                  
+                     return (JSSourceElements val)}
+                 
 
 -- <Source Element> ::= <Statement>
 --                    | <Function Declaration>
@@ -996,7 +988,7 @@ sourceElement = functionDeclaration
 
 m :: IO ()
 m = do args <- getArgs
-       putStrLn (readJs (args !! 0))
+       putStrLn (show $ readJs (args !! 0))
 
 
 -- ---------------------------------------------------------------------
@@ -1010,25 +1002,25 @@ main :: IO ()
 main =
   do args <- getArgs
      x <- readFile (args !! 0)
-     putStrLn (readJs x)            
+     putStrLn (show $ doParse program x)            
     
 -- ---------------------------------------------------------------------
           
-readJs :: String -> String
-readJs input = case parse program "js" input of
-    Left err -> "No match: " ++ show err
-    Right val -> "Parsed" ++ show(val)
+--readJs :: String -> String
+readJs :: [Char] -> JSNode
+readJs input = case parse (p' program) "js" input of
+    Left err -> error ("Parse failed:" ++ show err)
+    Right val -> val
 
 -- ---------------------------------------------------------------------
     
-doParse :: (Show a,Show tok) => GenParser tok () a -> [tok] -> [Char]
+doParse :: (Show tok) => GenParser tok () a -> [tok] -> a
 doParse p input = case parse (p' p) "js" input of
-    Left err -> "No match: " ++ show err
-    Right val -> "Parsed:" ++ show(val)
+    Left err -> error ("Parse failed:" ++ show err)
+    Right val -> val
 
 -- ---------------------------------------------------------------------
     
---p' :: GenParser Char st JSNode
 p' :: (Show tok) => GenParser tok st b -> GenParser tok st b
 p' p = do {val <- p; eof; return val}
 
