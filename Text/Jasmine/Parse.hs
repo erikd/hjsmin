@@ -62,11 +62,11 @@ data JSNode = JSArguments [JSNode]
               | JSContinue [JSNode]
               | JSDecimal Integer   
               | JSDefault [JSNode]  
-              | JSDoWhile JSNode JSNode
+              | JSDoWhile JSNode JSNode JSNode
               | JSElement String [JSNode]
               | JSElementList [JSNode]  
               | JSElision [JSNode]  
-              | JSEmpty
+              | JSEmpty JSNode
               | JSExpression [JSNode]
               | JSExpressionBinary String [JSNode] [JSNode]
               | JSExpressionParen JSNode
@@ -79,6 +79,7 @@ data JSNode = JSArguments [JSNode]
               | JSForVarIn JSNode JSNode JSNode 
               | JSFunction JSNode [JSNode] JSNode -- name, parameter list, body
               | JSFunctionBody [JSNode]
+              | JSFunctionExpression [JSNode] JSNode -- name, parameter list, body                
               | JSHexInteger Integer  
               | JSIdentifier String  
               | JSIf JSNode JSNode  
@@ -101,7 +102,7 @@ data JSNode = JSArguments [JSNode]
               | JSVarDecl JSNode [JSNode]
               | JSVariables [JSNode]  
               | JSWhile JSNode JSNode
-              | JSWith JSNode JSNode
+              | JSWith JSNode [JSNode]
     deriving (Show, Eq, Read, Data, Typeable)
 
 data JSType = JS_SCRIPT | JS_BLOCK | JS_LABEL | JS_FOR_IN | JS_CALL | JS_NEW_WITH_ARGS
@@ -218,8 +219,24 @@ rOp (x:xs) = do{ _ <- char x; rOp xs;}
                  
 -- ---------------------------------------------------------------------
 
-autoSemi :: GenParser Char st ()
-autoSemi = try (rOp ";") <|> lookAhead (rOp "}")
+-- Need to deal with the following cases
+-- 1. Missing semi, because following } => empty
+-- 2. Additional semi, with following } => empty
+-- 3. semi with no following }          => semi
+
+autoSemi :: GenParser Char st JSNode
+autoSemi = try (do { rOp ";"; lookAhead (rOp "}");
+                     return (JSLiteral "");})
+           <|> try (do{ rOp ";"; 
+                        return (JSLiteral ";");})
+           <|> try (do {lookAhead (rOp "}");
+                        return (JSLiteral "");})
+
+autoSemi' :: GenParser Char st JSNode
+autoSemi' = try (do { rOp ";"; lookAhead (rOp "}");
+                     return (JSLiteral "");})
+           <|> try (do{ rOp ";"; 
+                        return (JSLiteral ";");})
 
 -- ---------------------------------------------------------------------
 -- The parser, based on the gold parser for Javascript
@@ -388,7 +405,7 @@ propertyName = identifier
 --                        | 'new' <Member Expression> <Arguments>
 memberExpression :: GenParser Char st [JSNode]
 memberExpression = try(do{ reserved "new"; v1 <- memberExpression; v2 <- arguments; 
-                        return (((JSLiteral "new"):v1)++[v2])})
+                        return (((JSLiteral "new "):v1)++[v2])}) -- xxxx
                 <|> memberExpression'
 
 memberExpression' :: GenParser Char st [JSNode]
@@ -411,7 +428,7 @@ memberExpression' = try(do{v1 <- primaryExpression; v2 <- rest;
 newExpression :: GenParser Char st [JSNode]
 newExpression = memberExpression
            <|> do{ reserved "new"; val <- newExpression;
-                   return ((JSLiteral "new"):val)}
+                   return ((JSLiteral "new "):val)}
 
 -- <Call Expression> ::= <Member Expression> <Arguments>
 --                     | <Call Expression> <Arguments> 
@@ -792,7 +809,7 @@ initializer = do {rOp "="; val <- assignmentExpression;
 
 -- <Empty Statement> ::= ';'
 emptyStatement :: GenParser Char st JSNode
-emptyStatement = do { rOp ";"; return JSEmpty }
+emptyStatement = do { v1 <- autoSemi'; return (JSEmpty v1)}
 
 
 -- <If Statement> ::= 'if' '(' <Expression> ')' <Statement> 
@@ -813,15 +830,15 @@ ifElseStatement = do{ reserved "if"; rOp "("; v1 <- expression; rOp ")"; v2 <- s
 --                         | 'for' '(' <Left Hand Side Expression> in <Expression> ')' <Statement> 
 --                         | 'for' '(' 'var' <Variable Declaration> in <Expression> ')' <Statement> 
 iterationStatement :: GenParser Char st JSNode
-iterationStatement = do{ reserved "do"; v1 <- statement; reserved "while"; rOp "("; v2 <- expression; rOp ")"; autoSemi ; 
-                         return (JSDoWhile v1 v2)}
+iterationStatement = do{ reserved "do"; v1 <- statement; reserved "while"; rOp "("; v2 <- expression; rOp ")"; v3 <- autoSemi ; 
+                         return (JSDoWhile v1 v2 v3)}
                  <|> do{ reserved "while"; rOp "("; v1 <- expression; rOp ")"; v2 <- statement; 
                          return (JSWhile v1 v2)}
-                 <|> do{ reserved "for"; rOp "("; v1 <- expression; autoSemi; v2 <- expression; autoSemi; 
+                 <|> do{ reserved "for"; rOp "("; v1 <- expression; rOp ";"; v2 <- expression; rOp ";";
                          v3 <- expression; rOp ")"; v4 <- statement; 
                          return (JSFor v1 v2 v3 v4)}
-                 <|> do{ reserved "for"; rOp "("; reserved "var"; v1 <- variableDeclarationList; autoSemi; v2 <- expression; 
-                         autoSemi; v3 <- expression; rOp ")"; v4 <- statement; 
+                 <|> do{ reserved "for"; rOp "("; reserved "var"; v1 <- variableDeclarationList; rOp ";"; v2 <- expression; 
+                         rOp ";"; v3 <- expression; rOp ")"; v4 <- statement; 
                          return (JSForVar v1 v2 v3 v4)}
                  <|> do{ reserved "for"; rOp "("; v1 <- leftHandSideExpression; reserved "in"; v2 <- expression; rOp ")"; 
                          v3 <- statement; 
@@ -834,19 +851,19 @@ iterationStatement = do{ reserved "do"; v1 <- statement; reserved "while"; rOp "
 -- <Continue Statement> ::= 'continue' ';'
 --                        | 'continue' Identifier ';'
 continueStatement :: GenParser Char st JSNode
-continueStatement = do {reserved "continue"; autoSemi; 
-                        return (JSContinue [])}
-                <|> do {reserved "continue"; val <- identifier; autoSemi; 
-                        return (JSContinue [val])}
+continueStatement = do {reserved "continue"; v1 <- autoSemi; 
+                        return (JSContinue [v1])}
+                <|> do {reserved "continue"; v1 <- identifier; v2 <- autoSemi; 
+                        return (JSContinue [v1,v2])}
 
 
 -- <Break Statement> ::= 'break' ';'
 --                        | 'break' Identifier ';'
 breakStatement :: GenParser Char st JSNode
-breakStatement = do {reserved "break"; autoSemi; 
-                     return (JSBreak [])}
-            <|>  do {reserved "break"; val <- identifier; autoSemi; 
-                     return (JSBreak [val])}
+breakStatement = do {reserved "break"; v1 <- autoSemi; 
+                     return (JSBreak [v1])}
+            <|>  do {reserved "break"; v1 <- identifier; v2 <- autoSemi; 
+                     return (JSBreak [v1,v2])}
 
 
 -- <Return Statement> ::= 'return' ';'
@@ -854,17 +871,17 @@ breakStatement = do {reserved "break"; autoSemi;
 returnStatement :: GenParser Char st JSNode
 returnStatement = do {reserved "return"; 
                       do{
-                            do {autoSemi; return (JSReturn [])}
-                        <|> do {val <- expression; autoSemi; 
-                                return (JSReturn [val])}
+                            do {v1 <- autoSemi; return (JSReturn [v1])}
+                        <|> do {v1 <- expression; v2 <- autoSemi; 
+                                return (JSReturn [v1,v2])}
                         }
                       }
 
 
 -- <With Statement> ::= 'with' '(' <Expression> ')' <Statement> ';'
 withStatement :: GenParser Char st JSNode
-withStatement = do{ reserved "with"; rOp "("; v1 <- expression; rOp ")"; v2 <- statement; autoSemi; 
-                    return (JSWith v1 v2)}
+withStatement = do{ reserved "with"; rOp "("; v1 <- expression; rOp ")"; v2 <- statement; v3 <- autoSemi; 
+                    return (JSWith v1 [v2,v3])}
 
 
 -- <Switch Statement> ::= 'switch' '(' <Expression> ')' <Case Block>  
@@ -959,7 +976,14 @@ functionDeclaration = do {reserved "function"; v1 <- identifier; rOp "("; v2 <- 
 -- <Function Expression> ::= 'function' '(' ')' '{' <Function Body> '}'
 ---                        | 'function' '(' <Formal Parameter List> ')' '{' <Function Body> '}'
 functionExpression :: GenParser Char st JSNode
-functionExpression = do{ reserved "function"; rOp "("; optional formalParameterList; rOp ")"; functionBody; }
+functionExpression = do{ reserved "function"; rOp "("; 
+                         do {
+                           do { rOp ")"; v2 <- functionBody; 
+                                return (JSFunctionExpression [] v2)}
+                           <|> do {v1 <- formalParameterList; rOp ")"; v2 <- functionBody; 
+                                   return (JSFunctionExpression v1 v2)}
+                           }
+                         }
 
 -- <Formal Parameter List> ::= Identifier
 --                           | <Formal Parameter List> ',' Identifier

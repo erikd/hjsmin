@@ -1,0 +1,2 @@
+function UserException(message){this.message=message;this.name="UserException"}
+function getMonthName(mo){mo=mo-1;var months=new Array("Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec");if(months[mo]!=null){return months[mo]}else{myUserException=new UserException("InvalidMonthNo");throw myUserException}};try{monthName=getMonthName(14)}catch(e){monthName="unknown";x=e.name};monthName=="unknown"&&x=="UserException"

@@ -8,3 +8,6 @@
 /Text/Jasmine.hs~
 /Text/Jasmine/Parse.hs~
 /Text/Jasmine/Pretty.hs~
+/buildall.sh~
+/test/mkfinified.sh~
+/test/mkminified.sh~

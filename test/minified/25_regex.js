@@ -1,0 +1,1 @@
+function verifyZipCode(zip){pattern=/[0-9]{5}([- ]?[0-9]{4})?/;return pattern.test(zip)};a=verifyZipCode(95060);b=verifyZipCode(9560);c=verifyZipCode("a");d=verifyZipCode("95060");e=verifyZipCode("95060 1234");a&&!b&&!c&&d&&e

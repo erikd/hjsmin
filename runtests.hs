@@ -50,14 +50,14 @@ caseMinHelloWorld2 =
 
 srcSimpleAssignment = "a=1;"   
 caseSimpleAssignment = 
-  [JSExpression [JSElement "assignmentExpression" [JSIdentifier "a",JSOperator "=",JSDecimal 1]],JSEmpty]
+  [JSExpression [JSElement "assignmentExpression" [JSIdentifier "a",JSOperator "=",JSDecimal 1]],JSEmpty (JSLiteral ";")]
   @=? doParse statementList srcSimpleAssignment
 caseMinSimpleAssignment =
   srcSimpleAssignment @=? (show $ minify srcSimpleAssignment)
 
 src0_f = "function Hello(a) {ExprArray(1,1);}"
 case0_f =
-  JSSourceElements [JSFunction (JSIdentifier "Hello") [JSIdentifier "a"] (JSFunctionBody [JSSourceElements [JSExpression [JSIdentifier "ExprArray",JSArguments [JSDecimal 1,JSDecimal 1]],JSEmpty]])]
+  JSSourceElements [JSFunction (JSIdentifier "Hello") [JSIdentifier "a"] (JSFunctionBody [JSSourceElements [JSExpression [JSIdentifier "ExprArray",JSArguments [JSDecimal 1,JSDecimal 1]],JSEmpty (JSLiteral ";")]])]
   @=? doParse program src0_f
 caseMin0_f =
   src0_f @=? (show $ minify src0_f)
@@ -70,14 +70,14 @@ src01_semi1 = (
     "// five\n"++
     "five")  
 case01_semi1 =
-  JSSourceElements [JSBlock [JSExpression [JSIdentifier "zero",JSMemberDot [JSIdentifier "one"]],JSEmpty,JSExpression [JSIdentifier "zero"]],JSExpression [JSIdentifier "one"],JSExpression [JSIdentifier "two"],JSEmpty,JSExpression [JSIdentifier "three"],JSBlock [JSBlock []],JSExpression [JSIdentifier "four"],JSEmpty,JSExpression [JSIdentifier "five"]]
+  JSSourceElements [JSBlock [JSExpression [JSIdentifier "zero",JSMemberDot [JSIdentifier "one"]],JSEmpty (JSLiteral ";"),JSExpression [JSIdentifier "zero"]],JSExpression [JSIdentifier "one"],JSExpression [JSIdentifier "two"],JSEmpty (JSLiteral ";"),JSExpression [JSIdentifier "three"],JSBlock [JSBlock []],JSExpression [JSIdentifier "four"],JSEmpty (JSLiteral ";"),JSExpression [JSIdentifier "five"]]
   @=? doParse program src01_semi1
 caseMin01_semi1 =
   src01_semi1 @=? (show $ minify src01_semi1)  
   
 src_min_100_animals = "function Animal(name){if(!name)throw new Error('Must specify an animal name');this.name=name};Animal.prototype.toString=function(){return this.name};o=new Animal(\"bob\");o.toString()==\"bob\"" 
 case_min_100_animals =
-  JSSourceElements [JSFunction (JSIdentifier "Animal") [JSIdentifier "name"] (JSFunctionBody [JSSourceElements [JSIf (JSExpression [JSUnary "!",JSIdentifier "name"]) (JSThrow (JSExpression [JSLiteral "new",JSIdentifier "Error",JSArguments [JSStringLiteral '\'' "Must specify an animal name"]])),JSEmpty,JSExpression [JSElement "assignmentExpression" [JSLiteral "this",JSMemberDot [JSIdentifier "name"],JSOperator "=",JSIdentifier "name"]]]]),JSEmpty,JSExpression [JSElement "assignmentExpression" [JSIdentifier "Animal",JSMemberDot [JSIdentifier "prototype",JSMemberDot [JSIdentifier "toString"]],JSOperator "=",JSFunctionBody [JSSourceElements [JSReturn [JSExpression [JSLiteral "this",JSMemberDot [JSIdentifier "name"]]]]]]],JSEmpty,JSExpression [JSElement "assignmentExpression" [JSIdentifier "o",JSOperator "=",JSLiteral "new",JSIdentifier "Animal",JSArguments [JSStringLiteral '"' "bob"]]],JSEmpty,JSExpression [JSExpressionBinary "==" [JSIdentifier "o",JSMemberDot [JSIdentifier "toString"],JSArguments []] [JSStringLiteral '"' "bob"]]]
+  JSSourceElements [JSFunction (JSIdentifier "Animal") [JSIdentifier "name"] (JSFunctionBody [JSSourceElements [JSIf (JSExpression [JSUnary "!",JSIdentifier "name"]) (JSThrow (JSExpression [JSLiteral "new ",JSIdentifier "Error",JSArguments [JSStringLiteral '\'' "Must specify an animal name"]])),JSEmpty (JSLiteral ";"),JSExpression [JSElement "assignmentExpression" [JSLiteral "this",JSMemberDot [JSIdentifier "name"],JSOperator "=",JSIdentifier "name"]]]]),JSEmpty (JSLiteral ";"),JSExpression [JSElement "assignmentExpression" [JSIdentifier "Animal",JSMemberDot [JSIdentifier "prototype",JSMemberDot [JSIdentifier "toString"]],JSOperator "=",JSFunctionExpression [] (JSFunctionBody [JSSourceElements [JSReturn [JSExpression [JSLiteral "this",JSMemberDot [JSIdentifier "name"]],JSLiteral ""]]])]],JSEmpty (JSLiteral ";"),JSExpression [JSElement "assignmentExpression" [JSIdentifier "o",JSOperator "=",JSLiteral "new ",JSIdentifier "Animal",JSArguments [JSStringLiteral '"' "bob"]]],JSEmpty (JSLiteral ";"),JSExpression [JSExpressionBinary "==" [JSIdentifier "o",JSMemberDot [JSIdentifier "toString"],JSArguments []] [JSStringLiteral '"' "bob"]]]
   @=? doParse program src_min_100_animals
 caseMin_min_100_animals =
   src_min_100_animals @=? (show $ minify src_min_100_animals)  
