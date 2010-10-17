@@ -28,7 +28,7 @@ testSuiteMin = testGroup "Text.Jasmine.Pretty"
     , testCase "simpleAssignment" caseMinSimpleAssignment
     , testCase "0_f.js"           caseMin0_f
     , testCase "01_semi1.js"      caseMin01_semi1 
-    -- , testCase "min_100_animals"  caseMin_min_100_animals
+    , testCase "min_100_animals"  caseMin_min_100_animals
     ]
 
 caseFirst :: Assertion
@@ -77,7 +77,9 @@ caseMin01_semi1 =
   
 src_min_100_animals = "function Animal(name){if(!name)throw new Error('Must specify an animal name');this.name=name};Animal.prototype.toString=function(){return this.name};o=new Animal(\"bob\");o.toString()==\"bob\"" 
 case_min_100_animals =
-  JSSourceElements [JSFunction (JSIdentifier "Animal") [JSIdentifier "name"] (JSFunctionBody [JSSourceElements [JSIf (JSExpression [JSUnary "!",JSIdentifier "name"]) (JSNode JS_value (JSValue "throw") [JSExpression [JSLiteral "new",JSIdentifier "Error",JSArguments [JSStringLiteral '\'' "Must specify an animal name"]]] [] []),JSEmpty,JSExpression [JSElement "assignmentExpression" [JSLiteral "this",JSMemberDot [JSIdentifier "name"],JSOperator "=",JSIdentifier "name"]]]]),JSEmpty,JSExpression [JSElement "assignmentExpression" [JSIdentifier "Animal",JSMemberDot [JSIdentifier "prototype",JSMemberDot [JSIdentifier "toString"]],JSOperator "=",JSFunctionBody [JSSourceElements [JSReturn [JSExpression [JSLiteral "this",JSMemberDot [JSIdentifier "name"]]]]]]],JSEmpty,JSExpression [JSElement "assignmentExpression" [JSIdentifier "o",JSOperator "=",JSLiteral "new",JSIdentifier "Animal",JSArguments [JSStringLiteral '"' "bob"]]],JSEmpty,JSExpression [JSExpressionBinary "==" [JSIdentifier "o",JSMemberDot [JSIdentifier "toString"],JSArguments []] [JSStringLiteral '"' "bob"]]]
+  JSSourceElements [JSFunction (JSIdentifier "Animal") [JSIdentifier "name"] (JSFunctionBody [JSSourceElements [JSIf (JSExpression [JSUnary "!",JSIdentifier "name"]) (JSThrow (JSExpression [JSLiteral "new",JSIdentifier "Error",JSArguments [JSStringLiteral '\'' "Must specify an animal name"]])),JSEmpty,JSExpression [JSElement "assignmentExpression" [JSLiteral "this",JSMemberDot [JSIdentifier "name"],JSOperator "=",JSIdentifier "name"]]]]),JSEmpty,JSExpression [JSElement "assignmentExpression" [JSIdentifier "Animal",JSMemberDot [JSIdentifier "prototype",JSMemberDot [JSIdentifier "toString"]],JSOperator "=",JSFunctionBody [JSSourceElements [JSReturn [JSExpression [JSLiteral "this",JSMemberDot [JSIdentifier "name"]]]]]]],JSEmpty,JSExpression [JSElement "assignmentExpression" [JSIdentifier "o",JSOperator "=",JSLiteral "new",JSIdentifier "Animal",JSArguments [JSStringLiteral '"' "bob"]]],JSEmpty,JSExpression [JSExpressionBinary "==" [JSIdentifier "o",JSMemberDot [JSIdentifier "toString"],JSArguments []] [JSStringLiteral '"' "bob"]]]
   @=? doParse program src_min_100_animals
+caseMin_min_100_animals =
+  src_min_100_animals @=? (show $ minify src_min_100_animals)  
   
 -- EOF

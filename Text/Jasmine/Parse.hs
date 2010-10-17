@@ -6,8 +6,6 @@ module Text.Jasmine.Parse
     , JasmineSettings (..)
     , defaultJasmineSettings
     , JSNode(..)  
-    , JSType(..)  
-    , JSValue(..)  
     -- For testing      
     , doParse
     , program  
@@ -54,33 +52,38 @@ instance Applicative Result where
 
 -- ---------------------------------------------------------------------
 
-data JSNode = JSNode JSType JSValue [JSNode] [JSFunDecl] [JSNode]
-              | JSArguments [JSNode]  
+data JSNode = JSArguments [JSNode]  
               | JSArrayLiteral [JSNode]
               | JSBlock [JSNode]
               | JSBreak [JSNode]
               | JSCallExpression String [JSNode] -- type : ., (), []; rest  
+              | JSCase JSNode [JSNode]
+              | JSCatch JSNode JSNode
               | JSContinue [JSNode]
               | JSDecimal Integer   
+              | JSDefault [JSNode]  
               | JSDoWhile JSNode JSNode
               | JSElement String [JSNode]
               | JSElementList [JSNode]  
               | JSElision [JSNode]  
               | JSEmpty
               | JSExpression [JSNode]
-              | JSExpressionParen JSNode
               | JSExpressionBinary String [JSNode] [JSNode]
+              | JSExpressionParen JSNode
               | JSExpressionPostfix String [JSNode]
               | JSExpressionTernary [JSNode] [JSNode] [JSNode]
+              | JSFinally JSNode  
               | JSFor JSNode JSNode JSNode JSNode                
-              | JSForVar [JSNode] JSNode JSNode JSNode                
               | JSForIn [JSNode] JSNode JSNode
+              | JSForVar [JSNode] JSNode JSNode JSNode                
               | JSForVarIn JSNode JSNode JSNode 
               | JSFunction JSNode [JSNode] JSNode -- name, parameter list, body
               | JSFunctionBody [JSNode]
+              | JSHexInteger Integer  
               | JSIdentifier String  
               | JSIf JSNode JSNode  
               | JSIfElse JSNode JSNode JSNode 
+              | JSLabelled JSNode JSNode  
               | JSLiteral String  
               | JSMemberDot [JSNode]  
               | JSMemberSquare [JSNode]  
@@ -91,10 +94,12 @@ data JSNode = JSNode JSType JSValue [JSNode] [JSFunDecl] [JSNode]
               | JSReturn [JSNode]
               | JSSourceElements [JSNode]
               | JSStringLiteral Char String  
-              | JSSwitch JSNode JSNode
+              | JSSwitch JSNode [JSNode]
+              | JSThrow JSNode  
+              | JSTry JSNode [JSNode]  
               | JSUnary String  
-              | JSVariables [JSNode]  
               | JSVarDecl JSNode [JSNode]
+              | JSVariables [JSNode]  
               | JSWhile JSNode JSNode
               | JSWith JSNode JSNode
     deriving (Show, Eq, Read, Data, Typeable)
@@ -102,15 +107,8 @@ data JSNode = JSNode JSType JSValue [JSNode] [JSFunDecl] [JSNode]
 data JSType = JS_SCRIPT | JS_BLOCK | JS_LABEL | JS_FOR_IN | JS_CALL | JS_NEW_WITH_ARGS
             | JS_INDEX | JS_ARRAY_INIT | JS_OBJECT_INIT | JS_PROPERTY_INIT | JS_GETTER
             | JS_SETTER | JS_GROUP | JS_LIST
-            -- Lower case is AZ additions to understand the thing
-            | JS_value 
     deriving (Show, Eq, Read, Data, Typeable)
 
-data JSValue = NoValue | JSValue String | JSHexInteger Integer
-    deriving (Show, Eq, Read, Data, Typeable)
-
-data JSFunDecl = JSFunDecl String
-    deriving (Show, Eq, Read, Data, Typeable)
 
 
 
@@ -293,7 +291,7 @@ numericLiteral :: GenParser Char st JSNode
 numericLiteral = do {val <- decimalLiteral; 
                      return (JSDecimal val)}
              <|> do {val <- hexIntegerLiteral; 
-                     return (JSNode JS_value (JSHexInteger val) [] [] [])}
+                     return (JSHexInteger val)}
 
 
 -- <Regular Expression Literal> ::= RegExp 
@@ -880,75 +878,74 @@ switchStatement = do{ reserved "switch"; rOp "("; v1 <- expression; rOp ")"; v2 
 --                | '{' <Case Clauses> <Default Clause> <Case Clauses> '}'
 --                | '{' <Default Clause> <Case Clauses> '}'
 --                | '{' <Default Clause> '}'
-caseBlock :: GenParser Char st JSNode
+caseBlock :: GenParser Char st [JSNode]
 caseBlock = do{ rOp "{"; rOp "}"; 
-                return (JSNode JS_value (JSValue "case") [] [] []) }
-        <|> do{ rOp "{"; val <- caseClauses; rOp "}"; 
-                return (JSNode JS_value (JSValue "case") [val] [] []) }
+                return []}
+        <|> do{ rOp "{"; v1 <- caseClauses; rOp "}"; 
+                return v1}
         <|> do{ rOp "{"; v1 <- caseClauses; v2 <- defaultClause; rOp "}"; 
-                return (JSNode JS_value (JSValue "case_default") [v1,v2] [] []) }
+                return (v1++[v2])}
         <|> do{ rOp "{"; v1 <- caseClauses; v2 <- defaultClause; v3 <- caseClauses; rOp "}"; 
-                return (JSNode JS_value (JSValue "case_default2") [v1,v2,v3] [] []) }
+                return (v1++[v2]++v3)}
         <|> do{ rOp "{"; v1 <- defaultClause; v2 <- caseClauses; rOp "}"; 
-                return (JSNode JS_value (JSValue "case_default3") [v1,v2] [] []) }
+                return (v1:v2)}
         <|> do{ rOp "{"; v1 <- defaultClause; rOp "}"; 
-                return (JSNode JS_value (JSValue "case_default4") [v1] [] []) }
+                return [v1]}
 
 
 -- <Case Clauses> ::= <Case Clause>
 --                  | <Case Clauses> <Case Clause>
-caseClauses :: GenParser Char st JSNode
+caseClauses :: GenParser Char st [JSNode]
 caseClauses = do{ val <- many1 caseClause;
-                return (JSNode JS_value (JSValue "case_clauses") val [] []) }
+                return val}
 
 -- <Case Clause> ::= 'case' <Expression> ':' <Statement List>
 --                 | 'case' <Expression> ':'
 caseClause :: GenParser Char st JSNode
 caseClause = do { reserved "case"; val <- expression; rOp ":"; 
-                return (JSNode JS_value (JSValue "case_clause") [val] [] []) }
+                return (JSCase val [])}
          <|> do { reserved "case"; v1 <- expression; rOp ":"; v2 <- statementList;
-                return (JSNode JS_value (JSValue "case_clause") (v1:v2) [] []) }
+                return (JSCase v1 v2)}
 
 
 -- <Default Clause> ::= 'default' ':' 
 --                    | 'default' ':' <Statement List>
 defaultClause :: GenParser Char st JSNode
 defaultClause = do{ reserved "default"; rOp ":"; 
-                    return (JSNode JS_value (JSValue "default") [] [] []) }
+                    return (JSDefault [])}
             <|> do{ reserved "default"; rOp ":"; v1 <- statementList;
-                    return (JSNode JS_value (JSValue "default") v1 [] []) }
+                    return (JSDefault v1)}
 
 -- <Labelled Statement> ::= Identifier ':' <Statement> 
 labelledStatement :: GenParser Char st JSNode
 labelledStatement = do { v1 <- identifier; rOp ":"; v2 <- statement;
-                         return (JSNode JS_value (JSValue "labelled") [v1,v2] [] []) }
+                         return (JSLabelled v1 v2)}
 
 -- <Throw Statement> ::= 'throw' <Expression>
 throwStatement :: GenParser Char st JSNode
 throwStatement = do{ reserved "throw"; val <- expression;
-                   return (JSNode JS_value (JSValue "throw") [val] [] []) }
+                     return (JSThrow val)}
 
 -- <Try Statement> ::= 'try' <Block> <Catch>
 --                   | 'try' <Block> <Finally>
 --                   | 'try' <Block> <Catch> <Finally>
 tryStatement :: GenParser Char st JSNode
 tryStatement = do{ reserved "try"; v1 <- block; v2 <- catch;
-                   return (JSNode JS_value (JSValue "try_catch") [v1,v2] [] []) }
+                   return (JSTry v1 [v2])}
            <|> do{ reserved "try"; v1 <- block; v2 <- finally;
-                   return (JSNode JS_value (JSValue "try_finally") [v1,v2] [] []) }
+                   return (JSTry v1 [v2])}
            <|> do{ reserved "try"; v1 <- block; v2 <- catch; v3 <- finally;
-                   return (JSNode JS_value (JSValue "try_catch_finally") [v1,v2,v3] [] []) }
+                   return (JSTry v1 [v2,v3])}
 
 -- <Catch> ::= 'catch' '(' Identifier ')' <Block>
 catch :: GenParser Char st JSNode
 catch = do{ reserved "catch"; rOp "("; v1 <- identifier; rOp ")"; v2 <- block;
-            return (JSNode JS_value (JSValue "catch") [v1,v2] [] []) }
+            return (JSCatch v1 v2)}
 
 -- <Finally> ::= 'finally' <Block>
 finally :: GenParser Char st JSNode
 finally = do{ reserved "finally"; v1 <- block;
-            return (JSNode JS_value (JSValue "finally") [v1] [] []) }
-
+            return (JSFinally v1)}
 
 -- <Function Declaration> ::= 'function' Identifier '(' <Formal Parameter List> ')' '{' <Function Body> '}'
 --                          | 'function' Identifier '(' ')' '{' <Function Body> '}'
