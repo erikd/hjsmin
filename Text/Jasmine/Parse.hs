@@ -748,7 +748,7 @@ expression = do{ val <- sepBy1 assignmentExpression (rOp ",");
 --               | <Try Statement>
 --               | <Expression> 
 statement :: GenParser Char st JSNode
-statement = block
+statement = statementBlock
         <|> expression 
         <|> variableStatement
         <|> emptyStatement 
@@ -765,6 +765,18 @@ statement = block
         <|> tryStatement
         <?> "statement"
 
+
+statementBlock :: GenParser Char st29 JSNode
+statementBlock = do {v1 <- statementBlock'; return (if (v1 == []) then (JSLiteral ";") else (head v1))}
+
+-- <Block > ::= '{' '}'
+--            | '{' <Statement List> '}'
+statementBlock' :: GenParser Char st [JSNode]
+statementBlock' = try (do {rOp "{"; rOp "}"; 
+                          return []})
+                  <|> do {rOp "{"; val <- statementList; rOp "}"; 
+                          return (if (val == ([JSLiteral ";"])) then ([]) else [(JSBlock val)])}
+                  <?> "statementBlock"
 
 -- <Block > ::= '{' '}'
 --            | '{' <Statement List> '}'
@@ -809,7 +821,8 @@ initializer = do {rOp "="; val <- assignmentExpression;
 
 -- <Empty Statement> ::= ';'
 emptyStatement :: GenParser Char st JSNode
-emptyStatement = do { v1 <- autoSemi'; return (JSEmpty v1)}
+--emptyStatement = do { v1 <- autoSemi'; return (JSEmpty v1)}
+emptyStatement = do { v1 <- autoSemi'; return v1}
 
 
 -- <If Statement> ::= 'if' '(' <Expression> ')' <Statement> 
@@ -1012,7 +1025,7 @@ program = do {val <- sourceElements; eof; return val}
 --                     | <Source Elements>  <Source Element>
 sourceElements :: GenParser Char st JSNode
 sourceElements = do{ val <- many1 sourceElement;
-                     return (JSSourceElements val)}
+                     return (JSSourceElements (fixSourceElements val))}
                  
 
 -- <Source Element> ::= <Statement>
@@ -1022,6 +1035,13 @@ sourceElement = functionDeclaration
             <|> statement
             <?> "sourceElement"
 
+-- ---------------------------------------------------------------
+-- Utility stuff
+
+-- Make sure every alternate part is a JSLiteral ";", but not the last one
+fixSourceElements :: [JSNode] -> [JSNode]
+fixSourceElements xs = intersperse (JSLiteral ";") $ filter (\x -> JSLiteral "" /= x) $ filter (\x -> JSLiteral ";" /= x) xs
+  
 -- ---------------------------------------------------------------
 -- Testing
 
