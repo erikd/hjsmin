@@ -212,10 +212,13 @@ whiteSpace = P.whiteSpace lexer
 
 -- Do not use the lexer, it is greedy and consumes subsequent symbols, 
 --   e.g. "!" in a==!b
-rOp :: [Char] -> CharParser st ()
-rOp []     = fail "trying to parse empty token"
-rOp [x]    = do{ _ <- char x; optional whiteSpace; return () }
-rOp (x:xs) = do{ _ <- char x; rOp xs;}
+rOp :: [Char] -> GenParser Char st ()
+rOp x = try(rOp'' x)
+
+rOp'' :: [Char] -> CharParser st ()
+rOp'' []     = fail "trying to parse empty token"
+rOp'' [x]    = do{ _ <- char x; optional whiteSpace; return () }
+rOp'' (x:xs) = do{ _ <- char x; rOp xs;}
                  
 -- ---------------------------------------------------------------------
 
@@ -1018,7 +1021,7 @@ functionBody = do{ rOp "{";
 
 -- <Program> ::= <Source Elements>
 program :: GenParser Char st JSNode
-program = do {val <- sourceElements; eof; return val}
+program = do {whiteSpace; val <- sourceElements; eof; return val}
 
 
 -- <Source Elements> ::= <Source Element>

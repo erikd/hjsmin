@@ -6,14 +6,15 @@ import Test.HUnit hiding (Test)
 import Text.Jasmine
 import Text.Jasmine.Parse hiding (main)
 import Text.Jasmine.Pretty
+import Data.Char
 
 main :: IO ()
-main = defaultMain [testSuite,testSuiteMin]
+main = defaultMain [testSuite,testSuiteMin,testSuiteFiles]
 
 testSuite :: Test
 testSuite = testGroup "Text.Jasmine.Parse"
-    [ testCase "first" caseFirst
-    , testCase "helloWorld"       caseHelloWorld  
+    [ 
+      testCase "helloWorld"       caseHelloWorld  
     , testCase "helloWorld2"      caseHelloWorld2  
     , testCase "simpleAssignment" caseSimpleAssignment
     , testCase "0_f.js"           case0_f
@@ -31,8 +32,16 @@ testSuiteMin = testGroup "Text.Jasmine.Pretty"
     , testCase "min_100_animals"  caseMin_min_100_animals
     ]
 
-caseFirst :: Assertion
-caseFirst = 1 @=? blah
+testSuiteFiles :: Test
+testSuiteFiles = testGroup "Text.Jasmine.Pretty files"
+  [ testCase "00_f.js"          (testFile "./test/pminified/00_f.js")
+  , testCase "01_semi1.js"      (testFile "./test/pminified/01_semi1.js")  
+  , testCase "02_sm.js"         (testFile "./test/pminified/02_sm.js")  
+  , testCase "03_sm.js"         (testFile "./test/pminified/03_sm.js")  
+  , testCase "04_if.js"         (testFile "./test/pminified/04_if.js")  
+  , testCase "05_comments_simple.js" (testFile "./test/pminified/05_comments_simple.js")  
+  , testCase "05_regex.js"      (testFile "./test/pminified/05_regex.js")  
+  ]  
 
 srcHelloWorld = "function Hello(a) {}"
 caseHelloWorld =  
@@ -82,4 +91,21 @@ case_min_100_animals =
 caseMin_min_100_animals =
   src_min_100_animals @=? (show $ minify src_min_100_animals)  
   
+  
+  
+-- ---------------------------------------------------------------------
+-- utilities
+
+--testFile :: FilePath -> IO Doc
+testFile :: FilePath -> IO ()
+testFile filename =
+  do 
+     x <- readFile (filename)
+     let x' = trim x
+     x' @=? (show $ minify x')  
+
+trim      :: String -> String
+trim      = f . f
+   where f = reverse . dropWhile isSpace
+
 -- EOF
