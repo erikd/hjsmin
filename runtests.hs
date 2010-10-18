@@ -49,6 +49,9 @@ testSuiteFiles = testGroup "Text.Jasmine.Pretty files"
   , testCase "05_comments_simple.js" (testFile "./test/pminified/05_comments_simple.js")  
   , testCase "05_regex.js"      (testFile "./test/pminified/05_regex.js")  
   , testCase "06_callexpr.js"   (testFile "./test/pminified/06_callexpr.js")  
+  , testCase "06_newexpr.js"    (testFile "./test/pminified/06_newexpr.js")  
+  , testCase "06_var.js"        (testFile "./test/pminified/06_var.js")  
+  , testCase "07_expr.js"       (testFile "./test/pminified/07_expr.js")  
   ]  
 
 srcHelloWorld = "function Hello(a) {}"
@@ -79,12 +82,12 @@ caseEmptyFor =
   
 srcFullFor = "for (i = 0;i<10;i++){}"
 caseFullFor =
-  JSFor (JSExpression [JSElement "assignmentExpression" [JSIdentifier "i",JSOperator "=",JSDecimal 0]]) [JSExpression [JSExpressionBinary "<" [JSIdentifier "i"] [JSDecimal 10]]] [JSExpression [JSExpressionPostfix "++" [JSIdentifier "i"]]] (JSLiteral ";")
+  JSFor (JSExpression [JSElement "assignmentExpression" [JSIdentifier "i",JSOperator "=",JSDecimal 0]]) [JSExpression [JSIdentifier "i",JSExpressionBinary "<" [JSDecimal 10] []]] [JSExpression [JSExpressionPostfix "++" [JSIdentifier "i"]]] (JSLiteral ";")
   @=? doParse iterationStatement srcFullFor
 
 srcForVarFull = "for(var i=0,j=tokens.length;i<j;i++){}"
 caseForVarFull =
-  JSForVar [JSVarDecl (JSIdentifier "i") [JSDecimal 0],JSVarDecl (JSIdentifier "j") [JSIdentifier "tokens",JSMemberDot [JSIdentifier "length"]]] [JSExpression [JSExpressionBinary "<" [JSIdentifier "i"] [JSIdentifier "j"]]] [JSExpression [JSExpressionPostfix "++" [JSIdentifier "i"]]] (JSLiteral ";")
+  JSForVar [JSVarDecl (JSIdentifier "i") [JSDecimal 0],JSVarDecl (JSIdentifier "j") [JSIdentifier "tokens",JSMemberDot [JSIdentifier "length"]]] [JSExpression [JSIdentifier "i",JSExpressionBinary "<" [JSIdentifier "j"] []]] [JSExpression [JSExpressionPostfix "++" [JSIdentifier "i"]]] (JSLiteral ";")
   @=? doParse iterationStatement srcForVarFull
 
 srcIfElse1 = "if(a){b=1}else c=2";
@@ -123,7 +126,7 @@ caseMin01_semi1 =
   
 src_min_100_animals = "function Animal(name){if(!name)throw new Error('Must specify an animal name');this.name=name};Animal.prototype.toString=function(){return this.name};o=new Animal(\"bob\");o.toString()==\"bob\"" 
 case_min_100_animals =
-  JSSourceElements [JSFunction (JSIdentifier "Animal") [JSIdentifier "name"] (JSFunctionBody [JSSourceElements [JSIf (JSExpression [JSUnary "!",JSIdentifier "name"]) (JSThrow (JSExpression [JSLiteral "new ",JSIdentifier "Error",JSArguments [[JSStringLiteral '\'' "Must specify an animal name"]]])),JSLiteral ";",JSExpression [JSElement "assignmentExpression" [JSLiteral "this",JSMemberDot [JSIdentifier "name"],JSOperator "=",JSIdentifier "name"]]]]),JSLiteral ";",JSExpression [JSElement "assignmentExpression" [JSIdentifier "Animal",JSMemberDot [JSIdentifier "prototype",JSMemberDot [JSIdentifier "toString"]],JSOperator "=",JSFunctionExpression [] (JSFunctionBody [JSSourceElements [JSReturn [JSExpression [JSLiteral "this",JSMemberDot [JSIdentifier "name"]],JSLiteral ""]]])]],JSLiteral ";",JSExpression [JSElement "assignmentExpression" [JSIdentifier "o",JSOperator "=",JSLiteral "new ",JSIdentifier "Animal",JSArguments [[JSStringLiteral '"' "bob"]]]],JSLiteral ";",JSExpression [JSExpressionBinary "==" [JSIdentifier "o",JSMemberDot [JSIdentifier "toString"],JSArguments [[]]] [JSStringLiteral '"' "bob"]]]
+  JSSourceElements [JSFunction (JSIdentifier "Animal") [JSIdentifier "name"] (JSFunctionBody [JSSourceElements [JSIf (JSExpression [JSUnary "!",JSIdentifier "name"]) (JSThrow (JSExpression [JSLiteral "new ",JSIdentifier "Error",JSArguments [[JSStringLiteral '\'' "Must specify an animal name"]]])),JSLiteral ";",JSExpression [JSElement "assignmentExpression" [JSLiteral "this",JSMemberDot [JSIdentifier "name"],JSOperator "=",JSIdentifier "name"]]]]),JSLiteral ";",JSExpression [JSElement "assignmentExpression" [JSIdentifier "Animal",JSMemberDot [JSIdentifier "prototype",JSMemberDot [JSIdentifier "toString"]],JSOperator "=",JSFunctionExpression [] (JSFunctionBody [JSSourceElements [JSReturn [JSExpression [JSLiteral "this",JSMemberDot [JSIdentifier "name"]],JSLiteral ""]]])]],JSLiteral ";",JSExpression [JSElement "assignmentExpression" [JSIdentifier "o",JSOperator "=",JSLiteral "new ",JSIdentifier "Animal",JSArguments [[JSStringLiteral '"' "bob"]]]],JSLiteral ";",JSExpression [JSIdentifier "o",JSMemberDot [JSIdentifier "toString"],JSArguments [[]],JSExpressionBinary "==" [JSStringLiteral '"' "bob"] []]]
   @=? doParse program src_min_100_animals
 caseMin_min_100_animals =
   src_min_100_animals @=? (show $ minify src_min_100_animals)  

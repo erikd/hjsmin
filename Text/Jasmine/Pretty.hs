@@ -43,7 +43,8 @@ renderJS (JSDefault xs)          = (text "default") <> (char ':') <> (rJS xs)
 renderJS (JSDoWhile s e ms)         = (text "do") <+> (renderJS s) <> (text "while") <> (char '(') <> (renderJS e) <> (char ')') <> (renderJS ms)
 renderJS (JSElementList xs)      = rJS xs
 renderJS (JSElision xs)          = (char ',') <> (rJS xs)
-renderJS (JSExpressionBinary o e1 e2) = (rJS e1) <> (text o) <> (rJS e2)
+--renderJS (JSExpressionBinary o e1 e2) = (rJS e1) <> (text o) <> (rJS e2)
+renderJS (JSExpressionBinary o e1 e2) = (text o) <> (rJS e1) <> (rJS e2)
 renderJS (JSExpressionParen e)        = (char '(') <> (renderJS e) <> (char ')')
 renderJS (JSExpressionPostfix o e)    = (rJS e) <> (text o)
 renderJS (JSExpressionTernary c v1 v2) = (rJS c) <> (char '?') <> (rJS v1) <> (char ':') <> (rJS v2)
@@ -77,6 +78,7 @@ renderJS (JSWith e s)                  = (text "with") <> (char '(') <> (renderJ
 rJS :: [JSNode] -> Doc
 rJS xs = hcat $ map renderJS xs
 
+commaList :: [JSNode] -> Doc
 commaList xs = (hcat $ (punctuate comma (toDoc xs)))
 
 commaListList :: [[JSNode]] -> Doc
