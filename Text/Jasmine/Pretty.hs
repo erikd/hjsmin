@@ -21,10 +21,10 @@ renderJS (JSElement s xs)        = rJS xs
 renderJS (JSFunction s p xs)     = (text "function") <+> (renderJS s) <> (text "(") <> (rJS p) <> (text ")") <> (renderJS xs)
 renderJS (JSFunctionBody xs)     = (text "{") <> (rJS xs) <> (text "}")
 renderJS (JSFunctionExpression as s) = (text "function") <> (text "(") <> (rJS as) <> (text ")") <> (renderJS s)
-renderJS (JSArguments xs)        = (text "(") <> (hcat $ (punctuate comma (toDoc xs))) <> (text ")")
+renderJS (JSArguments xs)        = (text "(") <> (commaList xs) <> (text ")")
 renderJS (JSBlock xs)            = (text "{") <> (rJS xs) <> (text "}")
 renderJS (JSIf c t)              = (text "if") <> (text "(") <> (renderJS c) <> (text ")") <> (renderJS t)
-renderJS (JSIfElse c t e)        = (text "if") <> (text "(") <> (renderJS c) <> (text ")") <> (renderJS t) <> (text "else") <> (renderJS e)
+renderJS (JSIfElse c t e)        = (text "if") <> (text "(") <> (renderJS c) <> (text ")") <> (renderJS t) <> (text "else") <> (spaceOrBlock e)
 renderJS (JSMemberDot xs)        = (text ".") <> (rJS xs)
 renderJS (JSMemberSquare xs)     = (text "[") <> (rJS xs) <> (text "]")
 renderJS (JSLiteral l)           = (text l)
@@ -46,11 +46,11 @@ renderJS (JSExpressionPostfix o e)    = (rJS e) <> (text o)
 renderJS (JSExpressionTernary c v1 v2) = (rJS c) <> (char '?') <> (rJS v1) <> (char ':') <> (rJS v2)
 renderJS (JSFinally b)                 = (text "finally") <+> (renderJS b)
 renderJS (JSFor e1 e2 e3 s)            = (text "for") <> (char '(') <> (renderJS e1) <> (char ';') 
-                                         <> (renderJS e2) <> (char ';') <> (renderJS e3) <> (char ')') <> (renderJS s)
+                                         <> (rJS e2) <> (char ';') <> (rJS e3) <> (char ')') <> (renderJS s)
 renderJS (JSForIn e1 e2 s)             = (text "for") <> (char '(') <> (rJS e1) <> (text "in")                                         
                                          <> (renderJS e2) <> (char ')') <> (renderJS s)
-renderJS (JSForVar e1 e2 e3 s)         = (text "for") <> (char '(') <> (text "var") <+> (rJS e1) <> (char ';') 
-                                         <> (renderJS e2) <> (char ';') <> (renderJS e3) <> (char ')') <> (renderJS s)
+renderJS (JSForVar e1 e2 e3 s)         = (text "for") <> (char '(') <> (text "var") <+> (commaList e1) <> (char ';') 
+                                         <> (rJS e2) <> (char ';') <> (rJS e3) <> (char ')') <> (renderJS s)
 renderJS (JSForVarIn e1 e2 s)          = (text "for") <> (char '(') <> (text "var") <+> (renderJS e1) <> (text "in") 
                                          <> (renderJS e2) <> (char ')') <> (renderJS s)
 renderJS (JSHexInteger i)              = (text $ show i) -- TODO: need to tweak this                                         
@@ -62,8 +62,11 @@ renderJS (JSReturn xs)                 = (text "return") <+> (rJS xs) -- <> (tex
 renderJS (JSThrow e)                   = (text "throw") <+> (renderJS e)
 renderJS (JSSwitch e xs)               = (text "switch") <> (char '(') <> (renderJS e) <> (char ')') <> (rJS xs) -- <> (text ";")
 renderJS (JSTry e xs)                  = (text "try") <+> (rJS xs)
-renderJS (JSVarDecl i xs)              = (renderJS i) <> (rJS xs)
-renderJS (JSVariables xs)              = (text "var") <+> (rJS xs)
+
+renderJS (JSVarDecl i [])              = (renderJS i) 
+renderJS (JSVarDecl i xs)              = (renderJS i) <> (text "=") <> (rJS xs)
+
+renderJS (JSVariables xs)              = (text "var") <+> (commaList xs)
 renderJS (JSWhile e s)                 = (text "while") <> (char '(') <> (renderJS e) <> (char ')') <> (renderJS s)
 renderJS (JSWith e s)                  = (text "with") <> (char '(') <> (renderJS e) <> (char ')') <> (rJS s)
           
@@ -71,9 +74,14 @@ renderJS (JSWith e s)                  = (text "with") <> (char '(') <> (renderJ
 rJS :: [JSNode] -> Doc
 rJS xs = hcat $ map renderJS xs
 
+commaList xs = (hcat $ (punctuate comma (toDoc xs)))
+
 toDoc :: [JSNode] -> [Doc]
 toDoc xs = map renderJS xs
 
+spaceOrBlock :: JSNode -> Doc
+spaceOrBlock (JSBlock xs) = renderJS (JSBlock xs)
+spaceOrBlock x            = (text " ") <> (renderJS x)
 
 -- ---------------------------------------------------------------------
 -- Test stuff

@@ -17,6 +17,11 @@ testSuite = testGroup "Text.Jasmine.Parse"
       testCase "helloWorld"       caseHelloWorld  
     , testCase "helloWorld2"      caseHelloWorld2  
     , testCase "simpleAssignment" caseSimpleAssignment
+    , testCase "emptyFor"         caseEmptyFor  
+    , testCase "fullFor"          caseFullFor  
+    , testCase "forVarFull"       caseForVarFull      
+    , testCase "ifelse1"          caseIfElse1
+    , testCase "ifelse2"          caseIfElse2
     , testCase "0_f.js"           case0_f
     , testCase "01_semi1.js"      case01_semi1 
     , testCase "min_100_animals"  case_min_100_animals
@@ -27,6 +32,8 @@ testSuiteMin = testGroup "Text.Jasmine.Pretty"
     [ testCase "helloWorld"       caseMinHelloWorld  
     , testCase "helloWorld2"      caseMinHelloWorld2  
     , testCase "simpleAssignment" caseMinSimpleAssignment
+    , testCase "ifelse1"          caseMinIfElse1
+    , testCase "ifelse2"          caseMinIfElse2
     , testCase "0_f.js"           caseMin0_f
     , testCase "01_semi1.js"      caseMin01_semi1 
     , testCase "min_100_animals"  caseMin_min_100_animals
@@ -63,6 +70,35 @@ caseSimpleAssignment =
   @=? doParse statementList srcSimpleAssignment
 caseMinSimpleAssignment =
   "a=1" @=? (show $ minify srcSimpleAssignment)
+
+srcEmptyFor = "for (i = 0;;){}"
+caseEmptyFor =
+  JSFor (JSExpression [JSElement "assignmentExpression" [JSIdentifier "i",JSOperator "=",JSDecimal 0]]) [] [] (JSLiteral ";")
+  @=? doParse iterationStatement srcEmptyFor
+  
+srcFullFor = "for (i = 0;i<10;i++){}"
+caseFullFor =
+  JSFor (JSExpression [JSElement "assignmentExpression" [JSIdentifier "i",JSOperator "=",JSDecimal 0]]) [JSExpression [JSExpressionBinary "<" [JSIdentifier "i"] [JSDecimal 10]]] [JSExpression [JSExpressionPostfix "++" [JSIdentifier "i"]]] (JSLiteral ";")
+  @=? doParse iterationStatement srcFullFor
+
+srcForVarFull = "for(var i=0,j=tokens.length;i<j;i++){}"
+caseForVarFull =
+  JSForVar [JSVarDecl (JSIdentifier "i") [JSDecimal 0],JSVarDecl (JSIdentifier "j") [JSIdentifier "tokens",JSMemberDot [JSIdentifier "length"]]] [JSExpression [JSExpressionBinary "<" [JSIdentifier "i"] [JSIdentifier "j"]]] [JSExpression [JSExpressionPostfix "++" [JSIdentifier "i"]]] (JSLiteral ";")
+  @=? doParse iterationStatement srcForVarFull
+
+srcIfElse1 = "if(a){b=1}else c=2";
+caseIfElse1 =
+  JSSourceElements [JSIfElse (JSExpression [JSIdentifier "a"]) (JSBlock [JSExpression [JSElement "assignmentExpression" [JSIdentifier "b",JSOperator "=",JSDecimal 1]]]) (JSExpression [JSElement "assignmentExpression" [JSIdentifier "c",JSOperator "=",JSDecimal 2]])]
+  @=? doParse program srcIfElse1
+caseMinIfElse1 =
+  "if(a){b=1}else c=2" @=? (show $ minify srcIfElse1)
+
+srcIfElse2 = "if(a){b=1}else {c=2;d=4}";
+caseIfElse2 =
+  JSSourceElements [JSIfElse (JSExpression [JSIdentifier "a"]) (JSBlock [JSExpression [JSElement "assignmentExpression" [JSIdentifier "b",JSOperator "=",JSDecimal 1]]]) (JSBlock [JSExpression [JSElement "assignmentExpression" [JSIdentifier "c",JSOperator "=",JSDecimal 2]],JSLiteral ";",JSExpression [JSElement "assignmentExpression" [JSIdentifier "d",JSOperator "=",JSDecimal 4]]])]
+  @=? doParse program srcIfElse2
+caseMinIfElse2 =
+  "if(a){b=1}else{c=2;d=4}" @=? (show $ minify srcIfElse2)
 
 src0_f = "function Hello(a) {ExprArray(1,1);}"
 case0_f =

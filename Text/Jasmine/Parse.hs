@@ -12,6 +12,7 @@ module Text.Jasmine.Parse
     , functionDeclaration
     , identifier
     , statementList  
+    , iterationStatement  
     , m  
     , main  
     ) where
@@ -73,9 +74,9 @@ data JSNode = JSArguments [JSNode]
               | JSExpressionPostfix String [JSNode]
               | JSExpressionTernary [JSNode] [JSNode] [JSNode]
               | JSFinally JSNode  
-              | JSFor JSNode JSNode JSNode JSNode                
+              | JSFor JSNode [JSNode] [JSNode] JSNode                
               | JSForIn [JSNode] JSNode JSNode
-              | JSForVar [JSNode] JSNode JSNode JSNode                
+              | JSForVar [JSNode] [JSNode] [JSNode] JSNode                
               | JSForVarIn JSNode JSNode JSNode 
               | JSFunction JSNode [JSNode] JSNode -- name, parameter list, body
               | JSFunctionBody [JSNode]
@@ -276,11 +277,36 @@ hexIntegerLiteral = P.hexadecimal lexer -- TODO: check prefix etc for Javascript
 -- {Non Terminator} = {String Chars1} - {CR} - {LF}
 -- RegExp         = '/' ({RegExp Chars} | '\' {Non Terminator})+ '/' ( 'g' | 'i' | 'm' )*
 
+-- ---------------------------------------------------------------------
+-- From HJS
+
+regex :: GenParser Char st [Char]
+regex = do { char '/'; body <- do { c <- firstchar; cs <- many otherchar; return $ concat (c:cs) }; char '/'; 
+             flg <- identPart; return $ ("/"++body++"/"++flg) }
+
+firstchar :: GenParser Char st [Char]
+firstchar = do { c <- satisfy (\c -> isPrint c && c /= '*' && c /= '\\' && c /= '/'); return [c]} <|> escapeseq
+
+escapeseq :: GenParser Char st [Char]
+escapeseq = do { char '\\'; c <- satisfy isPrint; return ['\\',c]}
+
+otherchar :: GenParser Char st [Char]
+otherchar = do { c <- satisfy (\c -> isPrint c && c /= '\\' && c /= '/'); return [c]} <|> escapeseq
+
+identPart :: GenParser Char st [Char]
+identPart = many letter
+
+-- ---------------------------------------------------------------------
+
+
 -- TODO: do this properly, it is late now, want to move on
 regExp :: GenParser Char st JSNode
+{-
 regExp = do { rOp "/"; v1 <- many (noneOf "/"); rOp "/"; v2 <- optional (oneOf "gim"); -- TODO: remove optional
               return (JSRegEx ("/" ++ v1 ++ "/" ++ (show(v2))))  }
-       
+-}
+regExp = do { v1 <- regex;       
+              return (JSRegEx v1)}
 
 -- <Literal> ::= <Null Literal>
 --             | <Boolean Literal>
@@ -812,10 +838,13 @@ variableDeclarationList = do{ val <- sepBy1 variableDeclaration (rOp ",");
 -- <Variable Declaration> ::= Identifier
 --                          | Identifier <Initializer>
 variableDeclaration :: GenParser Char st JSNode
-variableDeclaration = do{ val <- identifier; 
-                          return (JSVarDecl val [])}
-                  <|> do{ v1 <- identifier; v2 <- initializer; 
-                          return (JSVarDecl v1 v2)}
+variableDeclaration = do{ v1 <- identifier; 
+                          do {
+                            do {v2 <- initializer; 
+                                return (JSVarDecl v1 v2)}
+                            <|> return (JSVarDecl v1 [])
+                            }
+                          }
 
 -- <Initializer> ::= '=' <Assignment Expression>
 initializer :: GenParser Char st [JSNode]
@@ -850,19 +879,23 @@ iterationStatement = do{ reserved "do"; v1 <- statement; reserved "while"; rOp "
                          return (JSDoWhile v1 v2 v3)}
                  <|> do{ reserved "while"; rOp "("; v1 <- expression; rOp ")"; v2 <- statement; 
                          return (JSWhile v1 v2)}
-                 <|> do{ reserved "for"; rOp "("; v1 <- expression; rOp ";"; v2 <- expression; rOp ";";
-                         v3 <- expression; rOp ")"; v4 <- statement; 
-                         return (JSFor v1 v2 v3 v4)}
-                 <|> do{ reserved "for"; rOp "("; reserved "var"; v1 <- variableDeclarationList; rOp ";"; v2 <- expression; 
-                         rOp ";"; v3 <- expression; rOp ")"; v4 <- statement; 
-                         return (JSForVar v1 v2 v3 v4)}
-                 <|> do{ reserved "for"; rOp "("; v1 <- leftHandSideExpression; reserved "in"; v2 <- expression; rOp ")"; 
+                 <|> try(do{ reserved "for"; rOp "("; reserved "var"; v1 <- variableDeclarationList; rOp ";"; v2 <- optionalExpression ";"; 
+                         v3 <- optionalExpression ")"; v4 <- statement; 
+                         return (JSForVar v1 v2 v3 v4)})
+                 <|> try(do{ reserved "for"; rOp "("; v1 <- expression; rOp ";"; v2 <- optionalExpression ";"; 
+                         v3 <- optionalExpression ")"; v4 <- statement; 
+                         return (JSFor v1 v2 v3 v4)})
+                 <|> try(do{ reserved "for"; rOp "("; v1 <- leftHandSideExpression; reserved "in"; v2 <- expression; rOp ")"; 
                          v3 <- statement; 
-                         return (JSForIn v1 v2 v3)}
+                         return (JSForIn v1 v2 v3)})
                  <|> do{ reserved "for"; rOp "("; reserved "var"; v1 <- variableDeclaration; reserved "in"; 
                          v2 <- expression; rOp ")"; v3 <- statement; 
                          return (JSForVarIn v1 v2 v3)}
-
+                     
+optionalExpression s = do { rOp s; 
+                            return []}
+                   <|> do { v1 <- expression; rOp s ;
+                            return [v1]}
 
 -- <Continue Statement> ::= 'continue' ';'
 --                        | 'continue' Identifier ';'
@@ -1085,5 +1118,21 @@ doParse p input = case parse (p' p) "js" input of
     
 p' :: (Show tok) => GenParser tok st b -> GenParser tok st b
 p' p = do {val <- p; eof; return val}
+
+-- ---------------------------------------------------------------------
+
+showFile :: FilePath -> IO String
+showFile filename =
+  do 
+     x <- readFile (filename)
+     return $ (show x)
+
+-- ---------------------------------------------------------------------
+
+parseFile :: FilePath -> IO JSNode
+parseFile filename =
+  do 
+     x <- readFile (filename)
+     return $ (readJs x)
 
 -- EOF
