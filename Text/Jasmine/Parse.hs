@@ -53,7 +53,7 @@ instance Applicative Result where
 
 -- ---------------------------------------------------------------------
 
-data JSNode = JSArguments [JSNode]  
+data JSNode = JSArguments [[JSNode]]  
               | JSArrayLiteral [JSNode]
               | JSBlock [JSNode]
               | JSBreak [JSNode]
@@ -467,17 +467,18 @@ newExpression = memberExpression
 callExpression :: GenParser Char st [JSNode]
 callExpression = do{ v1 <- memberExpression; v2 <- arguments; 
                       do { v3 <- rest; 
-                          return (v1++[v2,v3])}
-                  <|> do {return (v1++[v2   ])}
+                          return (v1++[v2]++v3)}
+                  <|> do {return (v1++[v2]    )}
                    }
                  where
                    rest =
-                         do{ v1 <- arguments ; v2 <- rest;
-                             return (JSCallExpression "()" [v1,v2])}
-                     <|> do{ rOp "["; v1 <- expression; rOp "]"; v2 <- rest;
-                             return (JSCallExpression "[]" [v1,v2])}
-                     <|> do{ rOp "."; v1 <- identifier; v2 <- rest;
-                             return (JSCallExpression "." [v1,v2])}
+                         do{ v4 <- arguments ; v5 <- rest;
+                             return ([(JSCallExpression "()" [v4])]++v5)}
+                     <|> do{ rOp "["; v4 <- expression; rOp "]"; v5 <- rest;
+                             return ([JSCallExpression "[]" [v4]]++v5)}
+                     <|> do{ rOp "."; v4 <- identifier; v5 <- rest;
+                             return ([JSCallExpression "." [v4]]++v5)}
+                     <|> return [] -- As per HJS, seems to extend the syntax
 
 -- ---------------------------------------------------------------------
 -- From HJS
@@ -501,15 +502,16 @@ callExpr = do { x <- memberExpr;
 --               | '(' <Argument List> ')'
 arguments :: GenParser Char st JSNode
 arguments = try(do{ rOp "(";  rOp ")";
-                return (JSArguments [])})
+                return (JSArguments [[]])})
         <|> do{ rOp "("; v1 <- argumentList; rOp ")";
                 return (JSArguments v1)}
 
 -- <Argument List> ::= <Assignment Expression>
 --                   | <Argument List> ',' <Assignment Expression>
-argumentList :: GenParser Char st [JSNode]
+argumentList :: GenParser Char st [[JSNode]]
 argumentList = do{ vals <- sepBy1 assignmentExpression (rOp ",");
-                   return (flatten vals)}
+                   --return (flatten vals)}
+                   return vals}
 
 
 -- <Left Hand Side Expression> ::= <New Expression> 

@@ -21,7 +21,7 @@ renderJS (JSElement s xs)        = rJS xs
 renderJS (JSFunction s p xs)     = (text "function") <+> (renderJS s) <> (text "(") <> (rJS p) <> (text ")") <> (renderJS xs)
 renderJS (JSFunctionBody xs)     = (text "{") <> (rJS xs) <> (text "}")
 renderJS (JSFunctionExpression as s) = (text "function") <> (text "(") <> (rJS as) <> (text ")") <> (renderJS s)
-renderJS (JSArguments xs)        = (text "(") <> (commaList xs) <> (text ")")
+renderJS (JSArguments xs)        = (text "(") <> (commaListList xs) <> (text ")")
 renderJS (JSBlock xs)            = (text "{") <> (rJS xs) <> (text "}")
 renderJS (JSIf c t)              = (text "if") <> (text "(") <> (renderJS c) <> (text ")") <> (renderJS t)
 renderJS (JSIfElse c t e)        = (text "if") <> (text "(") <> (renderJS c) <> (text ")") <> (renderJS t) <> (text "else") <> (spaceOrBlock e)
@@ -32,7 +32,10 @@ renderJS (JSStringLiteral s l)   = (char s) <> (text l) <> (char s)
 renderJS (JSUnary l  )           = text l
 renderJS (JSArrayLiteral xs)     = (text "[") <> (rJS xs) <> (text "]")
 renderJS (JSBreak xs)            = (text "break") <+> (rJS xs) -- <> (text ";")
-renderJS (JSCallExpression t xs) = (char $ head t) <> (rJS xs) <> (if ((length t) > 1) then (char $ last t) else empty)
+
+renderJS (JSCallExpression "()" xs) = (rJS xs)
+renderJS (JSCallExpression   t  xs) = (char $ head t) <> (rJS xs) <> (if ((length t) > 1) then (char $ last t) else empty)
+
 renderJS (JSCase e xs)           = (text "case") <+> (renderJS e) <> (char ':') <> (rJS xs)          
 renderJS (JSCatch i s)           = (text "catch") <> (char '(') <> (renderJS i) <> (char ')') <> (renderJS s)
 renderJS (JSContinue is)         = (text "continue") <+> (rJS is) -- <> (char ';')
@@ -75,6 +78,9 @@ rJS :: [JSNode] -> Doc
 rJS xs = hcat $ map renderJS xs
 
 commaList xs = (hcat $ (punctuate comma (toDoc xs)))
+
+commaListList :: [[JSNode]] -> Doc
+commaListList xs = (hcat $ punctuate comma $ map rJS xs)
 
 toDoc :: [JSNode] -> [Doc]
 toDoc xs = map renderJS xs
