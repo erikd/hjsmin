@@ -785,6 +785,7 @@ expression = do{ val <- sepBy1 assignmentExpression (rOp ",");
 --               | <Expression> 
 statement :: GenParser Char st JSNode
 statement = statementBlock
+        <|> try(labelledStatement)
         <|> expression 
         <|> variableStatement
         <|> emptyStatement 
@@ -795,7 +796,6 @@ statement = statementBlock
         <|> breakStatement    
         <|> returnStatement     
         <|> withStatement
-        <|> labelledStatement
         <|> switchStatement
         <|> throwStatement 
         <|> tryStatement
@@ -867,7 +867,7 @@ emptyStatement = do { v1 <- autoSemi'; return v1}
 -- <If Statement> ::= 'if' '(' <Expression> ')' <Statement> 
 ifStatement :: GenParser Char st JSNode
 ifStatement = do{ reserved "if"; rOp "("; v1 <- expression; rOp ")"; v2 <- statement;
-                  return (JSIf v1 v2) }
+                  return (if (v2 == (JSLiteral ";")) then (JSIf v1 (JSLiteral "")) else (JSIf v1 v2)) }
 
 -- <If Else Statement> ::= 'if' '(' <Expression> ')' <Statement> 'else' <Statement>
 ifElseStatement :: GenParser Char st JSNode
