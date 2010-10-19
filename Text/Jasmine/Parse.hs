@@ -459,9 +459,16 @@ propertyNameandValueList :: GenParser Char st [JSNode]
 propertyNameandValueList = do{ val <- sepBy1 propertyNameandValue (rOp ",");
                                return val}
                            
+-- Seems we can have function declarations in the value part too                           
 propertyNameandValue :: GenParser Char st JSNode
-propertyNameandValue = do{ v1 <- propertyName; rOp ":"; v2 <- assignmentExpression;
-                           return (JSPropertyNameandValue v1 v2)}
+propertyNameandValue = do{ v1 <- propertyName; rOp ":"; 
+                           do {
+                                do {v2 <- assignmentExpression;
+                                    return (JSPropertyNameandValue v1 v2)}
+                            <|> do {v2 <- functionDeclaration;    
+                                    return (JSPropertyNameandValue v1 [v2])}
+                                }
+                           }
 
 -- <Property Name> ::= Identifier
 --                   | StringLiteral
@@ -1145,6 +1152,7 @@ myIntersperse :: JSNode -> [JSNode] -> [JSNode]
 myIntersperse _   []      = []
 myIntersperse _   [x]     = [x]
 myIntersperse sep (x:(JSFunction v1 v2 v3):xs)  = x : (JSLiteral "\n") : (JSFunction v1 v2 v3) : sep : myIntersperse sep xs
+myIntersperse sep ((JSReturn v):xs)  = (JSReturn v) : myIntersperse sep xs
 myIntersperse sep (x:xs)  = x : sep : myIntersperse sep xs
                        
                        
