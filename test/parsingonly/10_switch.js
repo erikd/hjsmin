@@ -5,6 +5,7 @@ switch(i){
 2;
 }
 
+function x() {
  switch (typeof v) {
       case "boolean":
         return new global.Boolean(v);
@@ -20,6 +21,7 @@ switch(i){
         if (v !== null)
             return v;
     }
+}
 
 switch (t) {
               case BITWISE_OR:  v = u | v; break;
