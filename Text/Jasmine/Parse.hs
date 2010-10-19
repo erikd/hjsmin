@@ -101,7 +101,7 @@ data JSNode = JSArguments [[JSNode]]
               | JSTry JSNode [JSNode]  
               | JSUnary String  
               | JSVarDecl JSNode [JSNode]
-              | JSVariables [JSNode]  
+              | JSVariables String [JSNode]  
               | JSWhile JSNode JSNode
               | JSWith JSNode [JSNode]
     deriving (Show, Eq, Read, Data, Typeable)
@@ -365,20 +365,56 @@ primaryExpression = do {reserved "this";
                         return (JSExpressionParen val)}
                 <|> regularExpressionLiteral
 
+-- ---------------------------------------------------------------------
+-- Rework array literal
+
+
+-- <Array Literal> ::= '[' ']'
+--                   | '[' <Elision> ']'
+--                   | '[' <Element List> ']'
+--                   | '[' <Element List> ',' <Elision> ']'
+
+-- <Elision> ::= ','
+--             | <Elision> ','
+
+-- <Element List> ::= <Elision> <Assignment Expression>
+--                  | <Element List> ',' <Elision>  <Assignment Expression>
+--                  | <Element List> ',' <Assignment Expression>
+--                  | <Assignment Expression>
+
+--------
+--so
+
+-- <Array Literal> ::= '[' many (',' <|> assignment) ']'
+
+
+-- ---------------------------------------------------------------------
 
 -- <Array Literal> ::= '[' ']'
 --                   | '[' <Elision> ']'
 --                   | '[' <Element List> ']'
 --                   | '[' <Element List> ',' <Elision> ']'
 arrayLiteral :: GenParser Char st JSNode
-arrayLiteral = do {rOp "["; rOp "]"; 
-                   return (JSArrayLiteral [])}
-           <|> do {rOp "["; val <- elision; rOp "]"; 
-                   return (JSArrayLiteral [val])}
-           <|> do {rOp "["; val <- elementList; rOp "]"; 
-                   return (JSArrayLiteral val)}
-           <|> do {rOp "["; v1 <- elementList; rOp ","; v2 <- elision; rOp "]"; 
-                   return (JSArrayLiteral (v1++[v2]))}
+arrayLiteral = do {rOp "["; v1 <- many (do { rOp ","; return [(JSElision [])]} <|> assignmentExpression); rOp "]";
+                   return (JSArrayLiteral (flatten v1)) }
+
+{-
+arrayLiteral :: GenParser Char st JSNode
+arrayLiteral = do {rOp "["; 
+                   do {
+                        do { rOp "]"; 
+                             return (JSArrayLiteral [])}
+                    <|> do { v1 <- elision; rOp "]"; 
+                             return (JSArrayLiteral [v1])}
+                    <|> do { v1 <- elementList; rOp "]"; 
+                             do {
+                               do { rOp ","; v2 <- elision; rOp "]"; 
+                                    return (JSArrayLiteral (v1++[v2]))}
+                               <|> return (JSArrayLiteral v1)
+                               }
+                             }
+                        }
+                   }
 
 
 -- <Elision> ::= ','
@@ -395,14 +431,22 @@ elision = do{ rOp ",";
 --                  | <Element List> ',' <Assignment Expression>
 --                  | <Assignment Expression>
 elementList :: GenParser Char st [JSNode]
-elementList = do{ v1 <- elision; v2 <- assignmentExpression;
-              return [(JSElementList (v1:v2))]}
-          <|> do{ v1 <- elementList; rOp ","; v2 <- elision; v3 <- assignmentExpression;
-              return [(JSElementList (v1++[v2]++v3))]}
-          <|> do{ v1 <- elementList; rOp ","; v2 <- assignmentExpression;
-              return [(JSElementList (v1++v2))]}
-          <|> assignmentExpression
-
+elementList = do { v1 <- elision; v2 <- assignmentExpression; v3 <-rest;
+                   return [(JSElementList (v1:(v2++v3)))] }
+          <|> do { v1 <- assignmentExpression; v2 <- rest;
+                   return [(JSElementList (v1++v2))]}
+          where   
+            rest =
+                  do {rOp ",";
+                      do { 
+                            do { v2 <- elision; v3 <- assignmentExpression;
+                                return [] {- ([v2]++v3)-}}
+                        <|> do { v2 <- assignmentExpression;
+                                return [] {-v2-}}
+                         }
+                      }
+                  <|> do {return []}
+-}   
 
 -- <Object Literal> ::= '{' <Property Name and Value List> '}'
 objectLiteral :: GenParser Char st JSNode
@@ -830,9 +874,12 @@ statementList :: GenParser Char st [JSNode]
 statementList = many1 statement
 
 -- <Variable Statement> ::= var <Variable Declaration List> ';'
+-- Note: Mozilla introduced const declarations, not part of official spec
 variableStatement :: GenParser Char st JSNode
 variableStatement = do {reserved "var"; val <- variableDeclarationList;
-                        return (JSVariables val)}
+                        return (JSVariables "var" val)}
+                <|> do {reserved "const"; val <- variableDeclarationList;
+                        return (JSVariables "const" val)}
 
                     
 -- <Variable Declaration List> ::= <Variable Declaration>

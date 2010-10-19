@@ -64,7 +64,7 @@ renderJS (JSForVarIn e1 e2 s)          = (text "for") <> (char '(') <> (text "va
                                          <> (renderJS e2) <> (char ')') <> (renderJS s)
 renderJS (JSHexInteger i)              = (text $ show i) -- TODO: need to tweak this                                         
 renderJS (JSLabelled l v)              = (renderJS l) <> (text ":") <> (renderJS v)
-renderJS (JSObjectLiteral xs)          = (text "{") <> (rJS xs) <> (text "}")
+renderJS (JSObjectLiteral xs)          = (text "{") <> (commaList xs) <> (text "}")
 renderJS (JSPropertyNameandValue n vs) = (renderJS n) <> (text ":") <> (rJS vs)
 renderJS (JSRegEx s)                   = (text s)
 renderJS (JSReturn xs)                 = (text "return") <+> (rJS xs) -- <> (text ";") no longer required, handled by autosemi parsing
@@ -76,7 +76,7 @@ renderJS (JSTry e xs)                  = (text "try") <+> (rJS xs)
 renderJS (JSVarDecl i [])              = (renderJS i) 
 renderJS (JSVarDecl i xs)              = (renderJS i) <> (text "=") <> (rJS xs)
 
-renderJS (JSVariables xs)              = (text "var") <+> (commaList xs)
+renderJS (JSVariables kw xs)           = (text kw) <+> (commaList xs)
 renderJS (JSWhile e s)                 = (text "while") <> (char '(') <> (renderJS e) <> (char ')') <> (renderJS s)
 renderJS (JSWith e s)                  = (text "with") <> (char '(') <> (renderJS e) <> (char ')') <> (rJS s)
           
@@ -138,7 +138,22 @@ case3 = JSSourceElements
             [JSBreak [JSLiteral ""]]
            ]
           ]
-
+          
+-- doParse expression "opTypeNames={'\\n':\"NEWLINE\",';':\"SEMICOLON\",',':\"COMMA\"}"          
+case4 = JSExpression 
+          [
+            JSElement "assignmentExpression" 
+               [
+               JSIdentifier "opTypeNames",
+               JSOperator "=",
+               JSObjectLiteral 
+                 [JSPropertyNameandValue (JSStringLiteral '\'' "\\n") [JSStringLiteral '"' "NEWLINE"],
+                  JSPropertyNameandValue (JSStringLiteral '\'' ";") [JSStringLiteral '"' "SEMICOLON"],
+                  JSPropertyNameandValue (JSStringLiteral '\'' ",") [JSStringLiteral '"' "COMMA"]
+                 ]
+               ]
+          ]
+          
 
 
 -- EOF
