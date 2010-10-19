@@ -28,15 +28,20 @@ renderJS (JSIfElse c t e)        = (text "if") <> (text "(") <> (renderJS c) <> 
 renderJS (JSMemberDot xs)        = (text ".") <> (rJS xs)
 renderJS (JSMemberSquare xs)     = (text "[") <> (rJS xs) <> (text "]")
 renderJS (JSLiteral l)           = (text l)
-renderJS (JSStringLiteral s l)   = (char s) <> (text l) <> (char s)
+renderJS (JSStringLiteral s l)   = empty <> (char s) <> (text l) <> (char s)
 renderJS (JSUnary l  )           = text l
 renderJS (JSArrayLiteral xs)     = (text "[") <> (rJS xs) <> (text "]")
-renderJS (JSBreak xs)            = (text "break") <+> (rJS xs) -- <> (text ";")
+
+renderJS (JSBreak [])            = (text "break")
+renderJS (JSBreak xs)            = (text "break") <> (rJS xs) -- <> (text ";")
 
 renderJS (JSCallExpression "()" xs) = (rJS xs)
 renderJS (JSCallExpression   t  xs) = (char $ head t) <> (rJS xs) <> (if ((length t) > 1) then (char $ last t) else empty)
 
+-- No space between 'case' and string literal. TODO: what about expression in parentheses?
+renderJS (JSCase (JSExpression [JSStringLiteral sep s]) xs) = (text "case") <> (renderJS (JSStringLiteral sep s)) <> (char ':') <> (rJS xs)          
 renderJS (JSCase e xs)           = (text "case") <+> (renderJS e) <> (char ':') <> (rJS xs)          
+
 renderJS (JSCatch i s)           = (text "catch") <> (char '(') <> (renderJS i) <> (char ')') <> (renderJS s)
 renderJS (JSContinue is)         = (text "continue") <+> (rJS is) -- <> (char ';')
 renderJS (JSDefault xs)          = (text "default") <> (char ':') <> (rJS xs)
@@ -64,7 +69,8 @@ renderJS (JSPropertyNameandValue n vs) = (renderJS n) <> (text ":") <> (rJS vs)
 renderJS (JSRegEx s)                   = (text s)
 renderJS (JSReturn xs)                 = (text "return") <+> (rJS xs) -- <> (text ";") no longer required, handled by autosemi parsing
 renderJS (JSThrow e)                   = (text "throw") <+> (renderJS e)
-renderJS (JSSwitch e xs)               = (text "switch") <> (char '(') <> (renderJS e) <> (char ')') <> (rJS xs) -- <> (text ";")
+renderJS (JSSwitch e xs)               = (text "switch") <> (char '(') <> (renderJS e) <> (char ')') <> 
+                                         (char '{') <> (rJS xs)  <> (char '}')
 renderJS (JSTry e xs)                  = (text "try") <+> (rJS xs)
 
 renderJS (JSVarDecl i [])              = (renderJS i) 
@@ -122,7 +128,16 @@ case2 = JSFunctionExpression [] (JSFunctionBody
                                 )
                                 -- ]],JSEmpty (JSLiteral ";")  
   
-  
+case3 :: JSNode  
+case3 = JSSourceElements 
+          [JSSwitch 
+           (JSExpression [JSUnary "typeof ",JSIdentifier "v"]) 
+           [JSCase 
+            (JSExpression [JSStringLiteral '"' "boolean"]) 
+            --(JSStringLiteral '"' "boolean") 
+            [JSBreak [JSLiteral ""]]
+           ]
+          ]
 
 
 

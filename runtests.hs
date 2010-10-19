@@ -52,6 +52,8 @@ testSuiteFiles = testGroup "Text.Jasmine.Pretty files"
   , testCase "06_newexpr.js"    (testFile "./test/pminified/06_newexpr.js")  
   , testCase "06_var.js"        (testFile "./test/pminified/06_var.js")  
   , testCase "07_expr.js"       (testFile "./test/pminified/07_expr.js")  
+  --, testCase "10_switch.js"     (testFile "./test/parsingonly/10_switch.js")      
+  , testCase "10_switch.js"     (testFile "./test/pminified/10_switch.js")      
   ]  
 
 srcHelloWorld = "function Hello(a) {}"

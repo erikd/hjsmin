@@ -228,6 +228,7 @@ rOp'' (x:xs) = do{ _ <- char x; rOp xs;}
 -- 2. Additional semi, with following } => empty
 -- 3. semi with no following }          => semi
 
+-- TODO: change the return to [JSNode], and get rid of the empty JSLiteral
 autoSemi :: GenParser Char st JSNode
 autoSemi = try (do { rOp ";"; lookAhead (rOp "}");
                      return (JSLiteral "");})
@@ -553,8 +554,8 @@ unaryExpression = do{ v1 <- postfixExpression;
                       return ((JSUnary "delete"):v1)}
               <|> do{ reserved "void";   v1 <- unaryExpression;
                       return ((JSUnary "void"):v1)}
-              <|> do{ reserved "typeof"; v1 <- unaryExpression;
-                      return ((JSUnary "typeof"):v1)}
+              <|> do{ reserved "typeof"; v1 <- unaryExpression; 
+                      return ((JSUnary "typeof "):v1)} -- TODO: should the space always be there?
               <|> do{ rOp "++"; v1 <- unaryExpression;
                       return ((JSUnary "++"):v1)}
               <|> do{ rOp "--"; v1 <- unaryExpression;
@@ -612,10 +613,10 @@ shiftExpression = do{ v1 <- additiveExpression; v2 <- rest;
                     rest =
                           do{ rOp "<<"; v2 <- additiveExpression; v3 <- rest;
                               return [(JSExpressionBinary "<<" v2 v3)]}
-                      <|> do{ rOp ">>"; v2 <- additiveExpression; v3 <- rest;
-                              return [(JSExpressionBinary ">>" v2 v3)]}
                       <|> do{ rOp ">>>"; v2 <- additiveExpression; v3 <- rest;
                               return [(JSExpressionBinary ">>>" v2 v3)]}
+                      <|> do{ rOp ">>"; v2 <- additiveExpression; v3 <- rest;
+                              return [(JSExpressionBinary ">>" v2 v3)]}
                       <|> return []
 
 
@@ -916,10 +917,14 @@ continueStatement = do {reserved "continue"; v1 <- autoSemi;
 -- <Break Statement> ::= 'break' ';'
 --                        | 'break' Identifier ';'
 breakStatement :: GenParser Char st JSNode
-breakStatement = do {reserved "break"; v1 <- autoSemi; 
-                     return (JSBreak [v1])}
-            <|>  do {reserved "break"; v1 <- identifier; v2 <- autoSemi; 
-                     return (JSBreak [v1,v2])}
+breakStatement = do {reserved "break"; 
+                     do {
+                          do {v1 <- autoSemi; 
+                              return (if (v1 == JSLiteral "") then (JSBreak []) else (JSBreak [v1]))}
+                     <|>  do {v1 <- identifier; v2 <- autoSemi; 
+                              return (JSBreak [v1,v2])}
+                        }
+                     }
 
 
 -- <Return Statement> ::= 'return' ';'
@@ -952,16 +957,17 @@ switchStatement = do{ reserved "switch"; rOp "("; v1 <- expression; rOp ")"; v2 
 --                | '{' <Default Clause> <Case Clauses> '}'
 --                | '{' <Default Clause> '}'
 caseBlock :: GenParser Char st [JSNode]
-caseBlock = do{ rOp "{"; rOp "}"; 
-                return []}
-        <|> do{ rOp "{"; v1 <- caseClauses; rOp "}"; 
-                return v1}
-        <|> do{ rOp "{"; v1 <- caseClauses; v2 <- defaultClause; rOp "}"; 
-                return (v1++[v2])}
-        <|> do{ rOp "{"; v1 <- caseClauses; v2 <- defaultClause; v3 <- caseClauses; rOp "}"; 
-                return (v1++[v2]++v3)}
-        <|> do{ rOp "{"; v1 <- defaultClause; v2 <- caseClauses; rOp "}"; 
-                return (v1:v2)}
+-- TODO: get rid of the try clauses by unwinding this
+caseBlock = try(do{ rOp "{"; rOp "}"; 
+                return []})
+        <|> try(do{ rOp "{"; v1 <- caseClauses; rOp "}"; 
+                return v1})
+        <|> try(do{ rOp "{"; v1 <- caseClauses; v2 <- defaultClause; rOp "}"; 
+                return (v1++[v2])})
+        <|> try(do{ rOp "{"; v1 <- caseClauses; v2 <- defaultClause; v3 <- caseClauses; rOp "}"; 
+                return (v1++[v2]++v3)})
+        <|> try(do{ rOp "{"; v1 <- defaultClause; v2 <- caseClauses; rOp "}"; 
+                return (v1:v2)})
         <|> do{ rOp "{"; v1 <- defaultClause; rOp "}"; 
                 return [v1]}
 
@@ -970,16 +976,18 @@ caseBlock = do{ rOp "{"; rOp "}";
 --                  | <Case Clauses> <Case Clause>
 caseClauses :: GenParser Char st [JSNode]
 caseClauses = do{ val <- many1 caseClause;
-                return val}
+                  return val}
 
 -- <Case Clause> ::= 'case' <Expression> ':' <Statement List>
 --                 | 'case' <Expression> ':'
 caseClause :: GenParser Char st JSNode
-caseClause = do { reserved "case"; val <- expression; rOp ":"; 
-                return (JSCase val [])}
-         <|> do { reserved "case"; v1 <- expression; rOp ":"; v2 <- statementList;
-                return (JSCase v1 v2)}
-
+caseClause = do { reserved "case"; v1 <- expression; rOp ":"; 
+                  do {
+                       do { v2 <- statementList;
+                            return (JSCase v1 v2)}
+                   <|> return (JSCase v1 [])
+                     }
+                  }
 
 -- <Default Clause> ::= 'default' ':' 
 --                    | 'default' ':' <Statement List>
@@ -1081,10 +1089,18 @@ sourceElement = functionDeclaration
 -- ---------------------------------------------------------------
 -- Utility stuff
 
+-- TODO: move this into the Pretty printer, to keep the Parse true to the source, so it can be reused
 -- Make sure every alternate part is a JSLiteral ";", but not the last one
 fixSourceElements :: [JSNode] -> [JSNode]
-fixSourceElements xs = intersperse (JSLiteral ";") $ filter (\x -> JSLiteral "" /= x) $ filter (\x -> JSLiteral ";" /= x) xs
+fixSourceElements xs = myIntersperse (JSLiteral ";") $ filter (\x -> JSLiteral "" /= x) $ filter (\x -> JSLiteral ";" /= x) xs
   
+myIntersperse :: JSNode -> [JSNode] -> [JSNode]
+myIntersperse _   []      = []
+myIntersperse _   [x]     = [x]
+myIntersperse sep (x:(JSFunction v1 v2 v3):xs)  = x : (JSLiteral "\n") : (JSFunction v1 v2 v3) : sep : myIntersperse sep xs
+myIntersperse sep (x:xs)  = x : sep : myIntersperse sep xs
+                       
+                       
 -- ---------------------------------------------------------------
 -- Testing
 

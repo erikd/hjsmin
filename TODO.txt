@@ -1,4 +1,12 @@
+Testing:
 
+The following Lint has a sctrict parser
+  http://www.javascriptlint.com/online_lint.php
+
+This one does not
+  http://www.jslint.com/
+
+--- 
 
 Look at 
 
