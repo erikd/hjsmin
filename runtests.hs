@@ -79,7 +79,7 @@ caseSimpleAssignment =
   [JSExpression [JSElement "assignmentExpression" [JSIdentifier "a",JSOperator "=",JSDecimal 1]],JSLiteral ";"]
   @=? doParse statementList srcSimpleAssignment
 caseMinSimpleAssignment =
-  "a=1" @=? (show $ minify srcSimpleAssignment)
+  "a=1;" @=? (show $ minify srcSimpleAssignment)
 
 srcEmptyFor = "for (i = 0;;){}"
 caseEmptyFor =
@@ -112,7 +112,7 @@ caseMinIfElse2 =
 
 src0_f = "function Hello(a) {ExprArray(1,1);}"
 case0_f =
-  JSSourceElements [JSFunction (JSIdentifier "Hello") [JSIdentifier "a"] (JSFunctionBody [JSSourceElements [JSExpression [JSIdentifier "ExprArray",JSArguments [[JSDecimal 1],[JSDecimal 1]]]]])]
+  JSSourceElements [JSFunction (JSIdentifier "Hello") [JSIdentifier "a"] (JSFunctionBody [JSSourceElements [JSExpression [JSIdentifier "ExprArray",JSArguments [[JSDecimal 1],[JSDecimal 1]]],JSLiteral ""]])]
   @=? doParse program src0_f
 caseMin0_f =
   "function Hello(a){ExprArray(1,1)}" @=? (show $ minify src0_f)
@@ -125,7 +125,7 @@ src01_semi1 = (
     "// five\n"++
     "five")  
 case01_semi1 =
-  JSSourceElements [JSBlock [JSExpression [JSIdentifier "zero",JSMemberDot [JSIdentifier "one"]],JSLiteral ";",JSExpression [JSIdentifier "zero"]],JSLiteral ";",JSExpression [JSIdentifier "one"],JSLiteral ";",JSExpression [JSIdentifier "two"],JSLiteral ";",JSExpression [JSIdentifier "three"],JSLiteral ";",JSExpression [JSIdentifier "four"],JSLiteral ";",JSExpression [JSIdentifier "five"]]
+  JSSourceElements [JSBlock [JSExpression [JSIdentifier "zero",JSMemberDot [JSIdentifier "one"]],JSLiteral ";",JSExpression [JSIdentifier "zero"]],JSExpression [JSIdentifier "one"],JSExpression [JSIdentifier "two"],JSLiteral ";",JSExpression [JSIdentifier "three"],JSLiteral ";",JSExpression [JSIdentifier "four"],JSLiteral ";",JSExpression [JSIdentifier "five"]]
   @=? doParse program src01_semi1
 caseMin01_semi1 =
   "{zero.one;zero};one;two;three;four;five" @=? (show $ minify src01_semi1)  

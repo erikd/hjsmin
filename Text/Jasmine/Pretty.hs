@@ -16,7 +16,7 @@ renderJS (JSIdentifier s)        = text s
 renderJS (JSDecimal i)           = text $ show i
 renderJS (JSOperator s)          = text s
 renderJS (JSExpression xs)       = rJS xs
-renderJS (JSSourceElements xs)   = rJS xs
+renderJS (JSSourceElements xs)   = rJS (fixSourceElements xs)
 renderJS (JSElement s xs)        = rJS xs
 renderJS (JSFunction s p xs)     = (text "function") <+> (renderJS s) <> (text "(") <> (rJS p) <> (text ")") <> (renderJS xs)
 renderJS (JSFunctionBody xs)     = (text "{") <> (rJS xs) <> (text "}")
@@ -97,6 +97,24 @@ spaceOrBlock :: JSNode -> Doc
 spaceOrBlock (JSBlock xs) = renderJS (JSBlock xs)
 spaceOrBlock x            = (text " ") <> (renderJS x)
 
+-- ---------------------------------------------------------------
+-- Utility stuff
+
+-- TODO: move this into the Pretty printer, to keep the Parse true to the source, so it can be reused
+-- Make sure every alternate part is a JSLiteral ";", but not the last one
+fixSourceElements :: [JSNode] -> [JSNode]
+--fixSourceElements xs = myIntersperse (JSLiteral ";") $ filter (\x -> JSLiteral "" /= x) $ filter (\x -> JSLiteral ";" /= x) xs
+fixSourceElements xs = myIntersperse (JSLiteral ";") xs
+  
+myIntersperse :: JSNode -> [JSNode] -> [JSNode]
+myIntersperse _   []      = []
+myIntersperse _   [x]     = [x]
+--myIntersperse sep (x:(JSFunction v1 v2 v3):xs)  = x : (JSLiteral "\n") : (JSFunction v1 v2 v3) : sep : myIntersperse sep xs
+myIntersperse sep (x:(JSFunction v1 v2 v3):xs)  = x : (JSLiteral "\n") : (JSFunction v1 v2 v3) : myIntersperse sep xs
+--myIntersperse sep ((JSReturn v):xs)  = (JSReturn v) : myIntersperse sep xs
+--myIntersperse sep (x:xs)  = x : sep : myIntersperse sep xs
+myIntersperse sep (x:xs)  = x : myIntersperse sep xs
+
 -- ---------------------------------------------------------------------
 -- Test stuff
 
@@ -155,6 +173,52 @@ case4 = JSExpression
           ]
           
 
+-- doParse program "function load(s){if(typeof s!=\"string\")return s;a=1}"
+case5 = JSSourceElements 
+          [JSFunction (JSIdentifier "load") 
+           [JSIdentifier "s"] 
+             (JSFunctionBody 
+              [
+                JSSourceElements 
+                  [
+                    JSIf 
+                      (JSExpression [JSUnary "typeof ",JSIdentifier "s",JSExpressionBinary "!=" [JSStringLiteral '"' "string"] []]) 
+                      (JSReturn [JSExpression [JSIdentifier "s"],JSLiteral ";"])
+                    ,JSLiteral ";"
+                    ,JSExpression [JSElement "assignmentExpression" [JSIdentifier "a",JSOperator "=",JSDecimal 1]]
+                    ]
+              ]
+             )
+          ]
+          
+-- doParse program "{if(typeof s!=\"string\")return s;evaluate(1)}"
+case6 = JSSourceElements 
+          [JSBlock 
+           [JSIf 
+              (JSExpression 
+                [JSUnary "typeof ",JSIdentifier "s",JSExpressionBinary "!=" [JSStringLiteral '"' "string"] []]) 
+              (JSReturn 
+                [JSExpression [JSIdentifier "s"],JSLiteral ";"]),
+            JSExpression [JSIdentifier "evaluate",JSArguments [[JSDecimal 1]]
+                         ]
+           ]
+          ]          
+
+--doParse program  "function load(s){if(typeof s!=\"string\")return s;evaluate(1)}"
+case7 = JSSourceElements 
+        [
+          JSFunction (JSIdentifier "load") [JSIdentifier "s"] 
+            (JSFunctionBody 
+             [JSSourceElements 
+              [JSIf 
+                 (JSExpression [JSUnary "typeof ",JSIdentifier "s",JSExpressionBinary "!=" [JSStringLiteral '"' "string"] []]) 
+                 (JSReturn [JSExpression [JSIdentifier "s"],JSLiteral ";"])
+              ,
+               JSExpression [JSIdentifier "evaluate",JSArguments [[JSDecimal 1]]]
+              ]
+             ]
+            )
+        ]
 
 -- EOF
 

@@ -921,7 +921,8 @@ emptyStatement = do { v1 <- autoSemi'; return v1}
 -- <If Statement> ::= 'if' '(' <Expression> ')' <Statement> 
 ifStatement :: GenParser Char st JSNode
 ifStatement = do{ reserved "if"; rOp "("; v1 <- expression; rOp ")"; v2 <- statement;
-                  return (if (v2 == (JSLiteral ";")) then (JSIf v1 (JSLiteral "")) else (JSIf v1 v2)) }
+                  --return (if (v2 == (JSLiteral ";")) then (JSIf v1 (JSLiteral "")) else (JSIf v1 v2)) }
+                  return (JSIf v1 v2) }
 
 -- <If Else Statement> ::= 'if' '(' <Expression> ')' <Statement> 'else' <Statement>
 ifElseStatement :: GenParser Char st JSNode
@@ -1130,7 +1131,7 @@ program = do {whiteSpace; val <- sourceElements; eof; return val}
 --                     | <Source Elements>  <Source Element>
 sourceElements :: GenParser Char st JSNode
 sourceElements = do{ val <- many1 sourceElement;
-                     return (JSSourceElements (fixSourceElements val))}
+                     return (JSSourceElements val)}
                  
 
 -- <Source Element> ::= <Statement>
@@ -1140,20 +1141,6 @@ sourceElement = functionDeclaration
             <|> statement
             <?> "sourceElement"
 
--- ---------------------------------------------------------------
--- Utility stuff
-
--- TODO: move this into the Pretty printer, to keep the Parse true to the source, so it can be reused
--- Make sure every alternate part is a JSLiteral ";", but not the last one
-fixSourceElements :: [JSNode] -> [JSNode]
-fixSourceElements xs = myIntersperse (JSLiteral ";") $ filter (\x -> JSLiteral "" /= x) $ filter (\x -> JSLiteral ";" /= x) xs
-  
-myIntersperse :: JSNode -> [JSNode] -> [JSNode]
-myIntersperse _   []      = []
-myIntersperse _   [x]     = [x]
-myIntersperse sep (x:(JSFunction v1 v2 v3):xs)  = x : (JSLiteral "\n") : (JSFunction v1 v2 v3) : sep : myIntersperse sep xs
-myIntersperse sep ((JSReturn v):xs)  = (JSReturn v) : myIntersperse sep xs
-myIntersperse sep (x:xs)  = x : sep : myIntersperse sep xs
                        
                        
 -- ---------------------------------------------------------------
