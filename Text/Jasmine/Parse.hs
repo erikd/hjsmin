@@ -682,14 +682,15 @@ relationalExpression = do{ v1 <- shiftExpression; v2 <- rest;
                            return (v1++v2)}
                        where
                          rest =
-                                 do{ rOp "<"; v2 <- shiftExpression; v3 <- rest;
-                                     return [(JSExpressionBinary "<" v2 v3)]}
-                             <|> do{ rOp ">"; v2 <- shiftExpression; v3 <- rest;
-                                     return [(JSExpressionBinary ">" v2 v3)]}
-                             <|> do{ rOp "<="; v2 <- shiftExpression; v3 <- rest;
+                                 do{ rOp "<="; v2 <- shiftExpression; v3 <- rest;
                                      return [(JSExpressionBinary "<=" v2 v3)]}
                              <|> do{ rOp ">="; v2 <- shiftExpression; v3 <- rest;
                                      return [(JSExpressionBinary ">=" v2 v3)]}
+
+                             <|> do{ rOp "<"; v2 <- shiftExpression; v3 <- rest;
+                                     return [(JSExpressionBinary "<" v2 v3)]}
+                             <|> do{ rOp ">"; v2 <- shiftExpression; v3 <- rest;
+                                     return [(JSExpressionBinary ">" v2 v3)]}
                              <|> do{ reserved "instanceof"; v2 <- shiftExpression; v3 <- rest;
                                      return [(JSExpressionBinary "instanceof" v2 v3)]}
                              <|> return []
@@ -941,20 +942,32 @@ iterationStatement = do{ reserved "do"; v1 <- statement; reserved "while"; rOp "
                          return (JSDoWhile v1 v2 v3)}
                  <|> do{ reserved "while"; rOp "("; v1 <- expression; rOp ")"; v2 <- statement; 
                          return (JSWhile v1 v2)}
-                 <|> try(do{ reserved "for"; rOp "("; reserved "var"; v1 <- variableDeclarationList; rOp ";"; v2 <- optionalExpression ";"; 
-                         v3 <- optionalExpression ")"; v4 <- statement; 
-                         return (JSForVar v1 v2 v3 v4)})
-                 <|> try(do{ reserved "for"; rOp "("; v1 <- expression; rOp ";"; v2 <- optionalExpression ";"; 
-                         v3 <- optionalExpression ")"; v4 <- statement; 
-                         return (JSFor v1 v2 v3 v4)})
-                 <|> try(do{ reserved "for"; rOp "("; v1 <- leftHandSideExpression; reserved "in"; v2 <- expression; rOp ")"; 
-                         v3 <- statement; 
-                         return (JSForIn v1 v2 v3)})
-                 <|> do{ reserved "for"; rOp "("; reserved "var"; v1 <- variableDeclaration; reserved "in"; 
-                         v2 <- expression; rOp ")"; v3 <- statement; 
-                         return (JSForVarIn v1 v2 v3)}
                      
-optionalExpression :: [Char] -> GenParser Char st38 [JSNode]
+                 <|> do{ reserved "for"; rOp "("; 
+                         do {
+                           do{ reserved "var"; v1 <- variableDeclaration; 
+                             do {
+                               do { rOp ","; v1' <- variableDeclarationList; rOp ";"; v2 <- optionalExpression ";"; 
+                                    v3 <- optionalExpression ")"; v4 <- statement; 
+                                    return (JSForVar (v1:v1') v2 v3 v4)}
+                           <|> do { rOp ";"; v2 <- optionalExpression ";"; 
+                                    v3 <- optionalExpression ")"; v4 <- statement; 
+                                    return (JSForVar [v1] v2 v3 v4)}
+                           <|> do { reserved "in"; v2 <- expression; rOp ")"; v3 <- statement; 
+                                    return (JSForVarIn v1 v2 v3)}
+                                }
+                             }
+                         <|> try(do{ v1 <- leftHandSideExpression; reserved "in"; v2 <- expression; rOp ")"; 
+                                     v3 <- statement; 
+                                     return (JSForIn v1 v2 v3)})
+                         <|> do { v1 <- expression; rOp ";"; v2 <- optionalExpression ";"; 
+                                  v3 <- optionalExpression ")"; v4 <- statement; 
+                                  return (JSFor v1 v2 v3 v4)}
+                           }
+                       }
+                 <?> "iterationStatement"    
+                     
+optionalExpression :: [Char] -> GenParser Char st [JSNode]
 optionalExpression s = do { rOp s; 
                             return []}
                    <|> do { v1 <- expression; rOp s ;
