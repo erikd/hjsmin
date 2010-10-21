@@ -45,8 +45,10 @@ for( x in bob)
 
 }
 
-if (typeof s != "string")
-            return;
+function f() {
+  if (typeof s != "string")
+          return;
+
 
  while (--n >= 0)
             s += t;
@@ -58,6 +60,7 @@ var a, f, i, j, r, s, t, u, v;
 : DECLARED_FORM;
 
  n2 = new Node(t);
+   while (1) {
                 if (tt == DEFAULT)
                     n.defaultIndex = n.cases.length;
                 else
@@ -109,3 +112,5 @@ var a, f, i, j, r, s, t, u, v;
             }
         } while (getValue(execute(n.condition, x)));
         break;
+}
+}
