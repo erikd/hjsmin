@@ -39,11 +39,14 @@ renderJS (JSCallExpression "()" xs) = (rJS xs)
 renderJS (JSCallExpression   t  xs) = (char $ head t) <> (rJS xs) <> (if ((length t) > 1) then (char $ last t) else empty)
 
 -- No space between 'case' and string literal. TODO: what about expression in parentheses?
-renderJS (JSCase (JSExpression [JSStringLiteral sep s]) xs) = (text "case") <> (renderJS (JSStringLiteral sep s)) <> (char ':') <> (rJS xs)          
+renderJS (JSCase (JSExpression [JSStringLiteral sepa s]) xs) = (text "case") <> (renderJS (JSStringLiteral sepa s)) <> (char ':') <> (rJS xs)          
 renderJS (JSCase e xs)           = (text "case") <+> (renderJS e) <> (char ':') <> (rJS xs)          
 
-renderJS (JSCatch i s)           = (text "catch") <> (char '(') <> (renderJS i) <> (char ')') <> (renderJS s)
-renderJS (JSContinue is)         = (text "continue") <+> (rJS is) -- <> (char ';')
+renderJS (JSCatch i [] s)        = (text "catch") <> (char '(') <> (renderJS i) <>  (char ')') <> (renderJS s)
+renderJS (JSCatch i c s)         = (text "catch") <> (char '(') <> (renderJS i) <>  
+                                   (text " if ") <> (rJS c) <> (char ')') <> (renderJS s)
+
+renderJS (JSContinue is)         = (text "continue") <> (rJS is) -- <> (char ';')
 renderJS (JSDefault xs)          = (text "default") <> (char ':') <> (rJS xs)
 renderJS (JSDoWhile s e ms)         = (text "do") <> (renderJS s) <> (text "while") <> (char '(') <> (renderJS e) <> (char ')') <> (renderJS ms)
 renderJS (JSElementList xs)      = rJS xs
@@ -53,7 +56,7 @@ renderJS (JSExpressionBinary o e1 e2) = (text o) <> (rJS e1) <> (rJS e2)
 renderJS (JSExpressionParen e)        = (char '(') <> (renderJS e) <> (char ')')
 renderJS (JSExpressionPostfix o e)    = (rJS e) <> (text o)
 renderJS (JSExpressionTernary c v1 v2) = (rJS c) <> (char '?') <> (rJS v1) <> (char ':') <> (rJS v2)
-renderJS (JSFinally b)                 = (text "finally") <+> (renderJS b)
+renderJS (JSFinally b)                 = (text "finally") <> (renderJS b)
 renderJS (JSFor e1 e2 e3 s)            = (text "for") <> (char '(') <> (renderJS e1) <> (char ';') 
                                          <> (rJS e2) <> (char ';') <> (rJS e3) <> (char ')') <> (renderJS s)
 renderJS (JSForIn e1 e2 s)             = (text "for") <> (char '(') <> (rJS e1) <> (text "in")                                         
@@ -71,7 +74,7 @@ renderJS (JSReturn xs)                 = (text "return") <+> (rJS xs) -- <> (tex
 renderJS (JSThrow e)                   = (text "throw") <+> (renderJS e)
 renderJS (JSSwitch e xs)               = (text "switch") <> (char '(') <> (renderJS e) <> (char ')') <> 
                                          (char '{') <> (rJS xs)  <> (char '}')
-renderJS (JSTry e xs)                  = (text "try") <+> (rJS xs)
+renderJS (JSTry e xs)                  = (text "try") <> (renderJS e) <> (rJS xs)
 
 renderJS (JSVarDecl i [])              = (renderJS i) 
 renderJS (JSVarDecl i xs)              = (renderJS i) <> (text "=") <> (rJS xs)
@@ -109,11 +112,11 @@ fixSourceElements xs = myIntersperse (JSLiteral ";") xs
 myIntersperse :: JSNode -> [JSNode] -> [JSNode]
 myIntersperse _   []      = []
 myIntersperse _   [x]     = [x]
---myIntersperse sep (x:(JSFunction v1 v2 v3):xs)  = x : (JSLiteral "\n") : (JSFunction v1 v2 v3) : sep : myIntersperse sep xs
-myIntersperse sep (x:(JSFunction v1 v2 v3):xs)  = x : (JSLiteral "\n") : (JSFunction v1 v2 v3) : myIntersperse sep xs
---myIntersperse sep ((JSReturn v):xs)  = (JSReturn v) : myIntersperse sep xs
---myIntersperse sep (x:xs)  = x : sep : myIntersperse sep xs
-myIntersperse sep (x:xs)  = x : myIntersperse sep xs
+--myIntersperse sepa (x:(JSFunction v1 v2 v3):xs)  = x : (JSLiteral "\n") : (JSFunction v1 v2 v3) : sepa : myIntersperse sepa xs
+myIntersperse sepa (x:(JSFunction v1 v2 v3):xs)  = x : (JSLiteral "\n") : (JSFunction v1 v2 v3) : myIntersperse sepa xs
+--myIntersperse sepa ((JSReturn v):xs)  = (JSReturn v) : myIntersperse sepa xs
+--myIntersperse sepa (x:xs)  = x : sepa : myIntersperse sepa xs
+myIntersperse sepa (x:xs)  = x : myIntersperse sepa xs
 
 -- ---------------------------------------------------------------------
 -- Test stuff
@@ -158,6 +161,7 @@ case3 = JSSourceElements
           ]
           
 -- doParse expression "opTypeNames={'\\n':\"NEWLINE\",';':\"SEMICOLON\",',':\"COMMA\"}"          
+case4 :: JSNode
 case4 = JSExpression 
           [
             JSElement "assignmentExpression" 
@@ -174,6 +178,7 @@ case4 = JSExpression
           
 
 -- doParse program "function load(s){if(typeof s!=\"string\")return s;a=1}"
+case5 :: JSNode
 case5 = JSSourceElements 
           [JSFunction (JSIdentifier "load") 
            [JSIdentifier "s"] 
@@ -192,6 +197,7 @@ case5 = JSSourceElements
           ]
           
 -- doParse program "{if(typeof s!=\"string\")return s;evaluate(1)}"
+case6 :: JSNode
 case6 = JSSourceElements 
           [JSBlock 
            [JSIf 
@@ -205,6 +211,7 @@ case6 = JSSourceElements
           ]          
 
 --doParse program  "function load(s){if(typeof s!=\"string\")return s;evaluate(1)}"
+case7 :: JSNode
 case7 = JSSourceElements 
         [
           JSFunction (JSIdentifier "load") [JSIdentifier "s"] 

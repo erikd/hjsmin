@@ -1,6 +1,6 @@
 try {
 	print("hello");
-}
+} catch(bob){}
 
 try {}
 finally {}
@@ -41,6 +41,7 @@ catch(err)
             ExecutionContext.current = x;
         }
 
+while(1)
  try {
                 execute(n.body, x);
             } catch (e if e == BREAK && x.target == n) {

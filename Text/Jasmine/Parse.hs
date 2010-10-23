@@ -59,7 +59,7 @@ data JSNode = JSArguments [[JSNode]]
               | JSBreak [JSNode]
               | JSCallExpression String [JSNode] -- type : ., (), []; rest  
               | JSCase JSNode [JSNode]
-              | JSCatch JSNode JSNode
+              | JSCatch JSNode [JSNode] JSNode
               | JSContinue [JSNode]
               | JSDecimal Integer   
               | JSDefault [JSNode]  
@@ -726,8 +726,8 @@ bitwiseAndExpression = do{ v1 <- equalityExpression; v2 <- rest;
                            return (v1++v2)}
                        where
                          rest =
-                                do{ rOp "&"; v2 <- equalityExpression; v3 <- rest;
-                                    return [(JSExpressionBinary "&" v2 v3)]}
+                                try(do{ rOp "&"; v2 <- equalityExpression; v3 <- rest;
+                                    return [(JSExpressionBinary "&" v2 v3)]})
                              <|> return []
 
 
@@ -1075,21 +1075,37 @@ throwStatement :: GenParser Char st JSNode
 throwStatement = do{ reserved "throw"; val <- expression;
                      return (JSThrow val)}
 
+-- TODO: work in updated syntax as per https://developer.mozilla.org/en/JavaScript/Reference/Statements/try...catch
 -- <Try Statement> ::= 'try' <Block> <Catch>
 --                   | 'try' <Block> <Finally>
 --                   | 'try' <Block> <Catch> <Finally>
 tryStatement :: GenParser Char st JSNode
-tryStatement = do{ reserved "try"; v1 <- block; v2 <- catch;
-                   return (JSTry v1 [v2])}
-           <|> do{ reserved "try"; v1 <- block; v2 <- finally;
-                   return (JSTry v1 [v2])}
-           <|> do{ reserved "try"; v1 <- block; v2 <- catch; v3 <- finally;
-                   return (JSTry v1 [v2,v3])}
+tryStatement = do{ reserved "try"; v1 <- block; 
+                   do {
+                     do { v2 <- many1 catch;
+                        do { v3 <- finally;
+                             return (JSTry v1 (v2++[v3]))}
+                        <|> return (JSTry v1 v2)
+                        }
+                 <|> do{ v2 <- finally;
+                         return (JSTry v1 [v2])}
+                     }
+                 }
 
+-- TODO: work in updated syntax as per https://developer.mozilla.org/en/JavaScript/Reference/Statements/try...catch
 -- <Catch> ::= 'catch' '(' Identifier ')' <Block>
+--   becomes
+-- <Catch> ::= 'catch' '(' Identifier ')' <Block>
+--           | 'catch' '(' Identifier 'if' Condition ')' <Block>
 catch :: GenParser Char st JSNode
-catch = do{ reserved "catch"; rOp "("; v1 <- identifier; rOp ")"; v2 <- block;
-            return (JSCatch v1 v2)}
+catch = do{ reserved "catch"; rOp "("; v1 <- identifier; 
+            do {
+                  do { rOp ")"; v3 <- block;
+                       return (JSCatch v1 [] v3)}
+              <|> do { reserved "if"; v2 <- conditionalExpression; rOp ")"; v3 <- block;
+                       return (JSCatch v1 v2 v3)}
+                  }
+            }
 
 -- <Finally> ::= 'finally' <Block>
 finally :: GenParser Char st JSNode
