@@ -58,6 +58,7 @@ testSuiteFiles = testGroup "Text.Jasmine.Pretty files"
   , testCase "16_literals.js"   (testFile "./test/pminified/16_literals.js")      
   , testCase "20_statements.js" (testFile "./test/pminified/20_statements.js")      
   , testCase "25_trycatch.js"   (testFile "./test/pminified/25_trycatch.js")      
+  , testCase "40_functions.js"     (testFile "./test/pminified/40_functions.js")      
   --, testCase ""     (testFile "./test/pminified/")      
   ]  
 

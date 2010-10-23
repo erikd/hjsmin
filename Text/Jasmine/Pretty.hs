@@ -18,7 +18,7 @@ renderJS (JSOperator s)          = text s
 renderJS (JSExpression xs)       = rJS xs
 renderJS (JSSourceElements xs)   = rJS (fixSourceElements xs)
 renderJS (JSElement s xs)        = rJS xs
-renderJS (JSFunction s p xs)     = (text "function") <+> (renderJS s) <> (text "(") <> (rJS p) <> (text ")") <> (renderJS xs)
+renderJS (JSFunction s p xs)     = (text "function") <+> (renderJS s) <> (text "(") <> (commaList p) <> (text ")") <> (renderJS xs)
 renderJS (JSFunctionBody xs)     = (text "{") <> (rJS xs) <> (text "}")
 renderJS (JSFunctionExpression as s) = (text "function") <> (text "(") <> (rJS as) <> (text ")") <> (renderJS s)
 renderJS (JSArguments xs)        = (text "(") <> (commaListList xs) <> (text ")")
@@ -103,20 +103,14 @@ spaceOrBlock x            = (text " ") <> (renderJS x)
 -- ---------------------------------------------------------------
 -- Utility stuff
 
--- TODO: move this into the Pretty printer, to keep the Parse true to the source, so it can be reused
--- Make sure every alternate part is a JSLiteral ";", but not the last one
 fixSourceElements :: [JSNode] -> [JSNode]
---fixSourceElements xs = myIntersperse (JSLiteral ";") $ filter (\x -> JSLiteral "" /= x) $ filter (\x -> JSLiteral ";" /= x) xs
-fixSourceElements xs = myIntersperse (JSLiteral ";") xs
+fixSourceElements xs = myFix xs
   
-myIntersperse :: JSNode -> [JSNode] -> [JSNode]
-myIntersperse _   []      = []
-myIntersperse _   [x]     = [x]
---myIntersperse sepa (x:(JSFunction v1 v2 v3):xs)  = x : (JSLiteral "\n") : (JSFunction v1 v2 v3) : sepa : myIntersperse sepa xs
-myIntersperse sepa (x:(JSFunction v1 v2 v3):xs)  = x : (JSLiteral "\n") : (JSFunction v1 v2 v3) : myIntersperse sepa xs
---myIntersperse sepa ((JSReturn v):xs)  = (JSReturn v) : myIntersperse sepa xs
---myIntersperse sepa (x:xs)  = x : sepa : myIntersperse sepa xs
-myIntersperse sepa (x:xs)  = x : myIntersperse sepa xs
+myFix :: [JSNode] -> [JSNode]
+myFix []      = []
+myFix [x]     = [x]
+myFix (x:(JSFunction v1 v2 v3):xs)  = x : (JSLiteral "\n") : myFix ((JSFunction v1 v2 v3) : xs)
+myFix (x:xs)  = x : myFix xs
 
 -- ---------------------------------------------------------------------
 -- Test stuff

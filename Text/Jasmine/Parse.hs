@@ -692,7 +692,7 @@ relationalExpression = do{ v1 <- shiftExpression; v2 <- rest;
                              <|> do{ rOp ">"; v2 <- shiftExpression; v3 <- rest;
                                      return [(JSExpressionBinary ">" v2 v3)]}
                              <|> do{ reserved "instanceof"; v2 <- shiftExpression; v3 <- rest;
-                                     return [(JSExpressionBinary "instanceof" v2 v3)]}
+                                     return [(JSExpressionBinary " instanceof " v2 v3)]}
                              <|> return []
 
 

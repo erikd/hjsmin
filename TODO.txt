@@ -6,6 +6,10 @@ The following Lint has a sctrict parser
 This one does not
   http://www.jslint.com/
 
+---
+
+Language reference https://developer.mozilla.org/en/JavaScript/Reference
+
 --- 
 
 Look at 
