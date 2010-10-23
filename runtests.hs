@@ -25,6 +25,7 @@ testSuite = testGroup "Text.Jasmine.Parse"
     , testCase "0_f.js"           case0_f
     , testCase "01_semi1.js"      case01_semi1 
     , testCase "min_100_animals"  case_min_100_animals
+    , testCase "nestedSquare"     caseNestedSquare
     ]
 
 testSuiteMin :: Test
@@ -37,6 +38,7 @@ testSuiteMin = testGroup "Text.Jasmine.Pretty"
     , testCase "0_f.js"           caseMin0_f
     , testCase "01_semi1.js"      caseMin01_semi1 
     , testCase "min_100_animals"  caseMin_min_100_animals
+    , testCase "minNestedSquare"  caseMinNestedSquare
     ]
 
 testSuiteFiles :: Test
@@ -58,7 +60,8 @@ testSuiteFiles = testGroup "Text.Jasmine.Pretty files"
   , testCase "16_literals.js"   (testFile "./test/pminified/16_literals.js")      
   , testCase "20_statements.js" (testFile "./test/pminified/20_statements.js")      
   , testCase "25_trycatch.js"   (testFile "./test/pminified/25_trycatch.js")      
-  , testCase "40_functions.js"     (testFile "./test/pminified/40_functions.js")      
+  , testCase "40_functions.js"  (testFile "./test/pminified/40_functions.js")      
+  , testCase "67_bob.js"        (testFile "./test/pminified/67_bob.js")      
   --, testCase ""     (testFile "./test/pminified/")      
   ]  
 
@@ -85,12 +88,12 @@ caseMinSimpleAssignment =
 
 srcEmptyFor = "for (i = 0;;){}"
 caseEmptyFor =
-  JSFor (JSExpression [JSElement "assignmentExpression" [JSIdentifier "i",JSOperator "=",JSDecimal 0]]) [] [] (JSLiteral ";")
+  JSFor [JSExpression [JSElement "assignmentExpression" [JSIdentifier "i",JSOperator "=",JSDecimal 0]]] [] [] (JSLiteral ";")
   @=? doParse iterationStatement srcEmptyFor
   
 srcFullFor = "for (i = 0;i<10;i++){}"
 caseFullFor =
-  JSFor (JSExpression [JSElement "assignmentExpression" [JSIdentifier "i",JSOperator "=",JSDecimal 0]]) [JSExpression [JSIdentifier "i",JSExpressionBinary "<" [JSDecimal 10] []]] [JSExpression [JSExpressionPostfix "++" [JSIdentifier "i"]]] (JSLiteral ";")
+  JSFor [JSExpression [JSElement "assignmentExpression" [JSIdentifier "i",JSOperator "=",JSDecimal 0]]] [JSExpression [JSIdentifier "i",JSExpressionBinary "<" [JSDecimal 10] []]] [JSExpression [JSExpressionPostfix "++" [JSIdentifier "i"]]] (JSLiteral ";")
   @=? doParse iterationStatement srcFullFor
 
 srcForVarFull = "for(var i=0,j=tokens.length;i<j;i++){}"
@@ -139,7 +142,12 @@ case_min_100_animals =
 caseMin_min_100_animals =
   src_min_100_animals @=? (show $ minify src_min_100_animals)  
   
-  
+srcNestedSquare = "this.cursor+=match[0].length;"
+caseNestedSquare =
+  JSSourceElements [JSExpression [JSElement "assignmentExpression" [JSLiteral "this",JSMemberDot [JSIdentifier "cursor"],JSOperator "+=",JSIdentifier "match",JSMemberSquare (JSExpression [JSDecimal 0]) [JSMemberDot [JSIdentifier "length"]]]],JSLiteral ";"]
+  @=? doParse program srcNestedSquare
+caseMinNestedSquare =  
+  srcNestedSquare @=? (show $ minify srcNestedSquare)
   
 -- ---------------------------------------------------------------------
 -- utilities

@@ -74,7 +74,7 @@ data JSNode = JSArguments [[JSNode]]
               | JSExpressionPostfix String [JSNode]
               | JSExpressionTernary [JSNode] [JSNode] [JSNode]
               | JSFinally JSNode  
-              | JSFor JSNode [JSNode] [JSNode] JSNode                
+              | JSFor [JSNode] [JSNode] [JSNode] JSNode                
               | JSForIn [JSNode] JSNode JSNode
               | JSForVar [JSNode] [JSNode] [JSNode] JSNode                
               | JSForVarIn JSNode JSNode JSNode 
@@ -88,7 +88,7 @@ data JSNode = JSArguments [[JSNode]]
               | JSLabelled JSNode JSNode  
               | JSLiteral String  
               | JSMemberDot [JSNode]  
-              | JSMemberSquare [JSNode]  
+              | JSMemberSquare JSNode [JSNode]  
               | JSObjectLiteral [JSNode]  
               | JSOperator String  
               | JSPropertyNameandValue JSNode [JSNode]
@@ -456,7 +456,7 @@ objectLiteral = do{ rOp "{"; val <- propertyNameandValueList; rOp "}";
 -- <Property Name and Value List> ::= <Property Name> ':' <Assignment Expression>
 --                                  | <Property Name and Value List> ',' <Property Name> ':' <Assignment Expression>
 propertyNameandValueList :: GenParser Char st [JSNode]
-propertyNameandValueList = do{ val <- sepBy1 propertyNameandValue (rOp ",");
+propertyNameandValueList = do{ val <- sepBy propertyNameandValue (rOp ","); -- Note: can be zero elements
                                return val}
                            
 -- Seems we can have function declarations in the value part too                           
@@ -497,7 +497,7 @@ memberExpression' = try(do{v1 <- primaryExpression; v2 <- rest;
 
                 where
                   rest = do{ rOp "["; v1 <- expression; rOp "]"; v2 <- rest;
-                             return [JSMemberSquare (v1:v2)]}
+                             return [JSMemberSquare v1 v2]}
                      <|> do{ rOp "."; v1 <- identifier ; v2 <- rest;
                              return [JSMemberDot (v1:v2)]}
                      <|> return []
@@ -750,8 +750,8 @@ bitwiseOrExpression = do{ v1 <- bitwiseXOrExpression; v2 <- rest;
                           return (v1++v2)}
                       where
                         rest =
-                               do{ rOp "|"; v2 <- bitwiseXOrExpression; v3 <- rest;
-                                   return [(JSExpressionBinary "|" v2 v3)]}
+                               try(do{ rOp "|"; v2 <- bitwiseXOrExpression; v3 <- rest;
+                                   return [(JSExpressionBinary "|" v2 v3)]})
                            <|> return []
 
 
@@ -777,8 +777,8 @@ logicalOrExpression =  do{ v1 <- logicalAndExpression; v2 <- rest;
                            return (v1++v2)}
                        where
                          rest =
-                               do{ rOp "||"; v2 <- logicalAndExpression; v3 <- rest;
-                                   return [(JSExpressionBinary "||" v2 v3)]}
+                               try(do{ rOp "||"; v2 <- logicalAndExpression; v3 <- rest;
+                                   return [(JSExpressionBinary "||" v2 v3)]})
                             <|> return []
 
 
@@ -960,7 +960,7 @@ iterationStatement = do{ reserved "do"; v1 <- statement; reserved "while"; rOp "
                          <|> try(do{ v1 <- leftHandSideExpression; reserved "in"; v2 <- expression; rOp ")"; 
                                      v3 <- statement; 
                                      return (JSForIn v1 v2 v3)})
-                         <|> do { v1 <- expression; rOp ";"; v2 <- optionalExpression ";"; 
+                         <|> do { v1 <- optionalExpression ";"; v2 <- optionalExpression ";"; 
                                   v3 <- optionalExpression ")"; v4 <- statement; 
                                   return (JSFor v1 v2 v3 v4)}
                            }

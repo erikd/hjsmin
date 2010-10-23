@@ -26,7 +26,7 @@ renderJS (JSBlock xs)            = (text "{") <> (rJS xs) <> (text "}")
 renderJS (JSIf c t)              = (text "if") <> (text "(") <> (renderJS c) <> (text ")") <> (renderJS t)
 renderJS (JSIfElse c t e)        = (text "if") <> (text "(") <> (renderJS c) <> (text ")") <> (renderJS t) <> (text "else") <> (spaceOrBlock e)
 renderJS (JSMemberDot xs)        = (text ".") <> (rJS xs)
-renderJS (JSMemberSquare xs)     = (text "[") <> (rJS xs) <> (text "]")
+renderJS (JSMemberSquare x xs)   = (text "[") <> (renderJS x) <> (text "]") <> (rJS xs)
 renderJS (JSLiteral l)           = (text l)
 renderJS (JSStringLiteral s l)   = empty <> (char s) <> (text l) <> (char s)
 renderJS (JSUnary l  )           = text l
@@ -57,7 +57,7 @@ renderJS (JSExpressionParen e)        = (char '(') <> (renderJS e) <> (char ')')
 renderJS (JSExpressionPostfix o e)    = (rJS e) <> (text o)
 renderJS (JSExpressionTernary c v1 v2) = (rJS c) <> (char '?') <> (rJS v1) <> (char ':') <> (rJS v2)
 renderJS (JSFinally b)                 = (text "finally") <> (renderJS b)
-renderJS (JSFor e1 e2 e3 s)            = (text "for") <> (char '(') <> (renderJS e1) <> (char ';') 
+renderJS (JSFor e1 e2 e3 s)            = (text "for") <> (char '(') <> (rJS e1) <> (char ';') 
                                          <> (rJS e2) <> (char ';') <> (rJS e3) <> (char ')') <> (renderJS s)
 renderJS (JSForIn e1 e2 s)             = (text "for") <> (char '(') <> (rJS e1) <> (text "in")                                         
                                          <> (renderJS e2) <> (char ')') <> (renderJS s)
@@ -221,5 +221,6 @@ case7 = JSSourceElements
             )
         ]
 
+        
 -- EOF
 

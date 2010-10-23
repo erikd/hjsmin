@@ -1,3 +1,6 @@
+function x()
+{
+
        var token;
         while (this.lookahead) {
             --this.lookahead;
@@ -62,3 +65,4 @@
         token.end = this.cursor;
         token.lineno = this.lineno;
         return token.type;
+}
