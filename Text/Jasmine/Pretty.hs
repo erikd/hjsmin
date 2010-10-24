@@ -17,7 +17,7 @@ renderJS (JSDecimal i)           = text $ show i
 renderJS (JSOperator s)          = text s
 renderJS (JSExpression xs)       = rJS xs
 renderJS (JSSourceElements xs)   = rJS (fixSourceElements xs)
-renderJS (JSElement s xs)        = rJS xs
+renderJS (JSElement _s xs)       = rJS xs
 renderJS (JSFunction s p xs)     = (text "function") <+> (renderJS s) <> (text "(") <> (commaList p) <> (text ")") <> (renderJS xs)
 renderJS (JSFunctionBody xs)     = (text "{") <> (rJS xs) <> (text "}")
 renderJS (JSFunctionExpression as s) = (text "function") <> (text "(") <> (rJS as) <> (text ")") <> (renderJS s)
@@ -117,8 +117,8 @@ myFix (x:xs)  = x : myFix xs
 
 
 -- readJs "x=1;"
-case0 :: JSNode
-case0 = JSSourceElements 
+_case0 :: JSNode
+_case0 = JSSourceElements 
           [
             JSExpression [JSElement "assignmentExpression" [JSIdentifier "x",JSOperator "=",JSDecimal 1]],
             JSEmpty (JSLiteral ";")
@@ -126,16 +126,16 @@ case0 = JSSourceElements
 
 -- doParse statementList "a=1;"  
 
-case1 :: [JSNode]
-case1 = [JSExpression 
+_case1 :: [JSNode]
+_case1 = [JSExpression 
          [JSElement "assignmentExpression" 
           [JSIdentifier "a",JSOperator "=",JSDecimal 1]
          ]
         ,JSEmpty (JSLiteral ";")
         ]
         
-case2 :: JSNode        
-case2 = JSFunctionExpression [] (JSFunctionBody 
+_case2 :: JSNode        
+_case2 = JSFunctionExpression [] (JSFunctionBody 
                                  [JSSourceElements 
                                   [JSReturn [JSExpression 
                                              [JSLiteral "this",JSMemberDot [JSIdentifier "name"]],
@@ -143,8 +143,8 @@ case2 = JSFunctionExpression [] (JSFunctionBody
                                 )
                                 -- ]],JSEmpty (JSLiteral ";")  
   
-case3 :: JSNode  
-case3 = JSSourceElements 
+_case3 :: JSNode  
+_case3 = JSSourceElements 
           [JSSwitch 
            (JSExpression [JSUnary "typeof ",JSIdentifier "v"]) 
            [JSCase 
@@ -155,8 +155,8 @@ case3 = JSSourceElements
           ]
           
 -- doParse expression "opTypeNames={'\\n':\"NEWLINE\",';':\"SEMICOLON\",',':\"COMMA\"}"          
-case4 :: JSNode
-case4 = JSExpression 
+_case4 :: JSNode
+_case4 = JSExpression 
           [
             JSElement "assignmentExpression" 
                [
@@ -172,8 +172,8 @@ case4 = JSExpression
           
 
 -- doParse program "function load(s){if(typeof s!=\"string\")return s;a=1}"
-case5 :: JSNode
-case5 = JSSourceElements 
+_case5 :: JSNode
+_case5 = JSSourceElements 
           [JSFunction (JSIdentifier "load") 
            [JSIdentifier "s"] 
              (JSFunctionBody 
@@ -191,8 +191,8 @@ case5 = JSSourceElements
           ]
           
 -- doParse program "{if(typeof s!=\"string\")return s;evaluate(1)}"
-case6 :: JSNode
-case6 = JSSourceElements 
+_case6 :: JSNode
+_case6 = JSSourceElements 
           [JSBlock 
            [JSIf 
               (JSExpression 
@@ -205,8 +205,8 @@ case6 = JSSourceElements
           ]          
 
 --doParse program  "function load(s){if(typeof s!=\"string\")return s;evaluate(1)}"
-case7 :: JSNode
-case7 = JSSourceElements 
+_case7 :: JSNode
+_case7 = JSSourceElements 
         [
           JSFunction (JSIdentifier "load") [JSIdentifier "s"] 
             (JSFunctionBody 
@@ -222,8 +222,8 @@ case7 = JSSourceElements
         ]
 
 --doParse program "for(i=0,j=assignOps.length;i<j;i++){}"
-case8 :: JSNode
-case8 = JSSourceElements 
+_case8 :: JSNode
+_case8 = JSSourceElements 
           [
             JSFor 
               [JSExpression 

@@ -10,6 +10,7 @@ module Text.Jasmine.Token
     , autoSemi'  
     , rOp  
     , newJSPState  
+    , JSPState  
     ) where
 
 -- ---------------------------------------------------------------------
@@ -23,6 +24,7 @@ import Data.List ( nub, sort )
 
 data JSPState = JSPState {nlFlag::Bool}
 
+newJSPState :: JSPState
 newJSPState = JSPState { nlFlag = False }
 
 clearNLFlag :: GenParser tok JSPState ()
@@ -38,10 +40,10 @@ getNLFlag   = do s <- getState; return $ nlFlag s
 
 -- Do not use the lexer, it is greedy and consumes subsequent symbols, 
 --   e.g. "!" in a==!b
---rOp :: [Char] -> GenParser Char st ()
+rOp :: [Char] -> GenParser Char JSPState ()
 rOp x = try(rOp'' x)
 
---rOp'' :: [Char] -> CharParser st ()
+rOp'' :: [Char] -> GenParser Char JSPState ()
 rOp'' []     = fail "trying to parse empty token"
 rOp'' [x]    = do{ _ <- char x; optional whiteSpace; return () }
 rOp'' (x:xs) = do{ _ <- char x; rOp xs;}
@@ -54,7 +56,7 @@ rOp'' (x:xs) = do{ _ <- char x; rOp xs;}
 -- 3. semi with no following }          => semi
 
 -- TODO: change the return to [JSNode], and get rid of the empty JSLiteral
---autoSemi :: GenParser Char st String
+autoSemi :: GenParser Char JSPState String
 autoSemi = try (do { rOp ";"; lookAhead (rOp "}");
                      return ("");})
            <|> try (do{ rOp ";"; 
@@ -62,7 +64,7 @@ autoSemi = try (do { rOp ";"; lookAhead (rOp "}");
            <|> try (do {lookAhead (rOp "}");
                         return ("");})
 
---autoSemi' :: GenParser Char st String
+autoSemi' :: GenParser Char JSPState String
 autoSemi' = try (do { rOp ";"; lookAhead (rOp "}");
                      return ("");})
            <|> try (do{ rOp ";"; 
@@ -75,7 +77,8 @@ lexer :: P.TokenParser st
 lexer = P.makeTokenParser javascriptDef
 -}      
 
---identifier :: CharParser st String
+
+identifier :: GenParser Char JSPState String
 --identifier = lexeme $ many1 (letter <|> oneOf "_")
 identifier =
         lexeme $ try $
@@ -85,7 +88,7 @@ identifier =
              else return name
           }
 
---ident :: GenParser Char st [Char]
+ident :: GenParser Char JSPState String
 ident
         = do{ c <- identStart
             ; cs <- many identLetter
@@ -118,58 +121,57 @@ theReservedNames
         where
           sortedNames   = sort reservedNames
 
-
---reserved :: String -> CharParser st ()
+reserved :: String -> GenParser Char JSPState ()
 reserved name =
         lexeme $ try $
-        do{ string name
+        do{ _ <- string name
           ; notFollowedBy identLetter <?> ("end of " ++ show name)
           }
 
---whiteSpace :: CharParser st ()
+whiteSpace :: GenParser Char JSPState ()
 --whiteSpace = skipMany (simpleSpace <|> oneLineComment <|> multiLineComment <?> "")
-whiteSpace = skipMany (simpleSpace <|> oneLineComment <|> multiLineComment <|> do { char '\n'; setNLFlag} <?> "")
+whiteSpace = skipMany (simpleSpace <|> oneLineComment <|> multiLineComment <|> do { _ <- char '\n'; setNLFlag} <?> "")
 -- whiteSpace = try $ many $ (do { equal TokenWhite } <|> do { (equal TokenNL); setNLFlag})
 
 
---simpleSpace :: GenParser Char st ()
+simpleSpace :: GenParser Char JSPState ()
 --simpleSpace = skipMany1 (satisfy isSpace)
 simpleSpace  = skipMany1 (satisfy (\c -> isSpace c && c /= '\n')) -- From HJS
 
 
---oneLineComment :: GenParser Char st ()
+oneLineComment :: GenParser Char JSPState ()
 oneLineComment =
-  do{ try (string commentLine)
+  do{ _ <- try (string commentLine)
     ; skipMany (satisfy (/= '\n'))
     ; return ()
     }
 
---multiLineComment :: GenParser Char st ()
+multiLineComment :: GenParser Char JSPState ()
 multiLineComment =
-  do { try (string commentStart)
+  do { _ <- try (string commentStart)
      ; inComment
      }
 
---inComment :: GenParser Char st ()
+inComment :: GenParser Char JSPState ()
 inComment
   | nestedComments = inCommentMulti
   | otherwise      = inCommentSingle
 
---inCommentMulti :: GenParser Char st ()
+inCommentMulti :: GenParser Char JSPState ()
 inCommentMulti
-        =   do{ try (string commentEnd)              ; return () }
+        =   do{ _ <- try (string commentEnd)         ; return () }
         <|> do{ multiLineComment                     ; inCommentMulti }
         <|> do{ skipMany1 (noneOf startEnd)          ; inCommentMulti }
-        <|> do{ oneOf startEnd                       ; inCommentMulti }
+        <|> do{ _ <- oneOf startEnd                  ; inCommentMulti }
         <?> "end of comment"
         where
           startEnd   = nub (commentEnd ++ commentStart)
 
---inCommentSingle :: GenParser Char st ()
+inCommentSingle :: GenParser Char JSPState ()
 inCommentSingle
-        =   do{ try (string commentEnd)             ; return () }
+        =   do{ _ <- try (string commentEnd)        ; return () }
         <|> do{ skipMany1 (noneOf startEnd)         ; inCommentSingle }
-        <|> do{ oneOf startEnd                      ; inCommentSingle }
+        <|> do{ _ <- oneOf startEnd                 ; inCommentSingle }
         <?> "end of comment"
         where
           startEnd   = nub (commentEnd ++ commentStart)
@@ -189,7 +191,10 @@ commentLine    = "//"
 nestedComments :: Bool
 nestedComments = True
 
+identLetter :: GenParser Char JSPState Char
 identLetter = alphaNum <|> oneOf "_"
+
+identStart :: GenParser Char JSPState Char
 identStart  = letter <|> oneOf "_"
 
 reservedNames :: [[Char]]
@@ -209,17 +214,19 @@ reservedNames = [
   ]
                 
 
---decimal :: GenParser Char st Integer
+decimal :: GenParser Char JSPState Integer
 decimal         = number 10 digit
 
---hexadecimal :: GenParser Char st Integer
-hexadecimal     = do{ oneOf "xX"; number 16 hexDigit }
+hexadecimal :: GenParser Char JSPState Integer
+hexadecimal     = do{ _ <- oneOf "xX"; number 16 hexDigit }
 
---octal :: GenParser Char st Integer
-octal           = do{ oneOf "oO"; number 8 octDigit  }
+{-
+octal :: GenParser Char JSPState Integer
+octal           = do{ _ <- oneOf "oO"; number 8 octDigit  }
+-}
 
---number
---  :: Integer -> GenParser tok st Char -> GenParser tok st Integer
+number
+  :: Integer -> GenParser tok JSPState Char -> GenParser tok JSPState Integer
 number base baseDigit
         = do{ digits <- many1 baseDigit
             ; let n = foldl (\x d -> base*x + toInteger (digitToInt d)) 0 digits
@@ -244,7 +251,7 @@ number base baseDigit
 -- >                     }
 
 --lexeme  :: forall a. ParsecT s u m a -> ParsecT s u m a,
---lexeme :: GenParser Char st b -> GenParser Char st b
+lexeme :: GenParser Char JSPState b -> GenParser Char JSPState b
 --lexeme p = do{ x <- p;              whiteSpace; return x  }
 lexeme p = do{ x <- p; clearNLFlag; whiteSpace; return x  }
 
