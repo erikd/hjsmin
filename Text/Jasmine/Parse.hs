@@ -19,11 +19,7 @@ module Text.Jasmine.Parse
 
 -- ---------------------------------------------------------------------
 
-
--- import Text.Parsec
 --import Control.Arrow
---import Text.Parsec.Language (haskellDef)
---import qualified Text.Parsec.Token as P
 import Control.Applicative (Applicative (..))
 import Control.Monad
 import Data.Char
@@ -33,8 +29,8 @@ import Prelude hiding (catch)
 import System.Environment
 import Text.ParserCombinators.Parsec hiding (Line)
 import Text.ParserCombinators.Parsec.Language
-import qualified Text.ParserCombinators.Parsec.Token as P
-
+--import qualified Text.ParserCombinators.Parsec.Token as P
+import qualified Text.Jasmine.Token as P
 
 -- ---------------------------------------------------------------------
 
@@ -199,19 +195,9 @@ javascriptDef = javaStyle
 -- ---------------------------------------------------------------------
 -- | A lexer for the javascript language.
 
-lexer :: P.TokenParser st
-lexer = P.makeTokenParser javascriptDef
-      
 identifier :: CharParser st JSNode
-identifier  = do{ val <- P.identifier lexer;
+identifier  = do{ val <- P.identifier;
                   return (JSIdentifier val)}
-
-reserved :: String -> CharParser st ()
-reserved    = P.reserved lexer
-
-whiteSpace :: CharParser st ()
-whiteSpace = P.whiteSpace lexer
-
 
 -- Do not use the lexer, it is greedy and consumes subsequent symbols, 
 --   e.g. "!" in a==!b
@@ -220,7 +206,7 @@ rOp x = try(rOp'' x)
 
 rOp'' :: [Char] -> CharParser st ()
 rOp'' []     = fail "trying to parse empty token"
-rOp'' [x]    = do{ _ <- char x; optional whiteSpace; return () }
+rOp'' [x]    = do{ _ <- char x; optional P.whiteSpace; return () }
 rOp'' (x:xs) = do{ _ <- char x; rOp xs;}
                  
 -- ---------------------------------------------------------------------
@@ -270,10 +256,10 @@ stringCharSingle = satisfy (\c -> isPrint c && c /= '\'')
 
 
 decimalLiteral :: CharParser st Integer
-decimalLiteral = P.decimal lexer
+decimalLiteral = P.decimal 
 
 hexIntegerLiteral :: CharParser st Integer
-hexIntegerLiteral = P.hexadecimal lexer -- TODO: check prefix etc for Javascript convention
+hexIntegerLiteral = P.hexadecimal  -- TODO: check prefix etc for Javascript convention
 
 -- {String Chars1} = {Printable} + {HT} - ["\] 
 -- {RegExp Chars} = {Letter}+{Digit}+['^']+['$']+['*']+['+']+['?']+['{']+['}']+['|']+['-']+['.']+[',']+['#']+['[']+[']']+['_']+['<']+['>']
@@ -323,15 +309,15 @@ literal = nullLiteral
 
 -- <Null Literal>    ::= null
 nullLiteral :: GenParser Char st JSNode
-nullLiteral = do { reserved "null"; 
+nullLiteral = do { P.reserved "null"; 
                    return (JSLiteral "null")}
 
 -- <Boolean Literal> ::= 'true'
 --                     | 'false'
 booleanLiteral :: GenParser Char st JSNode
-booleanLiteral = do{ reserved "true" ; 
+booleanLiteral = do{ P.reserved "true" ; 
                      return (JSLiteral "true")}
-             <|> do{ reserved "false"; 
+             <|> do{ P.reserved "false"; 
                      return (JSLiteral "false")}
 
 -- <Numeric Literal> ::= DecimalLiteral
@@ -356,7 +342,7 @@ regularExpressionLiteral = regExp
 --                        | '(' <Expression> ')'
 --                        | <Regular Expression Literal>
 primaryExpression :: GenParser Char st JSNode
-primaryExpression = do {reserved "this"; 
+primaryExpression = do {P.reserved "this"; 
                         -- return [""]} 
                         return (JSLiteral "this")}
                 <|> identifier
@@ -487,7 +473,7 @@ propertyName = identifier
 --                        | <Member Expression> '.' Identifier
 --                        | 'new' <Member Expression> <Arguments>
 memberExpression :: GenParser Char st [JSNode]
-memberExpression = try(do{ reserved "new"; v1 <- memberExpression; v2 <- arguments; 
+memberExpression = try(do{ P.reserved "new"; v1 <- memberExpression; v2 <- arguments; 
                         return (((JSLiteral "new "):v1)++[v2])}) -- xxxx
                 <|> memberExpression'
 
@@ -510,7 +496,7 @@ memberExpression' = try(do{v1 <- primaryExpression; v2 <- rest;
 --                    | new <New Expression>
 newExpression :: GenParser Char st [JSNode]
 newExpression = memberExpression
-           <|> do{ reserved "new"; val <- newExpression;
+           <|> do{ P.reserved "new"; val <- newExpression;
                    return ((JSLiteral "new "):val)}
 
 -- <Call Expression> ::= <Member Expression> <Arguments>
@@ -603,11 +589,11 @@ postfixExpression = do{ v1 <- leftHandSideExpression;
 unaryExpression :: GenParser Char st [JSNode]
 unaryExpression = do{ v1 <- postfixExpression; 
                       return v1}
-              <|> do{ reserved "delete"; v1 <- unaryExpression;
+              <|> do{ P.reserved "delete"; v1 <- unaryExpression;
                       return ((JSUnary "delete"):v1)}
-              <|> do{ reserved "void";   v1 <- unaryExpression;
+              <|> do{ P.reserved "void";   v1 <- unaryExpression;
                       return ((JSUnary "void"):v1)}
-              <|> do{ reserved "typeof"; v1 <- unaryExpression; 
+              <|> do{ P.reserved "typeof"; v1 <- unaryExpression; 
                       return ((JSUnary "typeof "):v1)} -- TODO: should the space always be there?
               <|> do{ rOp "++"; v1 <- unaryExpression;
                       return ((JSUnary "++"):v1)}
@@ -693,7 +679,7 @@ relationalExpression = do{ v1 <- shiftExpression; v2 <- rest;
                                      return [(JSExpressionBinary "<" v2 v3)]}
                              <|> do{ rOp ">"; v2 <- shiftExpression; v3 <- rest;
                                      return [(JSExpressionBinary ">" v2 v3)]}
-                             <|> do{ reserved "instanceof"; v2 <- shiftExpression; v3 <- rest;
+                             <|> do{ P.reserved "instanceof"; v2 <- shiftExpression; v3 <- rest;
                                      return [(JSExpressionBinary " instanceof " v2 v3)]}
                              <|> return []
 
@@ -892,9 +878,9 @@ statementList = many1 statement
 -- <Variable Statement> ::= var <Variable Declaration List> ';'
 -- Note: Mozilla introduced const declarations, not part of official spec
 variableStatement :: GenParser Char st JSNode
-variableStatement = do {reserved "var"; val <- variableDeclarationList;
+variableStatement = do {P.reserved "var"; val <- variableDeclarationList;
                         return (JSVariables "var" val)}
-                <|> do {reserved "const"; val <- variableDeclarationList;
+                <|> do {P.reserved "const"; val <- variableDeclarationList;
                         return (JSVariables "const" val)}
 
                     
@@ -929,13 +915,13 @@ emptyStatement = do { v1 <- autoSemi'; return v1}
 
 -- <If Statement> ::= 'if' '(' <Expression> ')' <Statement> 
 ifStatement :: GenParser Char st JSNode
-ifStatement = do{ reserved "if"; rOp "("; v1 <- expression; rOp ")"; v2 <- statement;
+ifStatement = do{ P.reserved "if"; rOp "("; v1 <- expression; rOp ")"; v2 <- statement;
                   --return (if (v2 == (JSLiteral ";")) then (JSIf v1 (JSLiteral "")) else (JSIf v1 v2)) }
                   return (JSIf v1 v2) }
 
 -- <If Else Statement> ::= 'if' '(' <Expression> ')' <Statement> 'else' <Statement>
 ifElseStatement :: GenParser Char st JSNode
-ifElseStatement = do{ reserved "if"; rOp "("; v1 <- expression; rOp ")"; v2 <- statement; reserved "else"; v3 <- statement ;
+ifElseStatement = do{ P.reserved "if"; rOp "("; v1 <- expression; rOp ")"; v2 <- statement; P.reserved "else"; v3 <- statement ;
                       return (JSIfElse v1 v2 v3) }
 
 
@@ -946,14 +932,14 @@ ifElseStatement = do{ reserved "if"; rOp "("; v1 <- expression; rOp ")"; v2 <- s
 --                         | 'for' '(' <Left Hand Side Expression> in <Expression> ')' <Statement> 
 --                         | 'for' '(' 'var' <Variable Declaration> in <Expression> ')' <Statement> 
 iterationStatement :: GenParser Char st JSNode
-iterationStatement = do{ reserved "do"; v1 <- statement; reserved "while"; rOp "("; v2 <- expression; rOp ")"; v3 <- autoSemi ; 
+iterationStatement = do{ P.reserved "do"; v1 <- statement; P.reserved "while"; rOp "("; v2 <- expression; rOp ")"; v3 <- autoSemi ; 
                          return (JSDoWhile v1 v2 v3)}
-                 <|> do{ reserved "while"; rOp "("; v1 <- expression; rOp ")"; v2 <- statement; 
+                 <|> do{ P.reserved "while"; rOp "("; v1 <- expression; rOp ")"; v2 <- statement; 
                          return (JSWhile v1 v2)}
                      
-                 <|> do{ reserved "for"; rOp "("; 
+                 <|> do{ P.reserved "for"; rOp "("; 
                          do {
-                           do{ reserved "var"; v1 <- variableDeclaration; 
+                           do{ P.reserved "var"; v1 <- variableDeclaration; 
                              do {
                                do { rOp ","; v1' <- variableDeclarationList; rOp ";"; v2 <- optionalExpression ";"; 
                                     v3 <- optionalExpression ")"; v4 <- statement; 
@@ -961,11 +947,11 @@ iterationStatement = do{ reserved "do"; v1 <- statement; reserved "while"; rOp "
                            <|> do { rOp ";"; v2 <- optionalExpression ";"; 
                                     v3 <- optionalExpression ")"; v4 <- statement; 
                                     return (JSForVar [v1] v2 v3 v4)}
-                           <|> do { reserved "in"; v2 <- expression; rOp ")"; v3 <- statement; 
+                           <|> do { P.reserved "in"; v2 <- expression; rOp ")"; v3 <- statement; 
                                     return (JSForVarIn v1 v2 v3)}
                                 }
                              }
-                         <|> try(do{ v1 <- leftHandSideExpression; reserved "in"; v2 <- expression; rOp ")"; 
+                         <|> try(do{ v1 <- leftHandSideExpression; P.reserved "in"; v2 <- expression; rOp ")"; 
                                      v3 <- statement; 
                                      return (JSForIn v1 v2 v3)})
                          <|> do { v1 <- optionalExpression ";"; v2 <- optionalExpression ";"; 
@@ -984,16 +970,16 @@ optionalExpression s = do { rOp s;
 -- <Continue Statement> ::= 'continue' ';'
 --                        | 'continue' Identifier ';'
 continueStatement :: GenParser Char st JSNode
-continueStatement = do {reserved "continue"; v1 <- autoSemi; 
+continueStatement = do {P.reserved "continue"; v1 <- autoSemi; 
                         return (JSContinue [v1])}
-                <|> do {reserved "continue"; v1 <- identifier; v2 <- autoSemi; 
+                <|> do {P.reserved "continue"; v1 <- identifier; v2 <- autoSemi; 
                         return (JSContinue [v1,v2])}
 
 
 -- <Break Statement> ::= 'break' ';'
 --                        | 'break' Identifier ';'
 breakStatement :: GenParser Char st JSNode
-breakStatement = do {reserved "break"; 
+breakStatement = do {P.reserved "break"; 
                      do {
                           do {v1 <- autoSemi; 
                               return (if (v1 == JSLiteral "") then (JSBreak []) else (JSBreak [v1]))}
@@ -1006,7 +992,7 @@ breakStatement = do {reserved "break";
 -- <Return Statement> ::= 'return' ';'
 --                        | 'return' <Expression> ';'
 returnStatement :: GenParser Char st JSNode
-returnStatement = do {reserved "return"; 
+returnStatement = do {P.reserved "return"; 
                       do{
                             do {v1 <- autoSemi; return (JSReturn [v1])}
                         <|> do {v1 <- expression; v2 <- autoSemi; 
@@ -1017,13 +1003,13 @@ returnStatement = do {reserved "return";
 
 -- <With Statement> ::= 'with' '(' <Expression> ')' <Statement> ';'
 withStatement :: GenParser Char st JSNode
-withStatement = do{ reserved "with"; rOp "("; v1 <- expression; rOp ")"; v2 <- statement; v3 <- autoSemi; 
+withStatement = do{ P.reserved "with"; rOp "("; v1 <- expression; rOp ")"; v2 <- statement; v3 <- autoSemi; 
                     return (JSWith v1 [v2,v3])}
 
 
 -- <Switch Statement> ::= 'switch' '(' <Expression> ')' <Case Block>  
 switchStatement :: GenParser Char st JSNode
-switchStatement = do{ reserved "switch"; rOp "("; v1 <- expression; rOp ")"; v2 <- caseBlock;
+switchStatement = do{ P.reserved "switch"; rOp "("; v1 <- expression; rOp ")"; v2 <- caseBlock;
                       return (JSSwitch v1 v2)}
 
 -- <Case Block> ::= '{' '}'
@@ -1057,7 +1043,7 @@ caseClauses = do{ val <- many1 caseClause;
 -- <Case Clause> ::= 'case' <Expression> ':' <Statement List>
 --                 | 'case' <Expression> ':'
 caseClause :: GenParser Char st JSNode
-caseClause = do { reserved "case"; v1 <- expression; rOp ":"; 
+caseClause = do { P.reserved "case"; v1 <- expression; rOp ":"; 
                   do {
                        do { v2 <- statementList;
                             return (JSCase v1 v2)}
@@ -1068,9 +1054,9 @@ caseClause = do { reserved "case"; v1 <- expression; rOp ":";
 -- <Default Clause> ::= 'default' ':' 
 --                    | 'default' ':' <Statement List>
 defaultClause :: GenParser Char st JSNode
-defaultClause = do{ reserved "default"; rOp ":"; 
+defaultClause = do{ P.reserved "default"; rOp ":"; 
                     return (JSDefault [])}
-            <|> do{ reserved "default"; rOp ":"; v1 <- statementList;
+            <|> do{ P.reserved "default"; rOp ":"; v1 <- statementList;
                     return (JSDefault v1)}
 
 -- <Labelled Statement> ::= Identifier ':' <Statement> 
@@ -1080,7 +1066,7 @@ labelledStatement = do { v1 <- identifier; rOp ":"; v2 <- statement;
 
 -- <Throw Statement> ::= 'throw' <Expression>
 throwStatement :: GenParser Char st JSNode
-throwStatement = do{ reserved "throw"; val <- expression;
+throwStatement = do{ P.reserved "throw"; val <- expression;
                      return (JSThrow val)}
 
 -- TODO: work in updated syntax as per https://developer.mozilla.org/en/JavaScript/Reference/Statements/try...catch
@@ -1088,7 +1074,7 @@ throwStatement = do{ reserved "throw"; val <- expression;
 --                   | 'try' <Block> <Finally>
 --                   | 'try' <Block> <Catch> <Finally>
 tryStatement :: GenParser Char st JSNode
-tryStatement = do{ reserved "try"; v1 <- block; 
+tryStatement = do{ P.reserved "try"; v1 <- block; 
                    do {
                      do { v2 <- many1 catch;
                         do { v3 <- finally;
@@ -1106,24 +1092,24 @@ tryStatement = do{ reserved "try"; v1 <- block;
 -- <Catch> ::= 'catch' '(' Identifier ')' <Block>
 --           | 'catch' '(' Identifier 'if' Condition ')' <Block>
 catch :: GenParser Char st JSNode
-catch = do{ reserved "catch"; rOp "("; v1 <- identifier; 
+catch = do{ P.reserved "catch"; rOp "("; v1 <- identifier; 
             do {
                   do { rOp ")"; v3 <- block;
                        return (JSCatch v1 [] v3)}
-              <|> do { reserved "if"; v2 <- conditionalExpression; rOp ")"; v3 <- block;
+              <|> do { P.reserved "if"; v2 <- conditionalExpression; rOp ")"; v3 <- block;
                        return (JSCatch v1 v2 v3)}
                   }
             }
 
 -- <Finally> ::= 'finally' <Block>
 finally :: GenParser Char st JSNode
-finally = do{ reserved "finally"; v1 <- block;
+finally = do{ P.reserved "finally"; v1 <- block;
             return (JSFinally v1)}
 
 -- <Function Declaration> ::= 'function' Identifier '(' <Formal Parameter List> ')' '{' <Function Body> '}'
 --                          | 'function' Identifier '(' ')' '{' <Function Body> '}'
 functionDeclaration :: GenParser Char st JSNode
-functionDeclaration = do {reserved "function"; v1 <- identifier; rOp "("; v2 <- formalParameterList; rOp ")"; 
+functionDeclaration = do {P.reserved "function"; v1 <- identifier; rOp "("; v2 <- formalParameterList; rOp ")"; 
                           v3 <- functionBody; 
                           return (JSFunction v1 v2 v3) } 
                   <?> "functionDeclaration"
@@ -1132,7 +1118,7 @@ functionDeclaration = do {reserved "function"; v1 <- identifier; rOp "("; v2 <- 
 -- <Function Expression> ::= 'function' '(' ')' '{' <Function Body> '}'
 ---                        | 'function' '(' <Formal Parameter List> ')' '{' <Function Body> '}'
 functionExpression :: GenParser Char st JSNode
-functionExpression = do{ reserved "function"; rOp "("; 
+functionExpression = do{ P.reserved "function"; rOp "("; 
                          do {
                            do { rOp ")"; v2 <- functionBody; 
                                 return (JSFunctionExpression [] v2)}
@@ -1161,7 +1147,7 @@ functionBody = do{ rOp "{";
 
 -- <Program> ::= <Source Elements>
 program :: GenParser Char st JSNode
-program = do {whiteSpace; val <- sourceElements; eof; return val}
+program = do {P.whiteSpace; val <- sourceElements; eof; return val}
 
 
 -- <Source Elements> ::= <Source Element>

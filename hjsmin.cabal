@@ -23,6 +23,7 @@ library
                    , utf8-string      >= 0.3.4   && < 0.4
                    , parsec           >= 2       && < 4
                    , pretty           >= 1       && < 2
+                   , mtl              >= 1       && < 2
     exposed-modules: Text.Jasmine
     other-modules:   Text.Jasmine.Parse
     ghc-options:     -Wall

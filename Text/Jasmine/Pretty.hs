@@ -222,6 +222,7 @@ case7 = JSSourceElements
         ]
 
 --doParse program "for(i=0,j=assignOps.length;i<j;i++){}"
+case8 :: JSNode
 case8 = JSSourceElements 
           [
             JSFor 
