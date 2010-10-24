@@ -9,7 +9,7 @@
 # done
 
 #for i in `(cd ./parsingonly;ls *.js)`
-for i in `(cd ./parsingonly;ls 67_*.js)`
+for i in `(cd ./parsingonly;ls 122_*.js)`
 do
   #echo "./unminified/"$i "./minified/"$i
   ./jsminplus/run.php "./parsingonly/"$i >  "./pminified/"$i

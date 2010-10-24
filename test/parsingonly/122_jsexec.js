@@ -233,6 +233,7 @@ function toObject(v, r, rn) {
 }
 
 //function execute(n, x) {
+function execute(n, x) {
     var a, f, i, j, r, s, t, u, v;
 
     switch (n.type) {
@@ -270,7 +271,7 @@ function toObject(v, r, rn) {
             if (u.readOnly && hasDirectProperty(t, s)) {
                 throw new TypeError("Redeclaration of const " + s,
                                     u.filename, u.lineno);
-            }"c:/Mark/MyDevelopments/haskell/HJS/hjs-0.2/testsuite/parsingonly/122_jsexec.js"
+            }//++??AZ??"c:/Mark/MyDevelopments/haskell/HJS/hjs-0.2/testsuite/parsingonly/122_jsexec.js"
             if (u.readOnly || !hasDirectProperty(t, s)) {
                 t.__defineProperty__(s, undefined, x.type != EVAL_CODE,
                                      u.readOnly);
@@ -763,6 +764,7 @@ function toObject(v, r, rn) {
 
     return v;
 //}
+}
 
 function Activation(f, a) {
     for (var i = 0, j = f.params.length; i < j; i++)

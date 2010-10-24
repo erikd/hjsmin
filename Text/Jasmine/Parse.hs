@@ -187,9 +187,11 @@ javascriptDef = javaStyle
                      ")"	, -- "RIGHT_PAREN",
                      "@*/"	  -- "CONDCOMMENT_END"
                 ]
-               , opLetter = oneOf "!%&()*+,-./:;<=>?[]^{|}~"
-               , opStart = opLetter javascriptDef 
-                                  
+                , opLetter = oneOf "!%&()*+,-./:;<=>?[]^{|}~"
+                , opStart = opLetter javascriptDef 
+                , identStart = letter <|> oneOf "_"
+                , identLetter = alphaNum <|> oneOf "_"
+                               
                 , caseSensitive  = True
 		}
                 
@@ -817,8 +819,14 @@ rOp' x = do{ rOp x; return $ JSOperator x}
 --                | <Expression> ',' <Assignment Expression>
 expression :: GenParser Char st JSNode
 expression = do{ val <- sepBy1 assignmentExpression (rOp ",");
-                 return (JSExpression (flatten val))}
+                 return (JSExpression (flattenExpression val))}
 
+
+flattenExpression :: [[JSNode]] -> [JSNode]
+flattenExpression val = flatten $ intersperse litComma val
+                        where
+                          litComma :: [JSNode]
+                          litComma = [(JSLiteral ",")]
 
 -- <Statement> ::= <Block>
 --               | <Variable Statement>
