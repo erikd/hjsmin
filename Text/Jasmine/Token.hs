@@ -11,6 +11,9 @@ module Text.Jasmine.Token
     , rOp  
     , newJSPState  
     , JSPState  
+    -- Testing  
+    --, simpleSpace  
+    , nlPrior  
     ) where
 
 -- ---------------------------------------------------------------------
@@ -36,6 +39,10 @@ setNLFlag   = updateState (\x -> x { nlFlag=True })
 getNLFlag :: GenParser tok JSPState Bool
 getNLFlag   = do s <- getState; return $ nlFlag s                   
 
+--nlPrior = do { s <- getNLFlag; tok <- mytoken (\tok -> if s then Just tok else Nothing ); putBack tok}
+nlPrior = do { s <- getNLFlag; if s then (return ()) else (fail "no parse") }
+
+
 -- ---------------------------------------------------------------------
 
 -- Do not use the lexer, it is greedy and consumes subsequent symbols, 
@@ -54,6 +61,8 @@ rOp'' (x:xs) = do{ _ <- char x; rOp xs;}
 -- 1. Missing semi, because following } => empty
 -- 2. Additional semi, with following } => empty
 -- 3. semi with no following }          => semi
+-- 4. no semi, but prior NL             => semi
+
 
 -- TODO: change the return to [JSNode], and get rid of the empty JSLiteral
 autoSemi :: GenParser Char JSPState String
@@ -63,12 +72,18 @@ autoSemi = try (do { rOp ";"; lookAhead (rOp "}");
                         return (";");})
            <|> try (do {lookAhead (rOp "}");
                         return ("");})
+           <|> try (do {nlPrior;
+                        return ";/*NLPRIOR*/"})
 
 autoSemi' :: GenParser Char JSPState String
 autoSemi' = try (do { rOp ";"; lookAhead (rOp "}");
                      return ("");})
            <|> try (do{ rOp ";"; 
                         return (";");})
+           {- TODO: Make this thing actually work 
+           <|> try (do {nlPrior;
+                        return ";/*NLPRIOR*/"})
+           -}
 
 -- ---------------------------------------------------------------------
 
