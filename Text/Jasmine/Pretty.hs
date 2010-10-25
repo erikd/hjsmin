@@ -9,7 +9,6 @@ import Text.PrettyPrint
 -- ---------------------------------------------------------------------
 
 
-
 renderJS :: JSNode -> Doc
 renderJS (JSEmpty l)             = (renderJS l)
 renderJS (JSIdentifier s)        = text s
@@ -22,7 +21,7 @@ renderJS (JSFunction s p xs)     = (text "function") <+> (renderJS s) <> (text "
 renderJS (JSFunctionBody xs)     = (text "{") <> (rJS xs) <> (text "}")
 renderJS (JSFunctionExpression as s) = (text "function") <> (text "(") <> (rJS as) <> (text ")") <> (renderJS s)
 renderJS (JSArguments xs)        = (text "(") <> (commaListList xs) <> (text ")")
-renderJS (JSBlock xs)            = (text "{") <> (rJS xs) <> (text "}")
+renderJS (JSBlock xs)            = (text "{") <> (renderJS xs) <> (text "}")
 renderJS (JSIf c t)              = (text "if") <> (text "(") <> (renderJS c) <> (text ")") <> (renderJS t)
 renderJS (JSIfElse c t e)        = (text "if") <> (text "(") <> (renderJS c) <> (text ")") <> (renderJS t) <> (text "else") <> (spaceOrBlock e)
 renderJS (JSMemberDot xs)        = (text ".") <> (rJS xs)
@@ -39,15 +38,15 @@ renderJS (JSCallExpression "()" xs) = (rJS xs)
 renderJS (JSCallExpression   t  xs) = (char $ head t) <> (rJS xs) <> (if ((length t) > 1) then (char $ last t) else empty)
 
 -- No space between 'case' and string literal. TODO: what about expression in parentheses?
-renderJS (JSCase (JSExpression [JSStringLiteral sepa s]) xs) = (text "case") <> (renderJS (JSStringLiteral sepa s)) <> (char ':') <> (rJS xs)          
-renderJS (JSCase e xs)           = (text "case") <+> (renderJS e) <> (char ':') <> (rJS xs)          
+renderJS (JSCase (JSExpression [JSStringLiteral sepa s]) xs) = (text "case") <> (renderJS (JSStringLiteral sepa s)) <> (char ':') <> (renderJS xs)          
+renderJS (JSCase e xs)           = (text "case") <+> (renderJS e) <> (char ':') <> (renderJS xs)          
 
 renderJS (JSCatch i [] s)        = (text "catch") <> (char '(') <> (renderJS i) <>  (char ')') <> (renderJS s)
 renderJS (JSCatch i c s)         = (text "catch") <> (char '(') <> (renderJS i) <>  
                                    (text " if ") <> (rJS c) <> (char ')') <> (renderJS s)
 
 renderJS (JSContinue is)         = (text "continue") <> (rJS is) -- <> (char ';')
-renderJS (JSDefault xs)          = (text "default") <> (char ':') <> (rJS xs)
+renderJS (JSDefault xs)          = (text "default") <> (char ':') <> (renderJS xs)
 renderJS (JSDoWhile s e ms)         = (text "do") <> (renderJS s) <> (text "while") <> (char '(') <> (renderJS e) <> (char ')') <> (renderJS ms)
 renderJS (JSElementList xs)      = rJS xs
 renderJS (JSElision xs)          = (char ',') <> (rJS xs)
@@ -72,6 +71,9 @@ renderJS (JSPropertyNameandValue n vs) = (renderJS n) <> (text ":") <> (rJS vs)
 renderJS (JSRegEx s)                   = (text s)
 renderJS (JSReturn xs)                 = (text "return") <+> (rJS xs) -- <> (text ";") no longer required, handled by autosemi parsing
 renderJS (JSThrow e)                   = (text "throw") <+> (renderJS e)
+
+renderJS (JSStatementList xs)          = rJS (fixSourceElements xs)
+
 renderJS (JSSwitch e xs)               = (text "switch") <> (char '(') <> (renderJS e) <> (char ')') <> 
                                          (char '{') <> (rJS xs)  <> (char '}')
 renderJS (JSTry e xs)                  = (text "try") <> (renderJS e) <> (rJS xs)
@@ -103,6 +105,8 @@ spaceOrBlock x            = (text " ") <> (renderJS x)
 -- ---------------------------------------------------------------
 -- Utility stuff
 
+-- Fix semicolons in output of sourceelements and statementlist
+
 fixSourceElements :: [JSNode] -> [JSNode]
 fixSourceElements xs = myFix xs
   
@@ -110,6 +114,12 @@ myFix :: [JSNode] -> [JSNode]
 myFix []      = []
 myFix [x]     = [x]
 myFix (x:(JSFunction v1 v2 v3):xs)  = x : (JSLiteral "\n") : myFix ((JSFunction v1 v2 v3) : xs)
+-- Messy way, but it works, until the 3rd element arrives ..
+myFix ((JSExpression x):(JSExpression y):xs) = (JSExpression x):(JSLiteral ";"):myFix ((JSExpression y):xs)
+myFix ((JSExpression x):(JSBlock y):xs)      = (JSExpression x):(JSLiteral ";"):myFix ((JSBlock y):xs)
+myFix ((JSBlock x)     :(JSBlock y):xs)      = (JSBlock x)     :(JSLiteral ";"):myFix ((JSBlock y):xs)
+myFix ((JSBlock x)     :(JSExpression y):xs) = (JSBlock x)     :(JSLiteral ";"):myFix ((JSExpression y):xs)
+
 myFix (x:xs)  = x : myFix xs
 
 -- ---------------------------------------------------------------------
@@ -143,16 +153,6 @@ _case2 = JSFunctionExpression [] (JSFunctionBody
                                 )
                                 -- ]],JSEmpty (JSLiteral ";")  
   
-_case3 :: JSNode  
-_case3 = JSSourceElements 
-          [JSSwitch 
-           (JSExpression [JSUnary "typeof ",JSIdentifier "v"]) 
-           [JSCase 
-            (JSExpression [JSStringLiteral '"' "boolean"]) 
-            --(JSStringLiteral '"' "boolean") 
-            [JSBreak [JSLiteral ""]]
-           ]
-          ]
           
 -- doParse expression "opTypeNames={'\\n':\"NEWLINE\",';':\"SEMICOLON\",',':\"COMMA\"}"          
 _case4 :: JSNode
@@ -192,17 +192,7 @@ _case5 = JSSourceElements
           
 -- doParse program "{if(typeof s!=\"string\")return s;evaluate(1)}"
 _case6 :: JSNode
-_case6 = JSSourceElements 
-          [JSBlock 
-           [JSIf 
-              (JSExpression 
-                [JSUnary "typeof ",JSIdentifier "s",JSExpressionBinary "!=" [JSStringLiteral '"' "string"] []]) 
-              (JSReturn 
-                [JSExpression [JSIdentifier "s"],JSLiteral ";"]),
-            JSExpression [JSIdentifier "evaluate",JSArguments [[JSDecimal 1]]
-                         ]
-           ]
-          ]          
+_case6 = JSSourceElements [] 
 
 --doParse program  "function load(s){if(typeof s!=\"string\")return s;evaluate(1)}"
 _case7 :: JSNode
@@ -242,5 +232,23 @@ _case8 = JSSourceElements
               
               (JSLiteral ";")
           ]        
+          
+case01_semi1 = JSSourceElements 
+                 [
+                   JSBlock (JSStatementList 
+                              [
+                                JSExpression [JSIdentifier "zero",JSMemberDot [JSIdentifier "one"]],
+                                JSLiteral ";",
+                                JSExpression [JSIdentifier "zero"]
+                              ]),
+                   JSExpression [JSIdentifier "one"],
+                   JSExpression [JSIdentifier "two"],
+                   JSLiteral ";",
+                   JSExpression [JSIdentifier "three"],
+                   JSLiteral ";",
+                   JSExpression [JSIdentifier "four"],
+                   JSLiteral ";",
+                   JSExpression [JSIdentifier "five"]
+                 ]          
 -- EOF
 

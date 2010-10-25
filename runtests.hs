@@ -85,7 +85,7 @@ caseMinHelloWorld2 =
 
 srcSimpleAssignment = "a=1;"   
 caseSimpleAssignment = 
-  [JSExpression [JSElement "assignmentExpression" [JSIdentifier "a",JSOperator "=",JSDecimal 1]],JSLiteral ";"]
+  JSStatementList [JSExpression [JSElement "assignmentExpression" [JSIdentifier "a",JSOperator "=",JSDecimal 1]],JSLiteral ";"]
   @=? doParse statementList srcSimpleAssignment
 caseMinSimpleAssignment =
   "a=1;" @=? (show $ minify srcSimpleAssignment)
@@ -107,14 +107,14 @@ caseForVarFull =
 
 srcIfElse1 = "if(a){b=1}else c=2";
 caseIfElse1 =
-  JSSourceElements [JSIfElse (JSExpression [JSIdentifier "a"]) (JSBlock [JSExpression [JSElement "assignmentExpression" [JSIdentifier "b",JSOperator "=",JSDecimal 1]]]) (JSExpression [JSElement "assignmentExpression" [JSIdentifier "c",JSOperator "=",JSDecimal 2]])]
+  JSSourceElements [JSIfElse (JSExpression [JSIdentifier "a"]) (JSBlock (JSStatementList [JSExpression [JSElement "assignmentExpression" [JSIdentifier "b",JSOperator "=",JSDecimal 1]]])) (JSExpression [JSElement "assignmentExpression" [JSIdentifier "c",JSOperator "=",JSDecimal 2]])]
   @=? doParse program srcIfElse1
 caseMinIfElse1 =
   "if(a){b=1}else c=2" @=? (show $ minify srcIfElse1)
 
 srcIfElse2 = "if(a){b=1}else {c=2;d=4}";
 caseIfElse2 =
-  JSSourceElements [JSIfElse (JSExpression [JSIdentifier "a"]) (JSBlock [JSExpression [JSElement "assignmentExpression" [JSIdentifier "b",JSOperator "=",JSDecimal 1]]]) (JSBlock [JSExpression [JSElement "assignmentExpression" [JSIdentifier "c",JSOperator "=",JSDecimal 2]],JSLiteral ";",JSExpression [JSElement "assignmentExpression" [JSIdentifier "d",JSOperator "=",JSDecimal 4]]])]
+  JSSourceElements [JSIfElse (JSExpression [JSIdentifier "a"]) (JSBlock (JSStatementList [JSExpression [JSElement "assignmentExpression" [JSIdentifier "b",JSOperator "=",JSDecimal 1]]])) (JSBlock (JSStatementList [JSExpression [JSElement "assignmentExpression" [JSIdentifier "c",JSOperator "=",JSDecimal 2]],JSLiteral ";",JSExpression [JSElement "assignmentExpression" [JSIdentifier "d",JSOperator "=",JSDecimal 4]]]))]
   @=? doParse program srcIfElse2
 caseMinIfElse2 =
   "if(a){b=1}else{c=2;d=4}" @=? (show $ minify srcIfElse2)
@@ -134,7 +134,7 @@ src01_semi1 = (
     "// five\n"++
     "five")  
 case01_semi1 =
-  JSSourceElements [JSBlock [JSExpression [JSIdentifier "zero",JSMemberDot [JSIdentifier "one"]],JSLiteral ";",JSExpression [JSIdentifier "zero"]],JSExpression [JSIdentifier "one"],JSExpression [JSIdentifier "two"],JSLiteral ";",JSExpression [JSIdentifier "three"],JSLiteral ";",JSExpression [JSIdentifier "four"],JSLiteral ";",JSExpression [JSIdentifier "five"]]
+  JSSourceElements [JSBlock (JSStatementList [JSExpression [JSIdentifier "zero",JSMemberDot [JSIdentifier "one"]],JSLiteral ";",JSExpression [JSIdentifier "zero"]]),JSExpression [JSIdentifier "one"],JSExpression [JSIdentifier "two"],JSLiteral ";",JSExpression [JSIdentifier "three"],JSLiteral ";",JSExpression [JSIdentifier "four"],JSLiteral ";",JSExpression [JSIdentifier "five"]]
   @=? doParse program src01_semi1
 caseMin01_semi1 =
   "{zero.one;zero};one;two;three;four;five" @=? (show $ minify src01_semi1)  

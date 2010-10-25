@@ -51,14 +51,14 @@ instance Applicative Result where
 
 data JSNode = JSArguments [[JSNode]]  
               | JSArrayLiteral [JSNode]
-              | JSBlock [JSNode]
+              | JSBlock JSNode
               | JSBreak [JSNode]
               | JSCallExpression String [JSNode] -- type : ., (), []; rest  
-              | JSCase JSNode [JSNode]
+              | JSCase JSNode JSNode
               | JSCatch JSNode [JSNode] JSNode
               | JSContinue [JSNode]
               | JSDecimal Integer   
-              | JSDefault [JSNode]  
+              | JSDefault JSNode
               | JSDoWhile JSNode JSNode JSNode
               | JSElement String [JSNode]
               | JSElementList [JSNode]  
@@ -91,6 +91,7 @@ data JSNode = JSArguments [[JSNode]]
               | JSRegEx String  
               | JSReturn [JSNode]
               | JSSourceElements [JSNode]
+              | JSStatementList [JSNode]
               | JSStringLiteral Char String  
               | JSSwitch JSNode [JSNode]
               | JSThrow JSNode  
@@ -760,14 +761,14 @@ statementBlock' :: GenParser Char P.JSPState [JSNode]
 statementBlock' = try (do {rOp "{"; rOp "}"; 
                           return []})
                   <|> do {rOp "{"; val <- statementList; rOp "}"; 
-                          return (if (val == ([JSLiteral ";"])) then ([]) else [(JSBlock val)])}
+                          return (if (val == (JSStatementList [JSLiteral ";"])) then ([]) else [(JSBlock val)])}
                   <?> "statementBlock"
 
 -- <Block > ::= '{' '}'
 --            | '{' <Statement List> '}'
 block :: GenParser Char P.JSPState JSNode
 block = try (do {rOp "{"; rOp "}"; 
-            return (JSBlock [])})
+            return (JSBlock (JSStatementList []))})
     <|> do {rOp "{"; val <- statementList; rOp "}"; 
             return (JSBlock val)}
     <?> "block"
@@ -775,8 +776,10 @@ block = try (do {rOp "{"; rOp "}";
 
 -- <Statement List> ::= <Statement>
 --                    | <Statement List> <Statement>
-statementList :: GenParser Char P.JSPState [JSNode]
-statementList = many1 statement
+statementList :: GenParser Char P.JSPState JSNode
+statementList = do {v1 <- many1 statement;
+                    return (JSStatementList v1)}
+
 
 -- <Variable Statement> ::= var <Variable Declaration List> ';'
 -- Note: Mozilla introduced const declarations, not part of official spec
@@ -950,7 +953,7 @@ caseClause = do { P.reserved "case"; v1 <- expression; rOp ":";
                   do {
                        do { v2 <- statementList;
                             return (JSCase v1 v2)}
-                   <|> return (JSCase v1 [])
+                   <|> return (JSCase v1 (JSStatementList []))
                      }
                   }
 
@@ -958,7 +961,7 @@ caseClause = do { P.reserved "case"; v1 <- expression; rOp ":";
 --                    | 'default' ':' <Statement List>
 defaultClause :: GenParser Char P.JSPState JSNode
 defaultClause = do{ P.reserved "default"; rOp ":"; 
-                    return (JSDefault [])}
+                    return (JSDefault (JSStatementList []))}
             <|> do{ P.reserved "default"; rOp ":"; v1 <- statementList;
                     return (JSDefault v1)}
 

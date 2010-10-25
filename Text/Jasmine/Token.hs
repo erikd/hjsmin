@@ -64,7 +64,6 @@ rOp'' (x:xs) = do{ _ <- char x; rOp xs;}
 -- 4. no semi, but prior NL             => semi
 
 
--- TODO: change the return to [JSNode], and get rid of the empty JSLiteral
 autoSemi :: GenParser Char JSPState String
 autoSemi = try (do { rOp ";"; lookAhead (rOp "}");
                      return ("");})
