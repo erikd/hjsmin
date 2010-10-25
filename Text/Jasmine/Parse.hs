@@ -960,10 +960,10 @@ caseClause = do { P.reserved "case"; v1 <- expression; rOp ":";
 -- <Default Clause> ::= 'default' ':' 
 --                    | 'default' ':' <Statement List>
 defaultClause :: GenParser Char P.JSPState JSNode
-defaultClause = do{ P.reserved "default"; rOp ":"; 
-                    return (JSDefault (JSStatementList []))}
-            <|> do{ P.reserved "default"; rOp ":"; v1 <- statementList;
+defaultClause = do{ P.reserved "default"; rOp ":"; v1 <- statementList;
                     return (JSDefault v1)}
+            <|> do{ P.reserved "default"; rOp ":"; 
+                    return (JSDefault (JSStatementList []))}
 
 -- <Labelled Statement> ::= Identifier ':' <Statement> 
 labelledStatement :: GenParser Char P.JSPState JSNode

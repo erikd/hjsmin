@@ -58,18 +58,22 @@ renderJS (JSExpressionTernary c v1 v2) = (rJS c) <> (char '?') <> (rJS v1) <> (c
 renderJS (JSFinally b)                 = (text "finally") <> (renderJS b)
 renderJS (JSFor e1 e2 e3 s)            = (text "for") <> (char '(') <> (commaList e1) <> (char ';') 
                                          <> (rJS e2) <> (char ';') <> (rJS e3) <> (char ')') <> (renderJS s)
-renderJS (JSForIn e1 e2 s)             = (text "for") <> (char '(') <> (rJS e1) <> (text "in")                                         
-                                         <> (renderJS e2) <> (char ')') <> (renderJS s)
+renderJS (JSForIn e1 e2 s)             = (text "for") <> (char '(') <> (rJS e1) <+> (text "in")                                         
+                                         <+> (renderJS e2) <> (char ')') <> (renderJS s)
 renderJS (JSForVar e1 e2 e3 s)         = (text "for") <> (char '(') <> (text "var") <+> (commaList e1) <> (char ';') 
                                          <> (rJS e2) <> (char ';') <> (rJS e3) <> (char ')') <> (renderJS s)
-renderJS (JSForVarIn e1 e2 s)          = (text "for") <> (char '(') <> (text "var") <+> (renderJS e1) <> (text "in") 
-                                         <> (renderJS e2) <> (char ')') <> (renderJS s)
+renderJS (JSForVarIn e1 e2 s)          = (text "for") <> (char '(') <> (text "var") <+> (renderJS e1) <+> (text "in") 
+                                         <+> (renderJS e2) <> (char ')') <> (renderJS s)
 renderJS (JSHexInteger i)              = (text $ show i) -- TODO: need to tweak this                                         
 renderJS (JSLabelled l v)              = (renderJS l) <> (text ":") <> (renderJS v)
 renderJS (JSObjectLiteral xs)          = (text "{") <> (commaList xs) <> (text "}")
 renderJS (JSPropertyNameandValue n vs) = (renderJS n) <> (text ":") <> (rJS vs)
 renderJS (JSRegEx s)                   = (text s)
+
+renderJS (JSReturn [])                 = (text "return")
+renderJS (JSReturn [JSLiteral ";"])    = (text "return;")
 renderJS (JSReturn xs)                 = (text "return") <+> (rJS xs) -- <> (text ";") no longer required, handled by autosemi parsing
+
 renderJS (JSThrow e)                   = (text "throw") <+> (renderJS e)
 
 renderJS (JSStatementList xs)          = rJS (fixSourceElements xs)
