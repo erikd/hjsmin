@@ -9,6 +9,7 @@ This one does not
 ---
 
 Language reference https://developer.mozilla.org/en/JavaScript/Reference
+http://msdn.microsoft.com/en-us/library/ttyab5c8.aspx
 
 --- 
 

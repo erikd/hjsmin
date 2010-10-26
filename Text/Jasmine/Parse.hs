@@ -203,7 +203,7 @@ regExp :: GenParser Char P.JSPState JSNode
 regExp = do { rOp "/"; v1 <- many (noneOf "/"); rOp "/"; v2 <- optional (oneOf "gim"); -- TODO: remove optional
               return (JSRegEx ("/" ++ v1 ++ "/" ++ (show(v2))))  }
 -}
-regExp = do { v1 <- regex;       
+regExp = P.lexeme $ do { v1 <- regex;       
               return (JSRegEx v1)}
 
 -- <Literal> ::= <Null Literal>

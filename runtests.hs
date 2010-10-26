@@ -66,7 +66,11 @@ testSuiteFiles = testGroup "Text.Jasmine.Pretty files"
   , testCase "120_js.js"        (testFile "./test/pminified/120_js.js")      
   , testCase "121_jsdefs.js"    (testFile "./test/pminified/121_jsdefs.js")      
   , testCase "122_jsexec.js"    (testFile "./test/pminified/122_jsexec.js")      
-  , testCase "122_jsexec2.js"    (testFile "./test/pminified/122_jsexec2.js")      
+  , testCase "122_jsexec2.js"   (testFile "./test/pminified/122_jsexec2.js")      
+  -- , testCase "123_jsparse.js"   (testFile "./test/pminified/123_jsparse.js")      TODO: something strange here, assigning code block to variable?
+       -- See http://msdn.microsoft.com/en-us/library/77kz8hy0.aspx, get/set keywords for object accessors
+    
+  , testCase "130_htojs.js"     (testFile "./test/pminified/130_htojs.js")      
   --, testCase ""     (testFile "./test/pminified/")      
   ]  
 
