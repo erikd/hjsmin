@@ -237,7 +237,8 @@ _case8 = JSSourceElements
               (JSLiteral ";")
           ]        
           
-case01_semi1 = JSSourceElements 
+_case01_semi1 :: JSNode
+_case01_semi1 = JSSourceElements 
                  [
                    JSBlock (JSStatementList 
                               [

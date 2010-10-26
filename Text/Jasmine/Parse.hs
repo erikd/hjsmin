@@ -132,6 +132,10 @@ autoSemi' :: GenParser Char P.JSPState JSNode
 autoSemi' = try (do { v1 <-  P.autoSemi';
                       return (JSLiteral v1);})
 
+autoSemi'' :: GenParser Char P.JSPState JSNode
+autoSemi'' = try (do { v1 <-  P.autoSemi'';
+                       return (JSLiteral v1);})
+
 rOp :: [Char] -> GenParser Char P.JSPState ()
 rOp = P.rOp
 
@@ -805,7 +809,7 @@ variableDeclaration = do{ v1 <- identifier;
                             do {v2 <- initializer; 
                                 return (JSVarDecl v1 v2)}
                             <|> return (JSVarDecl v1 [])
-                            }
+                               }
                           }
 
 -- <Initializer> ::= '=' <Assignment Expression>
@@ -816,7 +820,7 @@ initializer = do {rOp "="; val <- assignmentExpression;
 -- <Empty Statement> ::= ';'
 emptyStatement :: GenParser Char P.JSPState JSNode
 --emptyStatement = do { v1 <- autoSemi'; return (JSEmpty v1)}
-emptyStatement = do { v1 <- autoSemi'; return v1}
+emptyStatement = do { v1 <- autoSemi''; return v1}
 
 
 -- <If Statement> ::= 'if' '(' <Expression> ')' <Statement> 
@@ -1060,6 +1064,7 @@ program = do {P.whiteSpace; val <- sourceElements; eof; return val}
 --                     | <Source Elements>  <Source Element>
 sourceElements :: GenParser Char P.JSPState JSNode
 sourceElements = do{ val <- many1 sourceElement;
+--sourceElements = do{ val <- sepBy1 sourceElement autoSemi'';
                      return (JSSourceElements val)}
                  
 

@@ -8,6 +8,7 @@ module Text.Jasmine.Token
     , hexadecimal  
     , autoSemi  
     , autoSemi'  
+    , autoSemi''  
     , rOp  
     , newJSPState  
     , JSPState  
@@ -40,6 +41,7 @@ getNLFlag :: GenParser tok JSPState Bool
 getNLFlag   = do s <- getState; return $ nlFlag s                   
 
 --nlPrior = do { s <- getNLFlag; tok <- mytoken (\tok -> if s then Just tok else Nothing ); putBack tok}
+nlPrior :: GenParser tok JSPState ()
 nlPrior = do { s <- getNLFlag; if s then (return ()) else (fail "no parse") }
 
 
@@ -52,7 +54,13 @@ rOp x = try(rOp'' x)
 
 rOp'' :: [Char] -> GenParser Char JSPState ()
 rOp'' []     = fail "trying to parse empty token"
-rOp'' [x]    = do{ _ <- char x; optional whiteSpace; return () }
+rOp'' [x]    = do{ _ <- char x; 
+                   do {
+                       do {_ <- whiteSpace; return () }
+                       <|> return ()
+                       }
+                   }
+
 rOp'' (x:xs) = do{ _ <- char x; rOp xs;}
                  
 -- ---------------------------------------------------------------------
@@ -83,6 +91,15 @@ autoSemi' = try (do { rOp ";"; lookAhead (rOp "}");
            <|> try (do {nlPrior;
                         return ";/*NLPRIOR*/"})
            -}
+
+autoSemi'' :: GenParser Char JSPState String
+autoSemi'' = try (do { rOp ";"; lookAhead (rOp "}");
+                     return ("");})
+            <|> try (do{ rOp ";"; 
+                        return (";");})
+            <|> try (do {nlPrior;
+                        return ";/*NLPRIOR*/"})
+
 
 -- ---------------------------------------------------------------------
 
@@ -144,7 +161,8 @@ reserved name =
 
 whiteSpace :: GenParser Char JSPState ()
 --whiteSpace = skipMany (simpleSpace <|> oneLineComment <|> multiLineComment <?> "")
-whiteSpace = skipMany (simpleSpace <|> oneLineComment <|> multiLineComment <|> do { _ <- char '\n'; setNLFlag} <?> "")
+--whiteSpace = skipMany (simpleSpace <|> oneLineComment <|> multiLineComment <|> do { _ <- char '\n'; setNLFlag} <?> "")
+whiteSpace = skipMany (do { _ <- char '\n'; setNLFlag; return ()} <|> simpleSpace <|> oneLineComment <|> multiLineComment <?> "")
 -- whiteSpace = try $ many $ (do { equal TokenWhite } <|> do { (equal TokenNL); setNLFlag})
 
 
@@ -229,10 +247,10 @@ reservedNames = [
                 
 
 decimal :: GenParser Char JSPState Integer
-decimal         = number 10 digit
+decimal = lexeme $ number 10 digit
 
 hexadecimal :: GenParser Char JSPState Integer
-hexadecimal     = do{ _ <- oneOf "xX"; number 16 hexDigit }
+hexadecimal = lexeme $ do{ _ <- oneOf "xX"; number 16 hexDigit }
 
 {-
 octal :: GenParser Char JSPState Integer
