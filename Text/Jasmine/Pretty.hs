@@ -19,7 +19,7 @@ renderJS (JSSourceElements xs)   = rJS (fixSourceElements xs)
 renderJS (JSElement _s xs)       = rJS xs
 renderJS (JSFunction s p xs)     = (text "function") <+> (renderJS s) <> (text "(") <> (commaList p) <> (text ")") <> (renderJS xs)
 renderJS (JSFunctionBody xs)     = (text "{") <> (rJS xs) <> (text "}")
-renderJS (JSFunctionExpression as s) = (text "function") <> (text "(") <> (rJS as) <> (text ")") <> (renderJS s)
+renderJS (JSFunctionExpression as s) = (text "function") <> (text "(") <> (commaList as) <> (text ")") <> (renderJS s)
 renderJS (JSArguments xs)        = (text "(") <> (commaListList xs) <> (text ")")
 renderJS (JSBlock xs)            = (text "{") <> (renderJS xs) <> (text "}")
 renderJS (JSIf c t)              = (text "if") <> (text "(") <> (renderJS c) <> (text ")") <> (renderJS t)
@@ -31,8 +31,9 @@ renderJS (JSStringLiteral s l)   = empty <> (char s) <> (text l) <> (char s)
 renderJS (JSUnary l  )           = text l
 renderJS (JSArrayLiteral xs)     = (text "[") <> (rJS xs) <> (text "]")
 
-renderJS (JSBreak [])            = (text "break")
-renderJS (JSBreak xs)            = (text "break") <> (rJS xs) -- <> (text ";")
+renderJS (JSBreak [] [])            = (text "break")
+renderJS (JSBreak [] xs)            = (text "break") <> (rJS xs) -- <> (text ";")
+renderJS (JSBreak is xs)            = (text "break") <+> (rJS is) <> (rJS xs)
 
 renderJS (JSCallExpression "()" xs) = (rJS xs)
 renderJS (JSCallExpression   t  xs) = (char $ head t) <> (rJS xs) <> (if ((length t) > 1) then (char $ last t) else empty)
@@ -72,7 +73,7 @@ renderJS (JSRegEx s)                   = (text s)
 
 renderJS (JSReturn [])                 = (text "return")
 renderJS (JSReturn [JSLiteral ";"])    = (text "return;")
-renderJS (JSReturn xs)                 = (text "return") <+> (rJS xs) -- <> (text ";") no longer required, handled by autosemi parsing
+renderJS (JSReturn xs)                 = (text "return") <> (if (spaceNeeded xs) then (text " ") else (empty)) <> (rJS xs) 
 
 renderJS (JSThrow e)                   = (text "throw") <+> (renderJS e)
 
@@ -125,6 +126,14 @@ myFix ((JSBlock x)     :(JSBlock y):xs)      = (JSBlock x)     :(JSLiteral ";"):
 myFix ((JSBlock x)     :(JSExpression y):xs) = (JSBlock x)     :(JSLiteral ";"):myFix ((JSExpression y):xs)
 
 myFix (x:xs)  = x : myFix xs
+
+-- A space is needed if this expression starts with an identifier etc, but not if with a '('
+spaceNeeded xs = 
+  let
+    str = show $ rJS xs
+  in  
+   head str /= '('
+
 
 -- ---------------------------------------------------------------------
 -- Test stuff
@@ -255,5 +264,12 @@ _case01_semi1 = JSSourceElements
                    JSLiteral ";",
                    JSExpression [JSIdentifier "five"]
                  ]          
+                 
+-- doParse returnStatement "return this.name;"
+_case9 :: JSNode
+_case9 = JSReturn [JSExpression [JSLiteral "this",JSMemberDot [JSIdentifier "name"]],JSLiteral ";"]                 
+
+_case9a = [JSExpression [JSLiteral "this",JSMemberDot [JSIdentifier "name"]],JSLiteral ";"]
+
 -- EOF
 

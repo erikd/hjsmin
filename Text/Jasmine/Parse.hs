@@ -52,7 +52,7 @@ instance Applicative Result where
 data JSNode = JSArguments [[JSNode]]  
               | JSArrayLiteral [JSNode]
               | JSBlock JSNode
-              | JSBreak [JSNode]
+              | JSBreak [JSNode] [JSNode]
               | JSCallExpression String [JSNode] -- type : ., (), []; rest  
               | JSCase JSNode JSNode
               | JSCatch JSNode [JSNode] JSNode
@@ -147,7 +147,8 @@ rOp = P.rOp
 --Modified from HJS
 
 stringLiteral :: GenParser Char P.JSPState JSNode
-stringLiteral = try( do { _ <- char '"'; val<- many stringCharDouble; _ <- char '"';
+stringLiteral = P.lexeme $ 
+                try( do { _ <- char '"'; val<- many stringCharDouble; _ <- char '"';
                      return (JSStringLiteral '"' val)})
             <|> do { _ <- char '\''; val<- many stringCharSingle; _ <- char '\'';
                      return (JSStringLiteral '\'' val)}
@@ -498,7 +499,7 @@ unaryExpression :: GenParser Char P.JSPState [JSNode]
 unaryExpression = do{ v1 <- postfixExpression; 
                       return v1}
               <|> do{ P.reserved "delete"; v1 <- unaryExpression;
-                      return ((JSUnary "delete"):v1)}
+                      return ((JSUnary "delete "):v1)}
               <|> do{ P.reserved "void";   v1 <- unaryExpression;
                       return ((JSUnary "void"):v1)}
               <|> do{ P.reserved "typeof"; v1 <- unaryExpression; 
@@ -589,6 +590,10 @@ relationalExpression = do{ v1 <- shiftExpression; v2 <- rest;
                                      return [(JSExpressionBinary ">" v2 v3)]}
                              <|> do{ P.reserved "instanceof"; v2 <- shiftExpression; v3 <- rest;
                                      return [(JSExpressionBinary " instanceof " v2 v3)]}
+                             -- Strictly speaking should have all the NoIn variants of expressions,    
+                             -- but we assume syntax is checked so no problem. Cross fingers.    
+                             <|> do{ P.reserved "in"; v2 <- shiftExpression; v3 <- rest;
+                                     return [(JSExpressionBinary " in " v2 v3)]}
                              <|> return []
 
 
@@ -892,9 +897,9 @@ breakStatement :: GenParser Char P.JSPState JSNode
 breakStatement = do {P.reserved "break"; 
                      do {
                           do {v1 <- autoSemi; 
-                              return (if (v1 == JSLiteral "") then (JSBreak []) else (JSBreak [v1]))}
+                              return (if (v1 == JSLiteral "") then (JSBreak [] []) else (JSBreak [] [v1]))}
                      <|>  do {v1 <- identifier; v2 <- autoSemi; 
-                              return (JSBreak [v1,v2])}
+                              return (JSBreak [v1] [v2])}
                         }
                      }
 

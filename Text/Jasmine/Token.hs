@@ -12,6 +12,7 @@ module Text.Jasmine.Token
     , rOp  
     , newJSPState  
     , JSPState  
+    , lexeme  
     -- Testing  
     --, simpleSpace  
     , nlPrior  
@@ -227,7 +228,7 @@ identLetter :: GenParser Char JSPState Char
 identLetter = alphaNum <|> oneOf "_"
 
 identStart :: GenParser Char JSPState Char
-identStart  = letter <|> oneOf "_"
+identStart  = letter <|> oneOf "_$"
 
 reservedNames :: [[Char]]
 reservedNames = [ 

@@ -65,7 +65,7 @@ testSuiteFiles = testGroup "Text.Jasmine.Pretty files"
   , testCase "110_perfect.js"   (testFile "./test/pminified/110_perfect.js")      
   , testCase "120_js.js"        (testFile "./test/pminified/120_js.js")      
   , testCase "121_jsdefs.js"    (testFile "./test/pminified/121_jsdefs.js")      
-  -- Takes too long for now, TODO:restore, testCase "122_jsexec.js"    (testFile "./test/pminified/122_jsexec.js")      
+  , testCase "122_jsexec.js"    (testFile "./test/pminified/122_jsexec.js")      
   , testCase "122_jsexec2.js"    (testFile "./test/pminified/122_jsexec2.js")      
   --, testCase ""     (testFile "./test/pminified/")      
   ]  
