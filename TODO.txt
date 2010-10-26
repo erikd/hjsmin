@@ -58,4 +58,6 @@ http://oss.org.cn/ossdocs/web/js/js20/formal/parser-grammar.html
 
 - put in tests for all cases of elementList
 
+-- Look at "in" keyword, as used : if (x in list) {}
+
 EOF

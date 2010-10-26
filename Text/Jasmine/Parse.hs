@@ -820,7 +820,7 @@ initializer = do {rOp "="; val <- assignmentExpression;
 -- <Empty Statement> ::= ';'
 emptyStatement :: GenParser Char P.JSPState JSNode
 --emptyStatement = do { v1 <- autoSemi'; return (JSEmpty v1)}
-emptyStatement = do { v1 <- autoSemi''; return v1}
+emptyStatement = do { v1 <- autoSemi'; return v1}
 
 
 -- <If Statement> ::= 'if' '(' <Expression> ')' <Statement> 
