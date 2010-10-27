@@ -13,6 +13,11 @@ stability:       unstable
 cabal-version:   >= 1.6
 build-type:      Simple
 homepage:        http://github.com/alanz/hjsmin
+bug-reports:     http://github.com/alanz/hjsmin/issues
+
+Extra-source-files: 
+  TODO.txt, README.markdown, buildall.sh
+
 
 flag buildtests
   description: Build the executable to run unit tests
@@ -26,7 +31,7 @@ library
                    , pretty           >= 1       && < 2
                    , mtl              >= 1       && < 2
     exposed-modules: Text.Jasmine
-    -- other-modules:   Text.Jasmine.Parse
+    other-modules:   Text.Jasmine.Parse, Text.Jasmine.Pretty, Text.Jasmine.Token
     ghc-options:     -Wall
 
 executable             runtests
