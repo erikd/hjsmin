@@ -128,6 +128,7 @@ myFix ((JSBlock x)     :(JSExpression y):xs) = (JSBlock x)     :(JSLiteral ";"):
 myFix (x:xs)  = x : myFix xs
 
 -- A space is needed if this expression starts with an identifier etc, but not if with a '('
+spaceNeeded :: [JSNode] -> Bool
 spaceNeeded xs = 
   let
     str = show $ rJS xs
@@ -269,6 +270,7 @@ _case01_semi1 = JSSourceElements
 _case9 :: JSNode
 _case9 = JSReturn [JSExpression [JSLiteral "this",JSMemberDot [JSIdentifier "name"]],JSLiteral ";"]                 
 
+_case9a :: [JSNode]
 _case9a = [JSExpression [JSLiteral "this",JSMemberDot [JSIdentifier "name"]],JSLiteral ";"]
 
 -- EOF

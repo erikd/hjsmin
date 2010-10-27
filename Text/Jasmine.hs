@@ -1,4 +1,3 @@
-
 module Text.Jasmine
     (       
       minify
@@ -9,10 +8,13 @@ import Text.Jasmine.Parse
 import Text.Jasmine.Pretty
 import Text.PrettyPrint
 
-minify :: [Char] -> Text.PrettyPrint.Doc
-minify s = renderJS $ readJs s
+minify :: String -> String
+minify s = show $ renderJS $ readJs s
 
-minifyFile :: FilePath -> IO Doc
+_minify' :: [Char] -> Text.PrettyPrint.Doc
+_minify' s = renderJS $ readJs s
+
+minifyFile :: FilePath -> IO String
 minifyFile filename =
   do 
      x <- readFile (filename)

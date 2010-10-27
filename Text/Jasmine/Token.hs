@@ -8,7 +8,6 @@ module Text.Jasmine.Token
     , hexadecimal  
     , autoSemi  
     , autoSemi'  
-    , autoSemi''  
     , rOp  
     , newJSPState  
     , JSPState  
@@ -88,18 +87,6 @@ autoSemi' = try (do { rOp ";"; lookAhead (rOp "}");
                      return ("");})
            <|> try (do{ rOp ";"; 
                         return (";");})
-           {- TODO: Make this thing actually work 
-           <|> try (do {nlPrior;
-                        return ";/*NLPRIOR*/"})
-           -}
-
-autoSemi'' :: GenParser Char JSPState String
-autoSemi'' = try (do { rOp ";"; lookAhead (rOp "}");
-                     return ("");})
-            <|> try (do{ rOp ";"; 
-                        return (";");})
-            <|> try (do {nlPrior;
-                        return ";/*NLPRIOR*/"})
 
 
 -- ---------------------------------------------------------------------

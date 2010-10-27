@@ -132,10 +132,6 @@ autoSemi' :: GenParser Char P.JSPState JSNode
 autoSemi' = try (do { v1 <-  P.autoSemi';
                       return (JSLiteral v1);})
 
-autoSemi'' :: GenParser Char P.JSPState JSNode
-autoSemi'' = try (do { v1 <-  P.autoSemi'';
-                       return (JSLiteral v1);})
-
 rOp :: [Char] -> GenParser Char P.JSPState ()
 rOp = P.rOp
 

@@ -6,7 +6,8 @@ author:          Alan Zimmerman <alan.zimm@gmail.com>
 maintainer:      Alan Zimmerman <alan.zimm@gmail.com>
 synopsis:        Haskell implementation of a javascript minifier
 description:
-    To follow ..
+   Reduces size of javascript files by stripping out extraneous whitespace and 
+   other syntactic elements, without changing the semantics.
 category:        Web
 stability:       unstable
 cabal-version:   >= 1.6
@@ -25,7 +26,7 @@ library
                    , pretty           >= 1       && < 2
                    , mtl              >= 1       && < 2
     exposed-modules: Text.Jasmine
-    other-modules:   Text.Jasmine.Parse
+    -- other-modules:   Text.Jasmine.Parse
     ghc-options:     -Wall
 
 executable             runtests
