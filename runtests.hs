@@ -9,7 +9,7 @@ import Text.Jasmine.Pretty
 import Data.Char
 
 main :: IO ()
-main = defaultMain [testSuite,testSuiteMin,testSuiteFiles]
+main = defaultMain [testSuite,testSuiteMin,testSuiteFiles,testSuiteFilesUnminified]
 
 testSuite :: Test
 testSuite = testGroup "Text.Jasmine.Parse"
@@ -73,6 +73,36 @@ testSuiteFiles = testGroup "Text.Jasmine.Pretty files"
     
   --, testCase "130_htojs2.js"     (testFile "./test/parsingonly/130_htojs2.js")      
   --, testCase ""     (testFile "./test/pminified/")      
+  ]  
+
+testSuiteFilesUnminified :: Test
+testSuiteFilesUnminified = testGroup "Text.Jasmine.Pretty files"
+  [ testCase "00_f.js"          (testFileUnminified "00_f.js")
+  , testCase "01_semi1.js"      (testFileUnminified "01_semi1.js")  
+  , testCase "02_sm.js"         (testFileUnminified "02_sm.js")  
+  {-  
+  , testCase "03_sm.js"         (testFileUnminified "03_sm.js")  
+  , testCase "04_if.js"         (testFileUnminified "04_if.js")  
+  , testCase "05_comments_simple.js" (testFileUnminified "05_comments_simple.js")  
+  , testCase "05_regex.js"      (testFileUnminified "05_regex.js")  
+  , testCase "06_callexpr.js"   (testFileUnminified "06_callexpr.js")  
+  , testCase "06_newexpr.js"    (testFileUnminified "06_newexpr.js")  
+  , testCase "06_var.js"        (testFileUnminified "06_var.js")  
+  , testCase "07_expr.js"       (testFileUnminified "07_expr.js")  
+  , testCase "10_switch.js"     (testFileUnminified "10_switch.js")      
+  , testCase "14_labelled_stmts.js" (testFileUnminified "14_labelled_stmts.js")      
+  , testCase "15_literals.js"   (testFileUnminified "15_literals.js")      
+  , testCase "16_literals.js"   (testFileUnminified "16_literals.js")      
+  , testCase "20_statements.js" (testFileUnminified "20_statements.js")      
+  , testCase "25_trycatch.js"   (testFileUnminified "25_trycatch.js")      
+  , testCase "40_functions.js"  (testFileUnminified "40_functions.js")      
+  , testCase "67_bob.js"        (testFileUnminified "67_bob.js")      
+  , testCase "110_perfect.js"   (testFileUnminified "110_perfect.js")      
+  , testCase "120_js.js"        (testFileUnminified "120_js.js")      
+  , testCase "121_jsdefs.js"    (testFileUnminified "121_jsdefs.js")      
+  , testCase "122_jsexec.js"    (testFileUnminified "122_jsexec.js")      
+  , testCase "122_jsexec2.js"   (testFileUnminified "122_jsexec2.js")      
+  -}
   ]  
 
 srcHelloWorld = "function Hello(a) {}"
@@ -162,13 +192,24 @@ caseMinNestedSquare =
 -- ---------------------------------------------------------------------
 -- utilities
 
---testFile :: FilePath -> IO Doc
 testFile :: FilePath -> IO ()
 testFile filename =
   do 
      x <- readFile (filename)
      let x' = trim x
      x' @=? (minify x')  
+
+
+testFileUnminified :: FilePath -> IO ()
+testFileUnminified filename =
+  do 
+     x <- readFile ("./test/pminified/" ++ filename)
+     y <- readFile ("./test/parsingonly/" ++ filename)
+     let x' = trim x
+     x' @=? (minify y)  
+
+
+
 
 trim      :: String -> String
 trim      = f . f

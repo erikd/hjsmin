@@ -21,7 +21,10 @@ renderJS (JSFunction s p xs)     = (text "function") <+> (renderJS s) <> (text "
 renderJS (JSFunctionBody xs)     = (text "{") <> (rJS xs) <> (text "}")
 renderJS (JSFunctionExpression as s) = (text "function") <> (text "(") <> (commaList as) <> (text ")") <> (renderJS s)
 renderJS (JSArguments xs)        = (text "(") <> (commaListList xs) <> (text ")")
-renderJS (JSBlock xs)            = (text "{") <> (renderJS xs) <> (text "}")
+
+--renderJS (JSBlock (JSStatementList [x]))  = (renderJS x)
+renderJS (JSBlock x)                      = (text "{") <> (renderJS x) <> (text "}")
+
 renderJS (JSIf c t)              = (text "if") <> (text "(") <> (renderJS c) <> (text ")") <> (renderJS t)
 renderJS (JSIfElse c t e)        = (text "if") <> (text "(") <> (renderJS c) <> (text ")") <> (renderJS t) <> (text "else") <> (spaceOrBlock e)
 renderJS (JSMemberDot xs)        = (text ".") <> (rJS xs)
@@ -273,5 +276,45 @@ _case9 = JSReturn [JSExpression [JSLiteral "this",JSMemberDot [JSIdentifier "nam
 _case9a :: [JSNode]
 _case9a = [JSExpression [JSLiteral "this",JSMemberDot [JSIdentifier "name"]],JSLiteral ";"]
 
+--parseFile "./test/parsingonly/02_sm.js"
+{-
+
+{zero}
+one;two
+{
+ three
+ four;five;
+  {
+  six;{seven;}
+  }
+}
+
+-}
+_case10 = JSSourceElements 
+            [
+              JSBlock (JSStatementList [JSExpression [JSIdentifier "zero"]]),
+              JSExpression [JSIdentifier "one"],
+              JSLiteral ";",
+              JSExpression [JSIdentifier "two"],
+              JSBlock (JSStatementList 
+                       [JSExpression [JSIdentifier "three"],
+                        JSExpression [JSIdentifier "four"],
+                        JSLiteral ";",
+                        JSExpression [JSIdentifier "five"],
+                        JSLiteral ";",
+                        JSBlock (JSStatementList 
+                                 [JSExpression [JSIdentifier "six"],
+                                  JSLiteral ";",
+                                  JSBlock (JSStatementList 
+                                           [
+                                             JSExpression [JSIdentifier "seven"],
+                                             JSLiteral ""
+                                           ]
+                                          )
+                                 ]
+                                )
+                       ]
+                      )
+            ]
 -- EOF
 
