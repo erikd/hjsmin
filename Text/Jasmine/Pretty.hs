@@ -15,15 +15,14 @@ renderJS (JSIdentifier s)        = text s
 renderJS (JSDecimal i)           = text $ show i
 renderJS (JSOperator s)          = text s
 renderJS (JSExpression xs)       = rJS xs
-renderJS (JSSourceElements xs)   = rJS (fixSourceElements xs)
+renderJS (JSSourceElements xs)   = rJS (map fixBlock $ fixSourceElements xs)
 renderJS (JSElement _s xs)       = rJS xs
 renderJS (JSFunction s p xs)     = (text "function") <+> (renderJS s) <> (text "(") <> (commaList p) <> (text ")") <> (renderJS xs)
 renderJS (JSFunctionBody xs)     = (text "{") <> (rJS xs) <> (text "}")
 renderJS (JSFunctionExpression as s) = (text "function") <> (text "(") <> (commaList as) <> (text ")") <> (renderJS s)
 renderJS (JSArguments xs)        = (text "(") <> (commaListList xs) <> (text ")")
 
---renderJS (JSBlock (JSStatementList [x]))  = (renderJS x)
-renderJS (JSBlock x)                      = (text "{") <> (renderJS x) <> (text "}")
+renderJS (JSBlock x)             = (text "{") <> (renderJS x) <> (text "}")
 
 renderJS (JSIf c t)              = (text "if") <> (text "(") <> (renderJS c) <> (text ")") <> (renderJS t)
 renderJS (JSIfElse c t e)        = (text "if") <> (text "(") <> (renderJS c) <> (text ")") <> (renderJS t) <> (text "else") <> (spaceOrBlock e)
@@ -80,7 +79,7 @@ renderJS (JSReturn xs)                 = (text "return") <> (if (spaceNeeded xs)
 
 renderJS (JSThrow e)                   = (text "throw") <+> (renderJS e)
 
-renderJS (JSStatementList xs)          = rJS (fixSourceElements xs)
+renderJS (JSStatementList xs)          = rJS (fixSourceElements $ map fixBlock xs)
 
 renderJS (JSSwitch e xs)               = (text "switch") <> (char '(') <> (renderJS e) <> (char ')') <> 
                                          (char '{') <> (rJS xs)  <> (char '}')
@@ -129,6 +128,11 @@ myFix ((JSBlock x)     :(JSBlock y):xs)      = (JSBlock x)     :(JSLiteral ";"):
 myFix ((JSBlock x)     :(JSExpression y):xs) = (JSBlock x)     :(JSLiteral ";"):myFix ((JSExpression y):xs)
 
 myFix (x:xs)  = x : myFix xs
+
+-- Remove extraneous braces around blocks
+fixBlock (JSBlock (JSStatementList [x])) = x
+fixBlock (JSBlock (JSStatementList [x,JSLiteral ""])) = x -- TODO: fix parser to not emit this case
+fixBlock x = x
 
 -- A space is needed if this expression starts with an identifier etc, but not if with a '('
 spaceNeeded :: [JSNode] -> Bool
@@ -290,6 +294,7 @@ one;two
 }
 
 -}
+_case10 :: JSNode
 _case10 = JSSourceElements 
             [
               JSBlock (JSStatementList [JSExpression [JSIdentifier "zero"]]),

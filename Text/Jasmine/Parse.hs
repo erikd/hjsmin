@@ -827,7 +827,6 @@ emptyStatement = do { v1 <- autoSemi'; return v1}
 -- <If Statement> ::= 'if' '(' <Expression> ')' <Statement> 
 ifStatement :: GenParser Char P.JSPState JSNode
 ifStatement = do{ P.reserved "if"; rOp "("; v1 <- expression; rOp ")"; v2 <- statement;
-                  --return (if (v2 == (JSLiteral ";")) then (JSIf v1 (JSLiteral "")) else (JSIf v1 v2)) }
                   return (JSIf v1 v2) }
 
 -- <If Else Statement> ::= 'if' '(' <Expression> ')' <Statement> 'else' <Statement>
