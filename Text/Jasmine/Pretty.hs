@@ -16,6 +16,7 @@ renderJS (JSDecimal i)           = text $ show i
 renderJS (JSOperator s)          = text s
 renderJS (JSExpression xs)       = rJS xs
 renderJS (JSSourceElements xs)   = rJS (map fixBlock $ fixSourceElements xs)
+renderJS (JSSourceElementsTop xs)= rJS (fixTop $ map fixBlock $ fixSourceElements xs)
 renderJS (JSElement _s xs)       = rJS xs
 renderJS (JSFunction s p xs)     = (text "function") <+> (renderJS s) <> (text "(") <> (commaList p) <> (text ")") <> (renderJS xs)
 renderJS (JSFunctionBody xs)     = (text "{") <> (rJS xs) <> (text "}")
@@ -25,7 +26,7 @@ renderJS (JSArguments xs)        = (text "(") <> (commaListList xs) <> (text ")"
 renderJS (JSBlock x)             = (text "{") <> (renderJS x) <> (text "}")
 
 renderJS (JSIf c t)              = (text "if") <> (text "(") <> (renderJS c) <> (text ")") <> (renderJS t)
-renderJS (JSIfElse c t e)        = (text "if") <> (text "(") <> (renderJS c) <> (text ")") <> (renderJS t) <> (text "else") <> (spaceOrBlock e)
+renderJS (JSIfElse c t e)        = (text "if") <> (text "(") <> (renderJS c) <> (text ")") <> (renderJS t) <> (text "else") <> (spaceOrBlock $ fixBlock e)
 renderJS (JSMemberDot xs)        = (text ".") <> (rJS xs)
 renderJS (JSMemberSquare x xs)   = (text "[") <> (renderJS x) <> (text "]") <> (rJS xs)
 renderJS (JSLiteral l)           = (text l)
@@ -59,14 +60,16 @@ renderJS (JSExpressionParen e)        = (char '(') <> (renderJS e) <> (char ')')
 renderJS (JSExpressionPostfix o e)    = (rJS e) <> (text o)
 renderJS (JSExpressionTernary c v1 v2) = (rJS c) <> (char '?') <> (rJS v1) <> (char ':') <> (rJS v2)
 renderJS (JSFinally b)                 = (text "finally") <> (renderJS b)
+
 renderJS (JSFor e1 e2 e3 s)            = (text "for") <> (char '(') <> (commaList e1) <> (char ';') 
-                                         <> (rJS e2) <> (char ';') <> (rJS e3) <> (char ')') <> (renderJS s)
-renderJS (JSForIn e1 e2 s)             = (text "for") <> (char '(') <> (rJS e1) <+> (text "in")                                         
-                                         <+> (renderJS e2) <> (char ')') <> (renderJS s)
+                                         <> (rJS e2) <> (char ';') <> (rJS e3) <> (char ')') <> (renderJS $ fixBlock s)
+renderJS (JSForIn e1 e2 s)             = (text "for") <> (char '(') <> (rJS e1) <+> (text "in")
+                                         <+> (renderJS e2) <> (char ')') <> (renderJS $ fixBlock s)
 renderJS (JSForVar e1 e2 e3 s)         = (text "for") <> (char '(') <> (text "var") <+> (commaList e1) <> (char ';') 
-                                         <> (rJS e2) <> (char ';') <> (rJS e3) <> (char ')') <> (renderJS s)
+                                         <> (rJS e2) <> (char ';') <> (rJS e3) <> (char ')') <> (renderJS $ fixBlock s)
 renderJS (JSForVarIn e1 e2 s)          = (text "for") <> (char '(') <> (text "var") <+> (renderJS e1) <+> (text "in") 
-                                         <+> (renderJS e2) <> (char ')') <> (renderJS s)
+                                         <+> (renderJS e2) <> (char ')') <> (renderJS $ fixBlock s)
+                                         
 renderJS (JSHexInteger i)              = (text $ show i) -- TODO: need to tweak this                                         
 renderJS (JSLabelled l v)              = (renderJS l) <> (text ":") <> (renderJS v)
 renderJS (JSObjectLiteral xs)          = (text "{") <> (commaList xs) <> (text "}")
@@ -112,6 +115,11 @@ spaceOrBlock x            = (text " ") <> (renderJS x)
 -- ---------------------------------------------------------------
 -- Utility stuff
 
+
+fixTop :: [JSNode] -> [JSNode]
+fixTop [] = []
+fixTop xs = if (last xs == (JSLiteral ";")) then (init xs) else (xs)
+
 -- Fix semicolons in output of sourceelements and statementlist
 
 fixSourceElements :: [JSNode] -> [JSNode]
@@ -126,6 +134,14 @@ myFix ((JSExpression x):(JSExpression y):xs) = (JSExpression x):(JSLiteral ";"):
 myFix ((JSExpression x):(JSBlock y):xs)      = (JSExpression x):(JSLiteral ";"):myFix ((JSBlock y):xs)
 myFix ((JSBlock x)     :(JSBlock y):xs)      = (JSBlock x)     :(JSLiteral ";"):myFix ((JSBlock y):xs)
 myFix ((JSBlock x)     :(JSExpression y):xs) = (JSBlock x)     :(JSLiteral ";"):myFix ((JSExpression y):xs)
+
+-- Merge adjacent variable declarations, but only of the same type
+myFix ((JSVariables t1 x1s):(JSLiteral l):(JSVariables t2 x2s):xs) 
+  | t1 == t2 = myFix ((JSVariables t1 (x1s++x2s)):xs)
+  | otherwise = (JSVariables t1 x1s):myFix ((JSLiteral l):(JSVariables t2 x2s):xs)
+
+-- Merge adjacent semi colons
+myFix ((JSLiteral ";"):(JSLiteral ";"):xs)  = myFix ((JSLiteral ";"):xs)
 
 myFix (x:xs)  = x : myFix xs
 
@@ -321,5 +337,126 @@ _case10 = JSSourceElements
                        ]
                       )
             ]
+            
+--parseFile "./test/parsingonly/05_comments_simple.js"
+_case11 = JSSourceElements 
+            [
+              JSExpression [JSIdentifier "a",JSExpressionBinary "+" [JSDecimal 1] []],
+              JSLiteral ";",
+              JSLiteral ";"
+            ]            
+            
+--doParse program "var newlines=spaces.match(/\\n/g);var newlines=spaces.match(/\\n/g);"
+_case12 = JSSourceElements 
+          [
+            JSVariables "var" [JSVarDecl (JSIdentifier "newlines") 
+                               [JSIdentifier "spaces",JSMemberDot [JSIdentifier "match"],
+                                JSArguments [[JSRegEx "/\\n/g"]]]],
+            JSLiteral ";",
+            JSVariables "var" [JSVarDecl (JSIdentifier "newlines") 
+                               [JSIdentifier "spaces",JSMemberDot [JSIdentifier "match"],
+                                JSArguments [[JSRegEx "/\\n/g"]]]],
+            JSLiteral ";"
+          ]            
+
+--doParse program "for(i=0;;){var t=1};for(var i=0,j=1;;){x=1}"
+_case13 = JSSourceElements 
+          [
+            JSFor [JSExpression [JSElement "assignmentExpression" [JSIdentifier "i",JSOperator "=",JSDecimal 0]]] 
+            [] 
+            [] 
+            (JSBlock (
+                JSStatementList [JSVariables "var" [JSVarDecl (JSIdentifier "t") [JSDecimal 1]]]
+                )
+            ),
+            JSLiteral ";",
+            JSForVar [JSVarDecl (JSIdentifier "i") [JSDecimal 0],JSVarDecl (JSIdentifier "j") [JSDecimal 1]] 
+            [] 
+            [] 
+            (JSBlock (
+                JSStatementList [JSExpression [JSElement "assignmentExpression" [JSIdentifier "x",JSOperator "=",JSDecimal 1]]]
+                )
+            )
+          ]          
+          
+-- doParse program "if (/^[a-z]/.test(t)) {consts += t.toUpperCase();keywords[t] = i;} else {consts += (/^\\W/.test(t) ? opTypeNames[t] : t);}consts += \" = \" + x;"
+_case14 = JSSourceElements 
+          [
+            JSIfElse 
+              (JSExpression [JSRegEx "/^[a-z]/",JSMemberDot [JSIdentifier "test"],JSArguments [[JSIdentifier "t"]]]) 
+              (JSBlock (JSStatementList 
+                        [
+                          JSExpression [
+                             JSElement "assignmentExpression" 
+                               [JSIdentifier "consts",JSOperator "+=",JSIdentifier "t",
+                                JSMemberDot [JSIdentifier "toUpperCase"],JSArguments [[]]]
+                             ],
+                          JSLiteral ";",
+                          JSExpression [
+                            JSElement "assignmentExpression" [JSIdentifier "keywords",
+                                                              JSMemberSquare (JSExpression [JSIdentifier "t"]) [],
+                                                              JSOperator "=",JSIdentifier "i"]],
+                          JSLiteral ""])) 
+              (JSBlock (JSStatementList 
+                        [
+                          JSExpression 
+                            [
+                              JSElement "assignmentExpression" 
+                                [
+                                  JSIdentifier "consts",JSOperator "+=",
+                                  JSExpressionParen 
+                                    (
+                                      JSExpression 
+                                        [
+                                          JSExpressionTernary 
+                                            [
+                                              JSRegEx "/^\\W/",
+                                              JSMemberDot [JSIdentifier "test"],
+                                              JSArguments [[JSIdentifier "t"]]
+                                            ] 
+                                            [
+                                              JSIdentifier "opTypeNames",
+                                              JSMemberSquare (JSExpression [JSIdentifier "t"]) 
+                                              []
+                                            ] 
+                                            [JSIdentifier "t"]
+                                        ]
+                                    )
+                                ]
+                            ],
+                          JSLiteral ""
+                        ]
+                       )
+              ),
+            JSExpression [JSElement "assignmentExpression" 
+                          [JSIdentifier "consts",JSOperator "+=",JSStringLiteral '"' " = ",
+                           JSExpressionBinary "+" [JSIdentifier "x"] []]],
+            JSLiteral ";"]          
+          
+-- doParse program "a+1;{}"
+_case15 = JSSourceElements 
+            [
+              JSExpression [JSIdentifier "a",JSExpressionBinary "+" [JSDecimal 1] []],
+              JSLiteral ";",
+              JSLiteral ";"
+            ]
+            
+-- doParse program "for (i = 0;;){var t=1;;}\nx=1;"
+_case16 = JSSourceElements 
+            [
+              JSFor [JSExpression [JSElement "assignmentExpression" [JSIdentifier "i",JSOperator "=",JSDecimal 0]]] [] [] 
+                (JSBlock 
+                 (JSStatementList 
+                  [
+                    JSVariables "var" [JSVarDecl (JSIdentifier "t") [JSDecimal 1]],
+                    JSLiteral ";",
+                    JSLiteral ""
+                  ]
+                 )
+                ),
+              JSExpression [JSElement "assignmentExpression" [JSIdentifier "x",JSOperator "=",JSDecimal 1]],
+              JSLiteral ";"
+            ]
+
 -- EOF
 

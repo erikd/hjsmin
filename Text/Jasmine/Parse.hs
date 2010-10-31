@@ -91,6 +91,7 @@ data JSNode = JSArguments [[JSNode]]
               | JSRegEx String  
               | JSReturn [JSNode]
               | JSSourceElements [JSNode]
+              | JSSourceElementsTop [JSNode]
               | JSStatementList [JSNode]
               | JSStringLiteral Char String  
               | JSSwitch JSNode [JSNode]
@@ -1057,16 +1058,20 @@ functionBody = do{ rOp "{";
 
 -- <Program> ::= <Source Elements>
 program :: GenParser Char P.JSPState JSNode
-program = do {P.whiteSpace; val <- sourceElements; eof; return val}
+program = do {P.whiteSpace; val <- sourceElementsTop; eof; 
+              return val}
 
 
 -- <Source Elements> ::= <Source Element>
 --                     | <Source Elements>  <Source Element>
 sourceElements :: GenParser Char P.JSPState JSNode
 sourceElements = do{ val <- many1 sourceElement;
---sourceElements = do{ val <- sepBy1 sourceElement autoSemi'';
                      return (JSSourceElements val)}
                  
+sourceElementsTop :: GenParser Char P.JSPState JSNode
+sourceElementsTop = do{ val <- many1 sourceElement;
+                        return (JSSourceElementsTop val)}
+
 
 -- <Source Element> ::= <Statement>
 --                    | <Function Declaration>
