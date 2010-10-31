@@ -5,6 +5,7 @@ module Text.Jasmine.Pretty
 
 import Text.Jasmine.Parse
 import Text.PrettyPrint
+import Data.List
 
 -- ---------------------------------------------------------------------
 
@@ -25,8 +26,12 @@ renderJS (JSArguments xs)        = (text "(") <> (commaListList xs) <> (text ")"
 
 renderJS (JSBlock x)             = (text "{") <> (renderJS x) <> (text "}")
 
+renderJS (JSIf c (JSLiteral ";"))= (text "if") <> (text "(") <> (renderJS c) <> (text ")") 
 renderJS (JSIf c t)              = (text "if") <> (text "(") <> (renderJS c) <> (text ")") <> (renderJS t)
-renderJS (JSIfElse c t e)        = (text "if") <> (text "(") <> (renderJS c) <> (text ")") <> (renderJS t) <> (text "else") <> (spaceOrBlock $ fixBlock e)
+
+renderJS (JSIfElse c t (JSLiteral ";")) = (text "if") <> (text "(") <> (renderJS c) <> (text ")") 
+renderJS (JSIfElse c t e)        = (text "if") <> (text "(") <> (renderJS c) <> (text ")") <> (renderJS t) 
+                                   <> (text "else") <> (spaceOrBlock $ fixBlock e)
 renderJS (JSMemberDot xs)        = (text ".") <> (rJS xs)
 renderJS (JSMemberSquare x xs)   = (text "[") <> (renderJS x) <> (text "]") <> (rJS xs)
 renderJS (JSLiteral l)           = (text l)
@@ -35,15 +40,15 @@ renderJS (JSUnary l  )           = text l
 renderJS (JSArrayLiteral xs)     = (text "[") <> (rJS xs) <> (text "]")
 
 renderJS (JSBreak [] [])            = (text "break")
-renderJS (JSBreak [] xs)            = (text "break") <> (rJS xs) -- <> (text ";")
-renderJS (JSBreak is xs)            = (text "break") <+> (rJS is) <> (rJS xs)
+renderJS (JSBreak [] xs)            = (text "break") -- <> (rJS xs) -- <> (text ";")
+renderJS (JSBreak is xs)            = (text "break") <+> (rJS is) -- <> (rJS xs)
 
 renderJS (JSCallExpression "()" xs) = (rJS xs)
 renderJS (JSCallExpression   t  xs) = (char $ head t) <> (rJS xs) <> (if ((length t) > 1) then (char $ last t) else empty)
 
 -- No space between 'case' and string literal. TODO: what about expression in parentheses?
 renderJS (JSCase (JSExpression [JSStringLiteral sepa s]) xs) = (text "case") <> (renderJS (JSStringLiteral sepa s)) <> (char ':') <> (renderJS xs)          
-renderJS (JSCase e xs)           = (text "case") <+> (renderJS e) <> (char ':') <> (renderJS xs)          
+renderJS (JSCase e xs)           = (text "case") <+> (renderJS e) <> (char ':') <> (renderJS xs) -- <> (text ";");         
 
 renderJS (JSCatch i [] s)        = (text "catch") <> (char '(') <> (renderJS i) <>  (char ')') <> (renderJS s)
 renderJS (JSCatch i c s)         = (text "catch") <> (char '(') <> (renderJS i) <>  
@@ -51,7 +56,7 @@ renderJS (JSCatch i c s)         = (text "catch") <> (char '(') <> (renderJS i) 
 
 renderJS (JSContinue is)         = (text "continue") <> (rJS is) -- <> (char ';')
 renderJS (JSDefault xs)          = (text "default") <> (char ':') <> (renderJS xs)
-renderJS (JSDoWhile s e ms)         = (text "do") <> (renderJS s) <> (text "while") <> (char '(') <> (renderJS e) <> (char ')') <> (renderJS ms)
+renderJS (JSDoWhile s e ms)      = (text "do") <> (renderJS s) <> (text "while") <> (char '(') <> (renderJS e) <> (char ')') -- <> (renderJS ms)
 renderJS (JSElementList xs)      = rJS xs
 renderJS (JSElision xs)          = (char ',') <> (rJS xs)
 --renderJS (JSExpressionBinary o e1 e2) = (rJS e1) <> (text o) <> (rJS e2)
@@ -78,21 +83,24 @@ renderJS (JSRegEx s)                   = (text s)
 
 renderJS (JSReturn [])                 = (text "return")
 renderJS (JSReturn [JSLiteral ";"])    = (text "return;")
-renderJS (JSReturn xs)                 = (text "return") <> (if (spaceNeeded xs) then (text " ") else (empty)) <> (rJS xs) 
+renderJS (JSReturn xs)                 = (text "return") <> (if (spaceNeeded xs) then (text " ") else (empty)) <> (rJS $ fixSourceElements xs) 
 
 renderJS (JSThrow e)                   = (text "throw") <+> (renderJS e)
 
 renderJS (JSStatementList xs)          = rJS (fixSourceElements $ map fixBlock xs)
 
 renderJS (JSSwitch e xs)               = (text "switch") <> (char '(') <> (renderJS e) <> (char ')') <> 
-                                         (char '{') <> (rJS xs)  <> (char '}')
+                                         (char '{') <> (rJS $ intersperse (JSLiteral ";") xs)  <> (char '}')
 renderJS (JSTry e xs)                  = (text "try") <> (renderJS e) <> (rJS xs)
 
 renderJS (JSVarDecl i [])              = (renderJS i) 
 renderJS (JSVarDecl i xs)              = (renderJS i) <> (text "=") <> (rJS xs)
 
 renderJS (JSVariables kw xs)           = (text kw) <+> (commaList xs)
+
+renderJS (JSWhile e (JSLiteral ";"))   = (text "while") <> (char '(') <> (renderJS e) <> (char ')') -- <> (renderJS s)
 renderJS (JSWhile e s)                 = (text "while") <> (char '(') <> (renderJS e) <> (char ')') <> (renderJS s)
+
 renderJS (JSWith e s)                  = (text "with") <> (char '(') <> (renderJS e) <> (char ')') <> (rJS s)
           
 -- Helper functions
@@ -123,7 +131,7 @@ fixTop xs = if (last xs == (JSLiteral ";")) then (init xs) else (xs)
 -- Fix semicolons in output of sourceelements and statementlist
 
 fixSourceElements :: [JSNode] -> [JSNode]
-fixSourceElements xs = myFix xs
+fixSourceElements xs = fixSemis $ myFix xs
   
 myFix :: [JSNode] -> [JSNode]
 myFix []      = []
@@ -142,13 +150,28 @@ myFix ((JSVariables t1 x1s):(JSLiteral l):(JSVariables t2 x2s):xs)
 
 -- Merge adjacent semi colons
 myFix ((JSLiteral ";"):(JSLiteral ";"):xs)  = myFix ((JSLiteral ";"):xs)
+myFix ((JSLiteral ";"):(JSLiteral "" ):xs)  = myFix ((JSLiteral ""):xs)
 
 myFix (x:xs)  = x : myFix xs
 
+-- Sort out Semicolons
+fixSemis :: [JSNode] -> [JSNode]
+fixSemis xs = fixSemis' $ filter (\x -> x /= JSLiteral ";" && x /= JSLiteral "") xs
+
+fixSemis' [] = []
+fixSemis' [x] = [x]
+fixSemis' (x:(JSLiteral "\n"):xs) = x:(JSLiteral "\n"):(fixSemis' xs)
+fixSemis' ((JSCase e1 ((JSStatementList []))):(JSCase e2 x):xs) = (JSCase e1 ((JSStatementList []))):fixSemis' ((JSCase e2 x):xs)
+fixSemis' (x:xs) = x:(JSLiteral ";"):fixSemis' xs
+
 -- Remove extraneous braces around blocks
 fixBlock (JSBlock (JSStatementList [x])) = x
-fixBlock (JSBlock (JSStatementList [x,JSLiteral ""])) = x -- TODO: fix parser to not emit this case
+fixBlock (JSBlock (JSStatementList xs)) = fixBlock' (JSBlock (JSStatementList (fixSourceElements xs)))
 fixBlock x = x
+
+fixBlock' (JSBlock (JSStatementList [x])) = x
+fixBlock' (JSBlock (JSStatementList [x,JSLiteral ""])) = x -- TODO: fix parser to not emit this case
+fixBlock' x = x
 
 -- A space is needed if this expression starts with an identifier etc, but not if with a '('
 spaceNeeded :: [JSNode] -> Bool
@@ -442,7 +465,8 @@ _case15 = JSSourceElements
             ]
             
 -- doParse program "for (i = 0;;){var t=1;;}\nx=1;"
-_case16 = JSSourceElements 
+-- (renderJS _case16) should become "for (i = 0;;)var t=1;x=1"
+_case16 = JSSourceElementsTop 
             [
               JSFor [JSExpression [JSElement "assignmentExpression" [JSIdentifier "i",JSOperator "=",JSDecimal 0]]] [] [] 
                 (JSBlock 
@@ -458,5 +482,13 @@ _case16 = JSSourceElements
               JSLiteral ";"
             ]
 
+-- doParse program "return new global.Boolean(v);"
+_case17 = JSSourceElementsTop 
+            [
+              JSReturn 
+                [
+                  JSExpression [JSLiteral "new ",JSIdentifier "global",JSMemberDot [JSIdentifier "Boolean"],JSArguments [[JSIdentifier "v"]]],
+                  JSLiteral ";"]
+                ]
 -- EOF
 
