@@ -47,7 +47,8 @@ renderJS (JSCallExpression "()" xs) = (rJS xs)
 renderJS (JSCallExpression   t  xs) = (char $ head t) <> (rJS xs) <> (if ((length t) > 1) then (char $ last t) else empty)
 
 -- No space between 'case' and string literal. TODO: what about expression in parentheses?
-renderJS (JSCase (JSExpression [JSStringLiteral sepa s]) xs) = (text "case") <> (renderJS (JSStringLiteral sepa s)) <> (char ':') <> (renderJS xs)          
+renderJS (JSCase (JSExpression [JSStringLiteral sepa s]) xs) = (text "case") <> (renderJS (JSStringLiteral sepa s)) 
+                                                               <> (char ':') <> (renderJS xs)          
 renderJS (JSCase e xs)           = (text "case") <+> (renderJS e) <> (char ':') <> (renderJS xs) -- <> (text ";");         
 
 renderJS (JSCatch i [] s)        = (text "catch") <> (char '(') <> (renderJS i) <>  (char ')') <> (renderJS s)
@@ -90,7 +91,7 @@ renderJS (JSThrow e)                   = (text "throw") <+> (renderJS e)
 renderJS (JSStatementList xs)          = rJS (fixSourceElements $ map fixBlock xs)
 
 renderJS (JSSwitch e xs)               = (text "switch") <> (char '(') <> (renderJS e) <> (char ')') <> 
-                                         (char '{') <> (rJS $ intersperse (JSLiteral ";") xs)  <> (char '}')
+                                         (char '{') <> (rJS $ fixSemis xs)  <> (char '}')
 renderJS (JSTry e xs)                  = (text "try") <> (renderJS e) <> (rJS xs)
 
 renderJS (JSVarDecl i [])              = (renderJS i) 
@@ -160,6 +161,8 @@ fixSemis xs = fixSemis' $ filter (\x -> x /= JSLiteral ";" && x /= JSLiteral "")
 
 fixSemis' [] = []
 fixSemis' [x] = [x]
+fixSemis' ((JSIf c (JSReturn [JSLiteral ";"])):xs)    = (JSIf c (JSReturn [JSLiteral ";"])):(fixSemis' xs)
+fixSemis' ((JSIf c (JSContinue [JSLiteral ";"])):xs)    = (JSIf c (JSContinue [JSLiteral ";"])):(fixSemis' xs)
 fixSemis' (x:(JSLiteral "\n"):xs) = x:(JSLiteral "\n"):(fixSemis' xs)
 fixSemis' ((JSCase e1 ((JSStatementList []))):(JSCase e2 x):xs) = (JSCase e1 ((JSStatementList []))):fixSemis' ((JSCase e2 x):xs)
 fixSemis' (x:xs) = x:(JSLiteral ";"):fixSemis' xs
@@ -490,5 +493,56 @@ _case17 = JSSourceElementsTop
                   JSExpression [JSLiteral "new ",JSIdentifier "global",JSMemberDot [JSIdentifier "Boolean"],JSArguments [[JSIdentifier "v"]]],
                   JSLiteral ";"]
                 ]
+            
+--doParse program "if(typeof s!=\"string\")return;while(--n>=0)s+=t;"
+_case18 = JSSourceElementsTop 
+            [
+              JSIf 
+                (JSExpression [JSUnary "typeof ",JSIdentifier "s",JSExpressionBinary "!=" [JSStringLiteral '"' "string"] []]) 
+                (JSReturn [JSLiteral ";"]),
+              JSWhile (JSExpression [JSUnary "--",JSIdentifier "n",JSExpressionBinary ">=" [JSDecimal 0] []]) 
+                (JSExpression 
+                   [
+                     JSElement "assignmentExpression" 
+                       [JSIdentifier "s",JSOperator "+=",JSIdentifier "t"]
+                   ]
+                ),
+              JSLiteral ";"
+            ]            
+
+-- doParse program "function f(){return n;\nx=1}"
+_case19 = JSSourceElementsTop 
+            [
+              JSFunction (JSIdentifier "f") [] 
+                (JSFunctionBody 
+                 [
+                   JSSourceElements 
+                     [
+                       JSReturn [JSExpression [JSIdentifier "n"],JSLiteral ";"],
+                       JSExpression 
+                         [JSElement "assignmentExpression" 
+                          [
+                            JSIdentifier "x",JSOperator "=",JSDecimal 1
+                          ]
+                         ]
+                     ]
+                 ]
+                )
+            ]
+            
+--fixSourceElements ([JSReturn [JSExpression [JSIdentifier "n"],JSLiteral ";"],JSExpression [JSElement "assignmentExpression" [JSIdentifier "x",JSOperator "=",JSDecimal 1]]])
+_case20 = [
+           JSReturn [JSExpression [JSIdentifier "n"],JSLiteral ";"],
+           JSExpression 
+             [JSElement "assignmentExpression" [JSIdentifier "x",JSOperator "=",JSDecimal 1]]
+          ]            
+            
+--doParse program "if(!u)continue;t=n"
+_case21 = JSSourceElementsTop 
+            [
+              JSIf (JSExpression [JSUnary "!",JSIdentifier "u"]) 
+                   (JSContinue [JSLiteral ";"]),
+              JSExpression [JSElement "assignmentExpression" [JSIdentifier "t",JSOperator "=",JSIdentifier "n"]]
+            ]          
 -- EOF
 
