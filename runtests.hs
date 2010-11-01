@@ -84,7 +84,6 @@ testSuiteFilesUnminified = testGroup "Text.Jasmine.Pretty files"
   , testCase "04_if.js"         (testFileUnminified "04_if.js")  
   , testCase "05_comments_simple.js" (testFileUnminified "05_comments_simple.js")  
   , testCase "05_regex.js"      (testFileUnminified "05_regex.js")  
-  {-  
   , testCase "06_callexpr.js"   (testFileUnminified "06_callexpr.js")  
   , testCase "06_newexpr.js"    (testFileUnminified "06_newexpr.js")  
   , testCase "06_var.js"        (testFileUnminified "06_var.js")  
@@ -101,8 +100,8 @@ testSuiteFilesUnminified = testGroup "Text.Jasmine.Pretty files"
   , testCase "120_js.js"        (testFileUnminified "120_js.js")      
   , testCase "121_jsdefs.js"    (testFileUnminified "121_jsdefs.js")      
   , testCase "122_jsexec.js"    (testFileUnminified "122_jsexec.js")      
-  , testCase "122_jsexec2.js"   (testFileUnminified "122_jsexec2.js")      
-  -}
+    
+  --, testCase "122_jsexec2.js"   (testFileUnminified "122_jsexec2.js")      
   ]  
 
 srcHelloWorld = "function Hello(a) {}"

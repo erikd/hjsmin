@@ -27,7 +27,7 @@ renderJS (JSArguments xs)        = (text "(") <> (commaListList xs) <> (text ")"
 renderJS (JSBlock x)             = (text "{") <> (renderJS x) <> (text "}")
 
 renderJS (JSIf c (JSLiteral ";"))= (text "if") <> (text "(") <> (renderJS c) <> (text ")") 
-renderJS (JSIf c t)              = (text "if") <> (text "(") <> (renderJS c) <> (text ")") <> (renderJS t)
+renderJS (JSIf c t)              = (text "if") <> (text "(") <> (renderJS c) <> (text ")") <> (renderJS $ fixBlock t)
 
 renderJS (JSIfElse c t (JSLiteral ";")) = (text "if") <> (text "(") <> (renderJS c) <> (text ")") 
 renderJS (JSIfElse c t e)        = (text "if") <> (text "(") <> (renderJS c) <> (text ")") <> (renderJS t) 
@@ -544,5 +544,61 @@ _case21 = JSSourceElementsTop
                    (JSContinue [JSLiteral ";"]),
               JSExpression [JSElement "assignmentExpression" [JSIdentifier "t",JSOperator "=",JSIdentifier "n"]]
             ]          
+            
+--doParse program "if (!v.base){throw new ReferenceError(v.propertyName + \" is not defined\");};x=1"
+_case22 = JSSourceElementsTop 
+            [
+              JSIf (JSExpression [JSUnary "!",JSIdentifier "v",JSMemberDot [JSIdentifier "base"]]) 
+                   (JSBlock (JSStatementList 
+                             [
+                               JSThrow (JSExpression 
+                                        [
+                                          JSLiteral "new ",
+                                          JSIdentifier "ReferenceError",
+                                          JSArguments 
+                                            [
+                                              [
+                                                JSIdentifier "v",
+                                                JSMemberDot [JSIdentifier "propertyName"],
+                                                JSExpressionBinary "+" [JSStringLiteral '"' " is not defined"] []
+                                              ]
+                                            ]
+                                        ]
+                                       ),
+                               JSLiteral ""
+                             ]
+                            )
+                   ),
+              JSLiteral ";",JSExpression [JSElement "assignmentExpression" [JSIdentifier "x",JSOperator "=",JSDecimal 1]]]            
+
+--doParse program "{throw new TypeError(\"Function.prototype.apply called on\"+\n\" uncallable object\");}"
+_case23 = JSSourceElementsTop 
+            [
+              JSBlock 
+               (
+                 JSStatementList 
+                   [
+                     JSThrow 
+                       (JSExpression 
+                          [
+                            JSLiteral "new ",
+                            JSIdentifier "TypeError",
+                            JSArguments 
+                              [
+                                [
+                                  JSStringLiteral '"' "Function.prototype.apply called on",
+                                  JSExpressionBinary "+" 
+                                    [
+                                      JSStringLiteral '"' " uncallable object"
+                                    ] 
+                                    []
+                                ]
+                              ]
+                          ]
+                       ),
+                     JSLiteral ""
+                   ]
+               )
+            ]
 -- EOF
 

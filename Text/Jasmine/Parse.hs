@@ -456,7 +456,6 @@ arguments = try(do{ rOp "(";  rOp ")";
 --                   | <Argument List> ',' <Assignment Expression>
 argumentList :: GenParser Char P.JSPState [[JSNode]]
 argumentList = do{ vals <- sepBy1 assignmentExpression (rOp ",");
-                   --return (flatten vals)}
                    return vals}
 
 
@@ -832,8 +831,16 @@ ifStatement = do{ P.reserved "if"; rOp "("; v1 <- expression; rOp ")"; v2 <- sta
 
 -- <If Else Statement> ::= 'if' '(' <Expression> ')' <Statement> 'else' <Statement>
 ifElseStatement :: GenParser Char P.JSPState JSNode
-ifElseStatement = do{ P.reserved "if"; rOp "("; v1 <- expression; rOp ")"; v2 <- statement; P.reserved "else"; v3 <- statement ;
+ifElseStatement = do{ P.reserved "if"; rOp "("; v1 <- expression; rOp ")"; v2 <- statementSemi; P.reserved "else"; v3 <- statement ;
                       return (JSIfElse v1 v2 v3) }
+
+statementSemi :: GenParser Char P.JSPState JSNode
+statementSemi = do { v1 <- statement;
+                     do { 
+                            do { rOp ";"; return (JSBlock (JSStatementList [v1]))} 
+                        <|> return v1
+                        }
+                     }
 
 
 -- <Iteration Statement> ::= 'do' <Statement> 'while' '(' <Expression> ')' ';'
