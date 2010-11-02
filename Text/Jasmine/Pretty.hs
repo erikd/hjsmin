@@ -5,7 +5,6 @@ module Text.Jasmine.Pretty
 
 import Text.Jasmine.Parse
 import Text.PrettyPrint
-import Data.List
 
 -- ---------------------------------------------------------------------
 
@@ -18,18 +17,19 @@ renderJS (JSOperator s)          = text s
 renderJS (JSExpression xs)       = rJS xs
 renderJS (JSSourceElements xs)   = rJS (map fixBlock $ fixSourceElements xs)
 renderJS (JSSourceElementsTop xs)= rJS (fixTop $ map fixBlock $ fixSourceElements xs)
-renderJS (JSElement _s xs)       = rJS xs
+renderJS (JSElement _s xs)       = rJS $ fixLiterals xs
 renderJS (JSFunction s p xs)     = (text "function") <+> (renderJS s) <> (text "(") <> (commaList p) <> (text ")") <> (renderJS xs)
 renderJS (JSFunctionBody xs)     = (text "{") <> (rJS xs) <> (text "}")
 renderJS (JSFunctionExpression as s) = (text "function") <> (text "(") <> (commaList as) <> (text ")") <> (renderJS s)
-renderJS (JSArguments xs)        = (text "(") <> (commaListList xs) <> (text ")")
+renderJS (JSArguments xs)        = (text "(") <> (commaListList $ map fixLiterals xs) <> (text ")")
 
 renderJS (JSBlock x)             = (text "{") <> (renderJS x) <> (text "}")
 
 renderJS (JSIf c (JSLiteral ";"))= (text "if") <> (text "(") <> (renderJS c) <> (text ")") 
 renderJS (JSIf c t)              = (text "if") <> (text "(") <> (renderJS c) <> (text ")") <> (renderJS $ fixBlock t)
 
-renderJS (JSIfElse c t (JSLiteral ";")) = (text "if") <> (text "(") <> (renderJS c) <> (text ")") 
+renderJS (JSIfElse c t (JSLiteral ";")) = (text "if") <> (text "(") <> (renderJS c) <> (text ")")  <> (renderJS t) 
+                                   <> (text "else") 
 renderJS (JSIfElse c t e)        = (text "if") <> (text "(") <> (renderJS c) <> (text ")") <> (renderJS t) 
                                    <> (text "else") <> (spaceOrBlock $ fixBlock e)
 renderJS (JSMemberDot xs)        = (text ".") <> (rJS xs)
@@ -40,8 +40,8 @@ renderJS (JSUnary l  )           = text l
 renderJS (JSArrayLiteral xs)     = (text "[") <> (rJS xs) <> (text "]")
 
 renderJS (JSBreak [] [])            = (text "break")
-renderJS (JSBreak [] xs)            = (text "break") -- <> (rJS xs) -- <> (text ";")
-renderJS (JSBreak is xs)            = (text "break") <+> (rJS is) -- <> (rJS xs)
+renderJS (JSBreak [] _xs)           = (text "break") -- <> (rJS xs) -- <> (text ";")
+renderJS (JSBreak is _xs)           = (text "break") <+> (rJS is) -- <> (rJS xs)
 
 renderJS (JSCallExpression "()" xs) = (rJS xs)
 renderJS (JSCallExpression   t  xs) = (char $ head t) <> (rJS xs) <> (if ((length t) > 1) then (char $ last t) else empty)
@@ -57,7 +57,7 @@ renderJS (JSCatch i c s)         = (text "catch") <> (char '(') <> (renderJS i) 
 
 renderJS (JSContinue is)         = (text "continue") <> (rJS is) -- <> (char ';')
 renderJS (JSDefault xs)          = (text "default") <> (char ':') <> (renderJS xs)
-renderJS (JSDoWhile s e ms)      = (text "do") <> (renderJS s) <> (text "while") <> (char '(') <> (renderJS e) <> (char ')') -- <> (renderJS ms)
+renderJS (JSDoWhile s e _ms)     = (text "do") <> (renderJS s) <> (text "while") <> (char '(') <> (renderJS e) <> (char ')') -- <> (renderJS ms)
 renderJS (JSElementList xs)      = rJS xs
 renderJS (JSElision xs)          = (char ',') <> (rJS xs)
 --renderJS (JSExpressionBinary o e1 e2) = (rJS e1) <> (text o) <> (rJS e2)
@@ -155,10 +155,21 @@ myFix ((JSLiteral ";"):(JSLiteral "" ):xs)  = myFix ((JSLiteral ""):xs)
 
 myFix (x:xs)  = x : myFix xs
 
+-- Merge strings split over lines and using "+"
+fixLiterals :: [JSNode] -> [JSNode]
+fixLiterals [] = []
+fixLiterals [x] = [x]
+fixLiterals ((JSStringLiteral d1 s1):(JSExpressionBinary "+" [JSStringLiteral d2 s2] r):xs)
+       | d1 == d2 = fixLiterals ((JSStringLiteral d1 (s1++s2)):(r++xs))
+       | otherwise = (JSStringLiteral d1 s1):fixLiterals ((JSExpressionBinary "+" [JSStringLiteral d2 s2] r):xs) 
+
+fixLiterals (x:xs) = x:fixLiterals xs
+
 -- Sort out Semicolons
 fixSemis :: [JSNode] -> [JSNode]
 fixSemis xs = fixSemis' $ filter (\x -> x /= JSLiteral ";" && x /= JSLiteral "") xs
 
+fixSemis' :: [JSNode] -> [JSNode]
 fixSemis' [] = []
 fixSemis' [x] = [x]
 fixSemis' ((JSIf c (JSReturn [JSLiteral ";"])):xs)    = (JSIf c (JSReturn [JSLiteral ";"])):(fixSemis' xs)
@@ -168,10 +179,12 @@ fixSemis' ((JSCase e1 ((JSStatementList []))):(JSCase e2 x):xs) = (JSCase e1 ((J
 fixSemis' (x:xs) = x:(JSLiteral ";"):fixSemis' xs
 
 -- Remove extraneous braces around blocks
+fixBlock :: JSNode -> JSNode
 fixBlock (JSBlock (JSStatementList [x])) = x
 fixBlock (JSBlock (JSStatementList xs)) = fixBlock' (JSBlock (JSStatementList (fixSourceElements xs)))
 fixBlock x = x
 
+fixBlock' :: JSNode -> JSNode
 fixBlock' (JSBlock (JSStatementList [x])) = x
 fixBlock' (JSBlock (JSStatementList [x,JSLiteral ""])) = x -- TODO: fix parser to not emit this case
 fixBlock' x = x
@@ -365,6 +378,7 @@ _case10 = JSSourceElements
             ]
             
 --parseFile "./test/parsingonly/05_comments_simple.js"
+_case11 :: JSNode
 _case11 = JSSourceElements 
             [
               JSExpression [JSIdentifier "a",JSExpressionBinary "+" [JSDecimal 1] []],
@@ -373,6 +387,7 @@ _case11 = JSSourceElements
             ]            
             
 --doParse program "var newlines=spaces.match(/\\n/g);var newlines=spaces.match(/\\n/g);"
+_case12 :: JSNode
 _case12 = JSSourceElements 
           [
             JSVariables "var" [JSVarDecl (JSIdentifier "newlines") 
@@ -386,6 +401,7 @@ _case12 = JSSourceElements
           ]            
 
 --doParse program "for(i=0;;){var t=1};for(var i=0,j=1;;){x=1}"
+_case13 :: JSNode
 _case13 = JSSourceElements 
           [
             JSFor [JSExpression [JSElement "assignmentExpression" [JSIdentifier "i",JSOperator "=",JSDecimal 0]]] 
@@ -406,6 +422,7 @@ _case13 = JSSourceElements
           ]          
           
 -- doParse program "if (/^[a-z]/.test(t)) {consts += t.toUpperCase();keywords[t] = i;} else {consts += (/^\\W/.test(t) ? opTypeNames[t] : t);}consts += \" = \" + x;"
+_case14 :: JSNode
 _case14 = JSSourceElements 
           [
             JSIfElse 
@@ -460,6 +477,7 @@ _case14 = JSSourceElements
             JSLiteral ";"]          
           
 -- doParse program "a+1;{}"
+_case15 :: JSNode
 _case15 = JSSourceElements 
             [
               JSExpression [JSIdentifier "a",JSExpressionBinary "+" [JSDecimal 1] []],
@@ -469,6 +487,7 @@ _case15 = JSSourceElements
             
 -- doParse program "for (i = 0;;){var t=1;;}\nx=1;"
 -- (renderJS _case16) should become "for (i = 0;;)var t=1;x=1"
+_case16 :: JSNode
 _case16 = JSSourceElementsTop 
             [
               JSFor [JSExpression [JSElement "assignmentExpression" [JSIdentifier "i",JSOperator "=",JSDecimal 0]]] [] [] 
@@ -486,6 +505,7 @@ _case16 = JSSourceElementsTop
             ]
 
 -- doParse program "return new global.Boolean(v);"
+_case17 :: JSNode
 _case17 = JSSourceElementsTop 
             [
               JSReturn 
@@ -495,6 +515,7 @@ _case17 = JSSourceElementsTop
                 ]
             
 --doParse program "if(typeof s!=\"string\")return;while(--n>=0)s+=t;"
+_case18 :: JSNode
 _case18 = JSSourceElementsTop 
             [
               JSIf 
@@ -511,6 +532,7 @@ _case18 = JSSourceElementsTop
             ]            
 
 -- doParse program "function f(){return n;\nx=1}"
+_case19 :: JSNode
 _case19 = JSSourceElementsTop 
             [
               JSFunction (JSIdentifier "f") [] 
@@ -531,6 +553,7 @@ _case19 = JSSourceElementsTop
             ]
             
 --fixSourceElements ([JSReturn [JSExpression [JSIdentifier "n"],JSLiteral ";"],JSExpression [JSElement "assignmentExpression" [JSIdentifier "x",JSOperator "=",JSDecimal 1]]])
+_case20 :: [JSNode]
 _case20 = [
            JSReturn [JSExpression [JSIdentifier "n"],JSLiteral ";"],
            JSExpression 
@@ -538,6 +561,7 @@ _case20 = [
           ]            
             
 --doParse program "if(!u)continue;t=n"
+_case21 :: JSNode
 _case21 = JSSourceElementsTop 
             [
               JSIf (JSExpression [JSUnary "!",JSIdentifier "u"]) 
@@ -546,6 +570,7 @@ _case21 = JSSourceElementsTop
             ]          
             
 --doParse program "if (!v.base){throw new ReferenceError(v.propertyName + \" is not defined\");};x=1"
+_case22 :: JSNode
 _case22 = JSSourceElementsTop 
             [
               JSIf (JSExpression [JSUnary "!",JSIdentifier "v",JSMemberDot [JSIdentifier "base"]]) 
@@ -572,6 +597,7 @@ _case22 = JSSourceElementsTop
               JSLiteral ";",JSExpression [JSElement "assignmentExpression" [JSIdentifier "x",JSOperator "=",JSDecimal 1]]]            
 
 --doParse program "{throw new TypeError(\"Function.prototype.apply called on\"+\n\" uncallable object\");}"
+_case23 :: JSNode
 _case23 = JSSourceElementsTop 
             [
               JSBlock 
@@ -600,5 +626,23 @@ _case23 = JSSourceElementsTop
                    ]
                )
             ]
+            
+--doParse program "x=\"hello \" + \"world\";"
+_case24 :: JSNode
+_case24 = JSSourceElementsTop 
+            [
+              JSExpression 
+                [
+                  JSElement "assignmentExpression" 
+                    [JSIdentifier "x",
+                     JSOperator "=",
+                     JSStringLiteral '"' "hello ",
+                     JSExpressionBinary "+" 
+                       [JSStringLiteral '"' "world"] []
+                    ]
+                ],
+              JSLiteral ";"
+            ]            
+            
 -- EOF
 
