@@ -165,7 +165,7 @@ decimalLiteral :: CharParser P.JSPState Integer
 decimalLiteral = P.decimal 
 
 hexIntegerLiteral :: CharParser P.JSPState Integer
-hexIntegerLiteral = P.hexadecimal  -- TODO: check prefix etc for Javascript convention
+hexIntegerLiteral = P.hexadecimal  
 
 -- {String Chars1} = {Printable} + {HT} - ["\] 
 -- {RegExp Chars} = {Letter}+{Digit}+['^']+['$']+['*']+['+']+['?']+['{']+['}']+['|']+['-']+['.']+[',']+['#']+['[']+[']']+['_']+['<']+['>']
@@ -194,12 +194,7 @@ identPart = many letter
 -- ---------------------------------------------------------------------
 
 
--- TODO: do this properly, it is late now, want to move on
 regExp :: GenParser Char P.JSPState JSNode
-{-
-regExp = do { rOp "/"; v1 <- many (noneOf "/"); rOp "/"; v2 <- optional (oneOf "gim"); -- TODO: remove optional
-              return (JSRegEx ("/" ++ v1 ++ "/" ++ (show(v2))))  }
--}
 regExp = P.lexeme $ do { v1 <- regex;       
               return (JSRegEx v1)}
 
@@ -470,7 +465,6 @@ leftHandSideExpression = try (callExpression)
 -- <Postfix Expression> ::= <Left Hand Side Expression>
 --                        | <Postfix Expression> '++'
 --                        | <Postfix Expression> '--'
---TODO: put in the recursive part here, with a 'rest' clause
 postfixExpression :: GenParser Char P.JSPState [JSNode]
 postfixExpression = do{ v1 <- leftHandSideExpression;
                         do {
@@ -490,7 +484,6 @@ postfixExpression = do{ v1 <- leftHandSideExpression;
 --                      | '-' <Unary Expression>
 --                      | '~' <Unary Expression>
 --                      | '!' <Unary Expression>
---TODO: put in the recursive part here, with a 'rest' clause
 unaryExpression :: GenParser Char P.JSPState [JSNode]
 unaryExpression = do{ v1 <- postfixExpression; 
                       return v1}
@@ -987,7 +980,7 @@ throwStatement :: GenParser Char P.JSPState JSNode
 throwStatement = do{ P.reserved "throw"; val <- expression;
                      return (JSThrow val)}
 
--- TODO: work in updated syntax as per https://developer.mozilla.org/en/JavaScript/Reference/Statements/try...catch
+-- Note: worked in updated syntax as per https://developer.mozilla.org/en/JavaScript/Reference/Statements/try...catch
 -- <Try Statement> ::= 'try' <Block> <Catch>
 --                   | 'try' <Block> <Finally>
 --                   | 'try' <Block> <Catch> <Finally>
@@ -1004,7 +997,7 @@ tryStatement = do{ P.reserved "try"; v1 <- block;
                      }
                  }
 
--- TODO: work in updated syntax as per https://developer.mozilla.org/en/JavaScript/Reference/Statements/try...catch
+-- Note: worked in updated syntax as per https://developer.mozilla.org/en/JavaScript/Reference/Statements/try...catch
 -- <Catch> ::= 'catch' '(' Identifier ')' <Block>
 --   becomes
 -- <Catch> ::= 'catch' '(' Identifier ')' <Block>
