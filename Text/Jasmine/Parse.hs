@@ -20,7 +20,6 @@ module Text.Jasmine.Parse
 
 -- ---------------------------------------------------------------------
 
---import Control.Arrow
 import Control.Applicative (Applicative (..))
 import Control.Monad
 import Data.Char
@@ -28,8 +27,8 @@ import Data.Data
 import Data.List 
 import Prelude hiding (catch)
 import System.Environment
-import Text.ParserCombinators.Parsec hiding (Line)
---import Text.ParserCombinators.Parsec.Language
+import Data.Attoparsec
+--import Text.ParserCombinators.Parsec hiding (Line)
 import qualified Text.Jasmine.Token as P
 
 -- ---------------------------------------------------------------------
