@@ -61,4 +61,8 @@ http://oss.org.cn/ossdocs/web/js/js20/formal/parser-grammar.html
 
 -- Look at "in" keyword, as used : if (x in list) {}
 
+------------
+
+- Token.hs : uses UTF8 for conversion in/out, but not UTF8 aware toUpper/toLower etc
+
 EOF
