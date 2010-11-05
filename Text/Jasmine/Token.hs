@@ -58,8 +58,8 @@ nlPrior = undefined
 
 -- Do not use the lexer, it is greedy and consumes subsequent symbols, 
 --   e.g. "!" in a==!b
---rOp :: String -> Parser B.ByteString
-rOp x = string (U.fromString x)
+rOp :: String -> Parser ()
+rOp x = do { _ <- string (U.fromString x); return () }
 
 {-
 rOp'' []     = fail "trying to parse empty token"
@@ -158,8 +158,10 @@ theReservedNames
         where
           sortedNames   = sort reservedNames
 
-reserved :: String -> Parser U.ByteString
-reserved name = lexeme $ myString name
+--reserved :: String -> Parser U.ByteString
+-- TODO: fix trailing characters test          
+reserved :: String -> Parser ()
+reserved name = lexeme $ do { _ <- myString name; return () }
 {-
 reserved name =
         lexeme $ try $
@@ -383,7 +385,7 @@ isDigit c' =  c >= (ord '0') && c <= (ord '9')
           where c = fromIntegral c'
 
 -- | Selects ASCII octal digits, i.e. @\'0\'@..@\'7\'@.
---isOctDigit              :: Char -> Bool
+_isOctDigit :: Int -> Bool
 _isOctDigit c            =  c >= (ord '0') && c <= (ord '7')
 
 -- | Selects ASCII hexadecimal digits,

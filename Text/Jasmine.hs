@@ -7,17 +7,19 @@ module Text.Jasmine
 import Text.Jasmine.Parse
 import Text.Jasmine.Pretty
 import Text.PrettyPrint
+import qualified Data.ByteString.UTF8 as U
 
-minify :: String -> String
+minify :: U.ByteString -> String
 minify s = show $ renderJS $ readJs s
 
-_minify' :: [Char] -> Text.PrettyPrint.Doc
+_minify' :: U.ByteString -> Doc
 _minify' s = renderJS $ readJs s
 
+-- TODO: read file as a ByteString
 minifyFile :: FilePath -> IO String
 minifyFile filename =
   do 
      x <- readFile (filename)
-     return $ minify x
+     return $ minify (U.fromString x)
     
 -- EOF    
