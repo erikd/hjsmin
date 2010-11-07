@@ -297,7 +297,7 @@ number base baseDigit
 
 --lexeme p = do{ x <- p;              whiteSpace; return x  }
 lexeme :: Parser b -> Parser b
-lexeme p = do{ x <- p; clearNLFlag; whiteSpace; return x  }
+lexeme p = do{ x <- p; {-clearNLFlag;-} whiteSpace; return x  }
 
 -- ---------------------------------------------------------------------
 -- Stuff from Parsec needed to make Attoparsec work

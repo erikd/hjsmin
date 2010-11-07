@@ -1121,7 +1121,7 @@ main :: IO ()
 main =
   do args <- getArgs
      x <- readFile (args !! 0)
-     putStrLn (show $ doParse program (U.fromString x))            
+     putStrLn (show $ doParse program x)            
 
     
 -- ---------------------------------------------------------------------     
@@ -1147,13 +1147,15 @@ readJs input = case parse (p' program) input of
 
 -- ---------------------------------------------------------------------
     
---doParse :: (Show tok) => GenParser tok P.JSPState a -> [tok] -> a
-doParse :: Parser a -> U.ByteString -> a
-doParse p input = case parse (p' p) input of
+doParse :: Parser a -> String -> a
+doParse p input = case parse (p' p) (U.fromString input) of
     Fail _unparsed contexts err -> error("Parse failed" ++ show(contexts) ++ ":" ++ show err)
     Partial _f -> error("Unexpected partial")
     Done _unparsed val -> val
 
+doParse' :: Parser r -> U.ByteString -> Result r
+doParse' p input = {-maybeResult $-} feed (parse (p' p) input) B.empty
+                       
 -- ---------------------------------------------------------------------
     
 p' :: Parser b -> Parser b
