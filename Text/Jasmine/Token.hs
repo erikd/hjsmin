@@ -59,19 +59,8 @@ nlPrior = undefined
 -- Do not use the lexer, it is greedy and consumes subsequent symbols, 
 --   e.g. "!" in a==!b
 rOp :: String -> Parser ()
-rOp x = do { _ <- string (U.fromString x); return () }
+rOp x = lexeme $ do { _ <- string (U.fromString x); return () }
 
-{-
-rOp'' []     = fail "trying to parse empty token"
-rOp'' [x]    = do{ _ <- char x; 
-                   do {
-                       do {_ <- whiteSpace; return () }
-                       <|> return ()
-                       }
-                   }
-
-rOp'' (x:xs) = do{ _ <- char x; rOp xs;}
-  -}
                
 -- ---------------------------------------------------------------------
 
@@ -83,6 +72,7 @@ rOp'' (x:xs) = do{ _ <- char x; rOp xs;}
 
 autoSemi :: Parser [Char]
 autoSemi = do{ _ <- rOp ";"; return (";");}
+
 {-
 autoSemi = try (do { rOp ";"; lookAhead (rOp "}");
                      return ("");})
@@ -355,7 +345,7 @@ myString :: String -> Parser U.ByteString
 myString s = string (U.fromString s)
 
 isSpace :: Word8 -> Bool
-isSpace c = c == 20
+isSpace c = c == 32
 
 -- The upper case ISO characters have the multiplication sign dumped
 -- randomly in the middle of the range.  Go figure.
