@@ -1140,7 +1140,7 @@ main =
 --readJs :: String -> String
 --readJs :: [Char] -> JSNode
 readJs :: U.ByteString -> JSNode
-readJs input = case parse (p' program) input of
+readJs input = case doParse program input of
     Fail _unparsed contexts err -> error("Parse failed" ++ show(contexts) ++ ":" ++ show err)
     Partial _f -> error("Unexpected partial")
     Done _unparsed val -> val

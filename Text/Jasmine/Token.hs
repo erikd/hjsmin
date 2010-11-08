@@ -41,11 +41,11 @@ newJSPState = JSPState { nlFlag = False }
 
 --clearNLFlag = updateState (\x -> x { nlFlag=False })
 clearNLFlag :: Parser ()
-clearNLFlag = undefined
+clearNLFlag = do { return () }
 
 --setNLFlag   = updateState (\x -> x { nlFlag=True })
 setNLFlag :: Parser ()
-setNLFlag   = undefined
+setNLFlag   = do { return () }
 
 --getNLFlag   = do s <- getState; return $ nlFlag s                   
 getNLFlag   = undefined
@@ -72,6 +72,7 @@ rOp x = lexeme $ do { _ <- string (U.fromString x); return () }
 
 autoSemi :: Parser [Char]
 autoSemi = do{ _ <- rOp ";"; return (";");}
+          <|> return ("")
 
 {-
 autoSemi = try (do { rOp ";"; lookAhead (rOp "}");
@@ -287,7 +288,7 @@ number base baseDigit
 
 --lexeme p = do{ x <- p;              whiteSpace; return x  }
 lexeme :: Parser b -> Parser b
-lexeme p = do{ x <- p; {-clearNLFlag;-} whiteSpace; return x  }
+lexeme p = do{ x <- p; clearNLFlag; whiteSpace; return x  }
 
 -- ---------------------------------------------------------------------
 -- Stuff from Parsec needed to make Attoparsec work
