@@ -924,9 +924,10 @@ breakStatement = do {P.reserved "break";
 returnStatement :: Parser JSNode
 returnStatement = do {P.reserved "return"; 
                       do{
-                            do {v1 <- autoSemi; return (JSReturn [v1])}
-                        <|> do {v1 <- expression; v2 <- autoSemi; 
+                            do {v1 <- expression; v2 <- autoSemi; 
                                 return (JSReturn [v1,v2])}
+                        <|> do {v1 <- autoSemi; return (JSReturn [v1])}
+                        
                         }
                       }
 
@@ -1147,8 +1148,8 @@ readJs input = case doParse program input of
 
 -- ---------------------------------------------------------------------
     
-doParse' :: Parser a -> String -> a
-doParse' p input = case parse (p' p) (U.fromString input) of
+_doParse' :: Parser a -> String -> a
+_doParse' p input = case parse (p' p) (U.fromString input) of
     Fail _unparsed contexts err -> error("Parse failed" ++ show(contexts) ++ ":" ++ show err)
     Partial _f -> error("Unexpected partial")
     Done _unparsed val -> val

@@ -77,7 +77,7 @@ testSuiteFiles = testGroup "Text.Jasmine.Pretty files"
   ]  
 
 testSuiteFilesUnminified :: Test
-testSuiteFilesUnminified = testGroup "Text.Jasmine.Pretty files"
+testSuiteFilesUnminified = testGroup "Text.Jasmine.Pretty filesUnminified"
   [ testCase "00_f.js"          (testFileUnminified "00_f.js")
   , testCase "01_semi1.js"      (testFileUnminified "01_semi1.js")  
   , testCase "02_sm.js"         (testFileUnminified "02_sm.js")  
@@ -157,7 +157,8 @@ caseMinIfElse2 =
 
 src0_f = "function Hello(a) {ExprArray(1,1);}"
 case0_f =
-  "Done \"\" JSSourceElementsTop [JSFunction (JSIdentifier \"Hello\") [JSIdentifier \"a\"] (JSFunctionBody [JSSourceElements [JSExpression [JSIdentifier \"ExprArray\",JSArguments [[JSDecimal 1],[JSDecimal 1]]],JSLiteral \"\"]])]"
+  -- "Done \"\" JSSourceElementsTop [JSFunction (JSIdentifier \"Hello\") [JSIdentifier \"a\"] (JSFunctionBody [JSSourceElements [JSExpression [JSIdentifier \"ExprArray\",JSArguments [[JSDecimal 1],[JSDecimal 1]]],JSLiteral \"\"]])]"
+  "Done \"\" JSSourceElementsTop [JSFunction (JSIdentifier \"Hello\") [JSIdentifier \"a\"] (JSFunctionBody [JSSourceElements [JSExpression [JSIdentifier \"ExprArray\",JSArguments [[JSDecimal 1],[JSDecimal 1]]],JSLiteral \";\"]])]"
   @=? (show $ doParse program (U.fromString src0_f))
 caseMin0_f =
   "function Hello(a){ExprArray(1,1)}" @=? (minify (U.fromString src0_f))
@@ -177,7 +178,7 @@ caseMin01_semi1 =
   
 src_min_100_animals = "function Animal(name){if(!name)throw new Error('Must specify an animal name');this.name=name};Animal.prototype.toString=function(){return this.name};o=new Animal(\"bob\");o.toString()==\"bob\"" 
 case_min_100_animals =
-  "Done \"\" JSSourceElementsTop [JSFunction (JSIdentifier \"Animal\") [JSIdentifier \"name\"] (JSFunctionBody [JSSourceElements [JSIf (JSExpression [JSUnary \"!\",JSIdentifier \"name\"]) (JSThrow (JSExpression [JSLiteral \"new \",JSIdentifier \"Error\",JSArguments [[JSStringLiteral '\'' \"Must specify an animal name\"]]])),JSLiteral \";\",JSExpression [JSElement \"assignmentExpression\" [JSLiteral \"this\",JSMemberDot [JSIdentifier \"name\"],JSOperator \"=\",JSIdentifier \"name\"]]]]),JSLiteral \";\",JSExpression [JSElement \"assignmentExpression\" [JSIdentifier \"Animal\",JSMemberDot [JSIdentifier \"prototype\",JSMemberDot [JSIdentifier \"toString\"]],JSOperator \"=\",JSFunctionExpression [] (JSFunctionBody [JSSourceElements [JSReturn [JSExpression [JSLiteral \"this\",JSMemberDot [JSIdentifier \"name\"]],JSLiteral \"\"]]])]],JSLiteral \";\",JSExpression [JSElement \"assignmentExpression\" [JSIdentifier \"o\",JSOperator \"=\",JSLiteral \"new \",JSIdentifier \"Animal\",JSArguments [[JSStringLiteral '\"' \"bob\"]]]],JSLiteral \";\",JSExpression [JSIdentifier \"o\",JSMemberDot [JSIdentifier \"toString\"],JSArguments [[]],JSExpressionBinary \"==\" [JSStringLiteral '\"' \"bob\"] []]]"
+  "Done \"\" JSSourceElementsTop [JSFunction (JSIdentifier \"Animal\") [JSIdentifier \"name\"] (JSFunctionBody [JSSourceElements [JSIf (JSExpression [JSUnary \"!\",JSIdentifier \"name\"]) (JSThrow (JSExpression [JSLiteral \"new \",JSIdentifier \"Error\",JSArguments [[JSStringLiteral '\\'' \"Must specify an animal name\"]]])),JSLiteral \";\",JSExpression [JSElement \"assignmentExpression\" [JSLiteral \"this\",JSMemberDot [JSIdentifier \"name\"],JSOperator \"=\",JSIdentifier \"name\"]]]]),JSLiteral \";\",JSExpression [JSElement \"assignmentExpression\" [JSIdentifier \"Animal\",JSMemberDot [JSIdentifier \"prototype\",JSMemberDot [JSIdentifier \"toString\"]],JSOperator \"=\",JSFunctionExpression [] (JSFunctionBody [JSSourceElements [JSReturn [JSExpression [JSLiteral \"this\",JSMemberDot [JSIdentifier \"name\"]],JSLiteral \"\"]]])]],JSLiteral \";\",JSExpression [JSElement \"assignmentExpression\" [JSIdentifier \"o\",JSOperator \"=\",JSLiteral \"new \",JSIdentifier \"Animal\",JSArguments [[JSStringLiteral '\"' \"bob\"]]]],JSLiteral \";\",JSExpression [JSIdentifier \"o\",JSMemberDot [JSIdentifier \"toString\"],JSArguments [[]],JSExpressionBinary \"==\" [JSStringLiteral '\"' \"bob\"] []]]"
   @=? (show $ doParse program (U.fromString src_min_100_animals))
 caseMin_min_100_animals =
   src_min_100_animals @=? (minify (U.fromString src_min_100_animals))

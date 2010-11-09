@@ -14,6 +14,7 @@ module Text.Jasmine.Token
     , lexeme  
     -- Testing  
     --, simpleSpace  
+    , oneLineComment  
     , nlPrior  
     , isAlpha  
     ) where
@@ -175,8 +176,9 @@ simpleSpace  = skipMany1 (satisfy (\c -> isSpace c && c /= 13)) -- From HJS
 
 oneLineComment :: Parser ()
 oneLineComment =
-  do{ _ <- try (myString commentLine)
-    ; skipMany (satisfy (/= 13))
+  do{ _ <- myString commentLine
+    ; skipMany (satisfy (/= 10))
+    -- ; word8 10 
     ; return ()
     }
 
