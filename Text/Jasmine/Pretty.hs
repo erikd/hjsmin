@@ -173,6 +173,7 @@ fixSemis xs = fixSemis' $ filter (\x -> x /= JSLiteral ";" && x /= JSLiteral "")
 
 fixSemis' :: [JSNode] -> [JSNode]
 fixSemis' [] = []
+fixSemis' [JSContinue [JSLiteral ";"]] = [JSContinue []]
 fixSemis' [x] = [x]
 fixSemis' ((JSIf c (JSReturn [JSLiteral ";"])):xs)    = (JSIf c (JSReturn [JSLiteral ";"])):(fixSemis' xs)
 fixSemis' ((JSIf c (JSContinue [JSLiteral ";"])):xs)    = (JSIf c (JSContinue [JSLiteral ";"])):(fixSemis' xs)
@@ -647,5 +648,24 @@ _case24 = JSSourceElementsTop
               JSLiteral ";"
             ]            
             
+--doParse program (U.fromString "try{}catch(e){continue;}")
+_case25 = JSSourceElementsTop 
+            [
+              JSTry 
+                (JSBlock (JSStatementList [])) 
+                [
+                  JSCatch 
+                    (JSIdentifier (U.fromString "e")) 
+                    [] 
+                    (JSBlock 
+                      (JSStatementList 
+                        [
+                          JSContinue [JSLiteral ";"]
+                        ]
+                      )
+                    )
+                ]
+            ]
+
 -- EOF
 

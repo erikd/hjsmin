@@ -171,7 +171,8 @@ whiteSpace = skipMany (do { _ <- myString "\n"; setNLFlag; return ()} <|> simple
 
 --simpleSpace = skipMany1 (satisfy isSpace)
 simpleSpace :: Parser ()
-simpleSpace  = skipMany1 (satisfy (\c -> isSpace c && c /= 13)) -- From HJS
+--simpleSpace  = skipMany1 (satisfy (\c -> isSpace c && c /= 13)) -- From HJS
+simpleSpace  = skipMany1 (satisfy (\c -> isSpace c && c /= 10)) -- From HJS
 
 
 oneLineComment :: Parser ()
@@ -348,7 +349,9 @@ myString :: String -> Parser U.ByteString
 myString s = string (U.fromString s)
 
 isSpace :: Word8 -> Bool
-isSpace c = c == 32
+--isSpace c = c == 32
+isSpace w = (w == 32) || (9 <= w && w <= 13)
+
 
 -- The upper case ISO characters have the multiplication sign dumped
 -- randomly in the middle of the range.  Go figure.

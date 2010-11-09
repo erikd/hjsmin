@@ -911,10 +911,10 @@ continueStatement = do {P.reserved "continue"; v1 <- autoSemi;
 breakStatement :: Parser JSNode
 breakStatement = do {P.reserved "break"; 
                      do {
-                          do {v1 <- autoSemi; 
-                              return (if (v1 == JSLiteral "") then (JSBreak [] []) else (JSBreak [] [v1]))}
-                     <|>  do {v1 <- identifier; v2 <- autoSemi; 
+                          do {v1 <- identifier; v2 <- autoSemi; 
                               return (JSBreak [v1] [v2])}
+                     <|>  do {v1 <- autoSemi; 
+                              return (if (v1 == JSLiteral "") then (JSBreak [] []) else (JSBreak [] [v1]))}
                         }
                      }
 
