@@ -649,6 +649,7 @@ _case24 = JSSourceElementsTop
             ]            
             
 --doParse program (U.fromString "try{}catch(e){continue;}")
+_case25 :: JSNode
 _case25 = JSSourceElementsTop 
             [
               JSTry 

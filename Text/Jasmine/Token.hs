@@ -9,13 +9,10 @@ module Text.Jasmine.Token
     , autoSemi  
     , autoSemi'  
     , rOp  
-    , newJSPState  
-    , JSPState  
     , lexeme  
     -- Testing  
     --, simpleSpace  
     , oneLineComment  
-    , nlPrior  
     , isAlpha  
     ) where
 
@@ -31,29 +28,6 @@ import qualified Data.ByteString.UTF8 as U
 import Data.Char ( toLower, digitToInt, chr, ord )
 import Data.List ( nub, sort )
 import Data.Word
-
--- ---------------------------------------------------------------------
--- This bit from HJS Prim.hs
-
-data JSPState = JSPState {nlFlag::Bool}
-
-newJSPState :: JSPState
-newJSPState = JSPState { nlFlag = False }
-
---clearNLFlag = updateState (\x -> x { nlFlag=False })
-clearNLFlag :: Parser ()
-clearNLFlag = do { return () }
-
---setNLFlag   = updateState (\x -> x { nlFlag=True })
-setNLFlag :: Parser ()
-setNLFlag   = do { return () }
-
---getNLFlag   = do s <- getState; return $ nlFlag s                   
-getNLFlag   = undefined
-
-
---nlPrior = do { s <- getNLFlag; if s then (return ()) else (fail "no parse") }
-nlPrior = undefined
 
 -- ---------------------------------------------------------------------
 
@@ -75,34 +49,11 @@ autoSemi :: Parser [Char]
 autoSemi = do{ _ <- rOp ";"; return (";");}
           <|> return ("")
 
-{-
-autoSemi = try (do { rOp ";"; lookAhead (rOp "}");
-                     return ("");})
-           <|> try (do{ rOp ";"; 
-                        return (";");})
-           <|> try (do {lookAhead (rOp "}");
-                        return ("");})
-           <|> try (do {nlPrior;
-                        return ";/*NLPRIOR*/"})
--}
-
 
 autoSemi' :: Parser [Char]
 autoSemi' = do{ _ <- rOp ";"; return (";");}
-{-
-autoSemi' = try (do { rOp ";"; lookAhead (rOp "}");
-                     return ("");})
-           <|> try (do{ rOp ";"; 
-                        return (";");})
--}
 
 -- ---------------------------------------------------------------------
-
-{-
-lexer :: P.TokenParser st
-lexer = P.makeTokenParser javascriptDef
--}      
-
 
 --identifier = lexeme $ many1 (letter <|> oneOf "_")
 --identifier :: Parser [Word8]
@@ -165,7 +116,7 @@ reserved name =
 --whiteSpace = skipMany (simpleSpace <|> oneLineComment <|> multiLineComment <?> "")
 --whiteSpace = skipMany (simpleSpace <|> oneLineComment <|> multiLineComment <|> do { _ <- char '\n'; setNLFlag} <?> "")
 whiteSpace :: Parser ()
-whiteSpace = skipMany (do { _ <- myString "\n"; setNLFlag; return ()} <|> simpleSpace <|> oneLineComment <|> multiLineComment <?> "")
+whiteSpace = skipMany (do { _ <- myString "\n"; return ()} <|> simpleSpace <|> oneLineComment <|> multiLineComment <?> "")
 -- whiteSpace = try $ many $ (do { equal TokenWhite } <|> do { (equal TokenNL); setNLFlag})
 
 
@@ -291,7 +242,7 @@ number base baseDigit
 
 --lexeme p = do{ x <- p;              whiteSpace; return x  }
 lexeme :: Parser b -> Parser b
-lexeme p = do{ x <- p; clearNLFlag; whiteSpace; return x  }
+lexeme p = do{ x <- p; whiteSpace; return x  }
 
 -- ---------------------------------------------------------------------
 -- Stuff from Parsec needed to make Attoparsec work
