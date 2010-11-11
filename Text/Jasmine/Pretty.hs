@@ -3,15 +3,51 @@ module Text.Jasmine.Pretty
     renderJS
     ) where
 
+--import Text.PrettyPrint
+import Data.Char
+import Data.List
+import Data.Monoid
+--import Data.Word
 import Text.Jasmine.Parse
-import Text.PrettyPrint
+import qualified Blaze.ByteString.Builder as BB
+import qualified Blaze.ByteString.Builder.Char.Utf8 as BS
 import qualified Data.ByteString as B
+import qualified Data.ByteString.Lazy as LB
 import qualified Data.ByteString.UTF8 as U
+import qualified Data.Text as T
+
+-- ---------------------------------------------------------------------
+-- Pretty printer stuff via blaze-builder
+
+(<>) :: BB.Builder -> BB.Builder -> BB.Builder
+(<>) a b = mappend a b
+
+(<+>) :: BB.Builder -> BB.Builder -> BB.Builder
+(<+>) a b = mconcat [a, text " ", b]
+
+hcat :: (Monoid a) => [a] -> a
+hcat xs = mconcat xs
+
+empty :: BB.Builder
+empty = mempty
+
+-- TODO: change this to use BS.fromText
+text :: String -> BB.Builder
+text s = BS.fromString s
+
+char :: Char -> BB.Builder
+char c = BS.fromChar c
+
+comma :: BB.Builder
+comma = BS.fromChar ','
+
+punctuate :: a -> [a] -> [a]
+punctuate p xs = intersperse p xs
 
 -- ---------------------------------------------------------------------
 
 
-renderJS :: JSNode -> Doc
+renderJS :: JSNode -> BB.Builder
 renderJS (JSEmpty l)             = (renderJS l)
 renderJS (JSIdentifier s)        = text (U.toString s)
 renderJS (JSDecimal i)           = text $ show i
@@ -107,19 +143,19 @@ renderJS (JSWhile e s)                 = (text "while") <> (char '(') <> (render
 renderJS (JSWith e s)                  = (text "with") <> (char '(') <> (renderJS e) <> (char ')') <> (rJS s)
           
 -- Helper functions
-rJS :: [JSNode] -> Doc
+rJS :: [JSNode] -> BB.Builder
 rJS xs = hcat $ map renderJS xs
 
-commaList :: [JSNode] -> Doc
+commaList :: [JSNode] -> BB.Builder
 commaList xs = (hcat $ (punctuate comma (toDoc xs)))
 
-commaListList :: [[JSNode]] -> Doc
+commaListList :: [[JSNode]] -> BB.Builder
 commaListList xs = (hcat $ punctuate comma $ map rJS xs)
 
-toDoc :: [JSNode] -> [Doc]
+toDoc :: [JSNode] -> [BB.Builder]
 toDoc xs = map renderJS xs
 
-spaceOrBlock :: JSNode -> Doc
+spaceOrBlock :: JSNode -> BB.Builder
 spaceOrBlock (JSBlock xs) = renderJS (JSBlock xs)
 spaceOrBlock x            = (text " ") <> (renderJS x)
 
@@ -196,10 +232,10 @@ fixBlock' x = x
 spaceNeeded :: [JSNode] -> Bool
 spaceNeeded xs = 
   let
-    str = show $ rJS xs
+   -- str = show $ rJS xs
+    str = LB.unpack $ BB.toLazyByteString $ rJS xs
   in  
-   head str /= '('
-
+   head str /= (fromIntegral $ ord '(')
 
 -- ---------------------------------------------------------------------
 -- Test stuff
