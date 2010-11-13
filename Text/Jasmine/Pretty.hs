@@ -3,17 +3,13 @@ module Text.Jasmine.Pretty
     renderJS
     ) where
 
---import Text.PrettyPrint
 import Data.Char
 import Data.List
 import Data.Monoid
---import Data.Word
 import Text.Jasmine.Parse
 import qualified Blaze.ByteString.Builder as BB
 import qualified Blaze.ByteString.Builder.Char.Utf8 as BS
-import qualified Data.ByteString as B
 import qualified Data.ByteString.Lazy as LB
-import qualified Data.ByteString.UTF8 as U
 import qualified Data.Text as T
 
 -- ---------------------------------------------------------------------
@@ -23,7 +19,7 @@ import qualified Data.Text as T
 (<>) a b = mappend a b
 
 (<+>) :: BB.Builder -> BB.Builder -> BB.Builder
-(<+>) a b = mconcat [a, text " ", b]
+(<+>) a b = mconcat [a, (text_t $ T.pack " "), b]
 
 hcat :: (Monoid a) => [a] -> a
 hcat xs = mconcat xs
@@ -32,6 +28,9 @@ empty :: BB.Builder
 empty = mempty
 
 -- TODO: change this to use BS.fromText
+text_t :: T.Text -> BB.Builder
+text_t s = BS.fromString $ T.unpack s
+
 text :: String -> BB.Builder
 text s = BS.fromString s
 
@@ -49,7 +48,7 @@ punctuate p xs = intersperse p xs
 
 renderJS :: JSNode -> BB.Builder
 renderJS (JSEmpty l)             = (renderJS l)
-renderJS (JSIdentifier s)        = text (U.toString s)
+renderJS (JSIdentifier s)        = text_t s
 renderJS (JSDecimal i)           = text $ show i
 renderJS (JSOperator s)          = text s
 renderJS (JSExpression xs)       = rJS xs
@@ -73,7 +72,7 @@ renderJS (JSIfElse c t e)        = (text "if") <> (text "(") <> (renderJS c) <> 
 renderJS (JSMemberDot xs)        = (text ".") <> (rJS xs)
 renderJS (JSMemberSquare x xs)   = (text "[") <> (renderJS x) <> (text "]") <> (rJS xs)
 renderJS (JSLiteral l)           = (text l)
-renderJS (JSStringLiteral s l)   = empty <> (char s) <> (text (U.toString l)) <> (char s)
+renderJS (JSStringLiteral s l)   = empty <> (char s) <> (text l) <> (char s)
 renderJS (JSUnary l  )           = text l
 renderJS (JSArrayLiteral xs)     = (text "[") <> (rJS xs) <> (text "]")
 
@@ -118,7 +117,7 @@ renderJS (JSHexInteger i)              = (text $ show i) -- TODO: need to tweak 
 renderJS (JSLabelled l v)              = (renderJS l) <> (text ":") <> (renderJS v)
 renderJS (JSObjectLiteral xs)          = (text "{") <> (commaList xs) <> (text "}")
 renderJS (JSPropertyNameandValue n vs) = (renderJS n) <> (text ":") <> (rJS vs)
-renderJS (JSRegEx s)                   = (text (U.toString s))
+renderJS (JSRegEx s)                   = (text_t s)
 
 renderJS (JSReturn [])                 = (text "return")
 renderJS (JSReturn [JSLiteral ";"])    = (text "return;")
@@ -198,7 +197,7 @@ fixLiterals :: [JSNode] -> [JSNode]
 fixLiterals [] = []
 fixLiterals [x] = [x]
 fixLiterals ((JSStringLiteral d1 s1):(JSExpressionBinary "+" [JSStringLiteral d2 s2] r):xs)
-       | d1 == d2 = fixLiterals ((JSStringLiteral d1 (B.append s1 s2)):(r++xs))
+       | d1 == d2 = fixLiterals ((JSStringLiteral d1 (s1++s2)):(r++xs))
        | otherwise = (JSStringLiteral d1 s1):fixLiterals ((JSExpressionBinary "+" [JSStringLiteral d2 s2] r):xs) 
 
 fixLiterals (x:xs) = x:fixLiterals xs
@@ -240,12 +239,12 @@ spaceNeeded xs =
 -- ---------------------------------------------------------------------
 -- Test stuff
 
-
+{-
 -- readJs "x=1;"
 _case0 :: JSNode
 _case0 = JSSourceElements 
           [
-            JSExpression [JSElement "assignmentExpression" [JSIdentifier (U.fromString "x"),JSOperator "=",JSDecimal 1]],
+            JSExpression [JSElement "assignmentExpression" [JSIdentifier "x",JSOperator "=",JSDecimal 1]],
             JSEmpty (JSLiteral ";")
           ]
 
@@ -254,7 +253,7 @@ _case0 = JSSourceElements
 _case1 :: [JSNode]
 _case1 = [JSExpression 
          [JSElement "assignmentExpression" 
-          [JSIdentifier (U.fromString "a"),JSOperator "=",JSDecimal 1]
+          [JSIdentifier "a",JSOperator "=",JSDecimal 1]
          ]
         ,JSEmpty (JSLiteral ";")
         ]
@@ -263,7 +262,7 @@ _case2 :: JSNode
 _case2 = JSFunctionExpression [] (JSFunctionBody 
                                  [JSSourceElements 
                                   [JSReturn [JSExpression 
-                                             [JSLiteral "this",JSMemberDot [JSIdentifier (U.fromString "name")]],
+                                             [JSLiteral "this",JSMemberDot [JSIdentifier "name"]],
                                              JSLiteral ""]]]
                                 )
                                 -- ]],JSEmpty (JSLiteral ";")  
@@ -275,12 +274,12 @@ _case4 = JSExpression
           [
             JSElement "assignmentExpression" 
                [
-               JSIdentifier (U.fromString "opTypeNames"),
+               JSIdentifier "opTypeNames",
                JSOperator "=",
                JSObjectLiteral 
-                 [JSPropertyNameandValue (JSStringLiteral '\'' (U.fromString "\\n")) [JSStringLiteral '"' (U.fromString "NEWLINE")],
-                  JSPropertyNameandValue (JSStringLiteral '\'' (U.fromString ";"))   [JSStringLiteral '"' (U.fromString "SEMICOLON")],
-                  JSPropertyNameandValue (JSStringLiteral '\'' (U.fromString ","))   [JSStringLiteral '"' (U.fromString "COMMA")]
+                 [JSPropertyNameandValue (JSStringLiteral '\'' "\\n") [JSStringLiteral '"' "NEWLINE"],
+                  JSPropertyNameandValue (JSStringLiteral '\'' ";")   [JSStringLiteral '"' "SEMICOLON"],
+                  JSPropertyNameandValue (JSStringLiteral '\'' ",")   [JSStringLiteral '"' "COMMA"]
                  ]
                ]
           ]
@@ -289,18 +288,18 @@ _case4 = JSExpression
 -- doParse program "function load(s){if(typeof s!=\"string\")return s;a=1}"
 _case5 :: JSNode
 _case5 = JSSourceElements 
-          [JSFunction (JSIdentifier (U.fromString "load")) 
-           [JSIdentifier (U.fromString "s")] 
+          [JSFunction (JSIdentifier "load") 
+           [JSIdentifier "s"] 
              (JSFunctionBody 
               [
                 JSSourceElements 
                   [
                     JSIf 
-                      (JSExpression [JSUnary "typeof ",JSIdentifier (U.fromString "s"),
-                                     JSExpressionBinary "!=" [JSStringLiteral '"' (U.fromString "string")] []]) 
-                      (JSReturn [JSExpression [JSIdentifier (U.fromString "s")],JSLiteral ";"])
+                      (JSExpression [JSUnary "typeof ",JSIdentifier "s",
+                                     JSExpressionBinary "!=" [JSStringLiteral '"' "string"] []]) 
+                      (JSReturn [JSExpression [JSIdentifier "s"],JSLiteral ";"])
                     ,JSLiteral ";"
-                    ,JSExpression [JSElement "assignmentExpression" [JSIdentifier (U.fromString "a"),JSOperator "=",JSDecimal 1]]
+                    ,JSExpression [JSElement "assignmentExpression" [JSIdentifier "a",JSOperator "=",JSDecimal 1]]
                     ]
               ]
              )
@@ -314,14 +313,14 @@ _case6 = JSSourceElements []
 _case7 :: JSNode
 _case7 = JSSourceElements 
         [
-          JSFunction (JSIdentifier (U.fromString "load")) [JSIdentifier (U.fromString "s")] 
+          JSFunction (JSIdentifier "load") [JSIdentifier "s"] 
             (JSFunctionBody 
              [JSSourceElements 
               [JSIf 
-                 (JSExpression [JSUnary "typeof ",JSIdentifier (U.fromString "s"),JSExpressionBinary "!=" [JSStringLiteral '"' (U.fromString "string")] []]) 
-                 (JSReturn [JSExpression [JSIdentifier (U.fromString "s")],JSLiteral ";"])
+                 (JSExpression [JSUnary "typeof ",JSIdentifier "s",JSExpressionBinary "!=" [JSStringLiteral '"' "string"] []]) 
+                 (JSReturn [JSExpression [JSIdentifier "s"],JSLiteral ";"])
               ,
-               JSExpression [JSIdentifier (U.fromString "evaluate"),JSArguments [[JSDecimal 1]]]
+               JSExpression [JSIdentifier "evaluate",JSArguments [[JSDecimal 1]]]
               ]
              ]
             )
@@ -334,17 +333,17 @@ _case8 = JSSourceElements
             JSFor 
               [JSExpression 
                  [JSElement "assignmentExpression" 
-                   [JSIdentifier (U.fromString "i"),JSOperator "=",JSDecimal 0],
+                   [JSIdentifier "i",JSOperator "=",JSDecimal 0],
                     JSElement "assignmentExpression" 
-                     [JSIdentifier (U.fromString "j"),JSOperator "=",JSIdentifier (U.fromString "assignOps"),JSMemberDot [JSIdentifier (U.fromString "length")]]
+                     [JSIdentifier "j",JSOperator "=",JSIdentifier "assignOps",JSMemberDot [JSIdentifier "length"]]
                  ]
               ] 
               
               [JSExpression 
-                 [JSIdentifier (U.fromString "i"),JSExpressionBinary "<" [JSIdentifier (U.fromString "j")] []]
+                 [JSIdentifier "i",JSExpressionBinary "<" [JSIdentifier "j"] []]
               ] 
               
-              [JSExpression [JSExpressionPostfix "++" [JSIdentifier (U.fromString "i")]]] 
+              [JSExpression [JSExpressionPostfix "++" [JSIdentifier "i"]]] 
               
               (JSLiteral ";")
           ]        
@@ -354,26 +353,26 @@ _case01_semi1 = JSSourceElements
                  [
                    JSBlock (JSStatementList 
                               [
-                                JSExpression [JSIdentifier (U.fromString "zero"),JSMemberDot [JSIdentifier (U.fromString "one")]],
+                                JSExpression [JSIdentifier "zero",JSMemberDot [JSIdentifier "one"]],
                                 JSLiteral ";",
-                                JSExpression [JSIdentifier (U.fromString "zero")]
+                                JSExpression [JSIdentifier "zero"]
                               ]),
-                   JSExpression [JSIdentifier (U.fromString "one")],
-                   JSExpression [JSIdentifier (U.fromString "two")],
+                   JSExpression [JSIdentifier "one"],
+                   JSExpression [JSIdentifier "two"],
                    JSLiteral ";",
-                   JSExpression [JSIdentifier (U.fromString "three")],
+                   JSExpression [JSIdentifier "three"],
                    JSLiteral ";",
-                   JSExpression [JSIdentifier (U.fromString "four")],
+                   JSExpression [JSIdentifier "four"],
                    JSLiteral ";",
-                   JSExpression [JSIdentifier (U.fromString "five")]
+                   JSExpression [JSIdentifier "five"]
                  ]          
                  
 -- doParse returnStatement "return this.name;"
 _case9 :: JSNode
-_case9 = JSReturn [JSExpression [JSLiteral "this",JSMemberDot [JSIdentifier (U.fromString "name")]],JSLiteral ";"]                 
+_case9 = JSReturn [JSExpression [JSLiteral "this",JSMemberDot [JSIdentifier "name"]],JSLiteral ";"]                 
 
 _case9a :: [JSNode]
-_case9a = [JSExpression [JSLiteral "this",JSMemberDot [JSIdentifier (U.fromString "name")]],JSLiteral ";"]
+_case9a = [JSExpression [JSLiteral "this",JSMemberDot [JSIdentifier "name"]],JSLiteral ";"]
 
 --parseFile "./test/parsingonly/02_sm.js"
 {-
@@ -392,22 +391,22 @@ one;two
 _case10 :: JSNode
 _case10 = JSSourceElements 
             [
-              JSBlock (JSStatementList [JSExpression [JSIdentifier (U.fromString "zero")]]),
-              JSExpression [JSIdentifier (U.fromString "one")],
+              JSBlock (JSStatementList [JSExpression [JSIdentifier "zero"]]),
+              JSExpression [JSIdentifier "one"],
               JSLiteral ";",
-              JSExpression [JSIdentifier (U.fromString "two")],
+              JSExpression [JSIdentifier "two"],
               JSBlock (JSStatementList 
-                       [JSExpression [JSIdentifier (U.fromString "three")],
-                        JSExpression [JSIdentifier (U.fromString "four")],
+                       [JSExpression [JSIdentifier "three"],
+                        JSExpression [JSIdentifier "four"],
                         JSLiteral ";",
-                        JSExpression [JSIdentifier (U.fromString "five")],
+                        JSExpression [JSIdentifier "five"],
                         JSLiteral ";",
                         JSBlock (JSStatementList 
-                                 [JSExpression [JSIdentifier (U.fromString "six")],
+                                 [JSExpression [JSIdentifier "six"],
                                   JSLiteral ";",
                                   JSBlock (JSStatementList 
                                            [
-                                             JSExpression [JSIdentifier (U.fromString "seven")],
+                                             JSExpression [JSIdentifier "seven"],
                                              JSLiteral ""
                                            ]
                                           )
@@ -421,7 +420,7 @@ _case10 = JSSourceElements
 _case11 :: JSNode
 _case11 = JSSourceElements 
             [
-              JSExpression [JSIdentifier (U.fromString "a"),JSExpressionBinary "+" [JSDecimal 1] []],
+              JSExpression [JSIdentifier "a",JSExpressionBinary "+" [JSDecimal 1] []],
               JSLiteral ";",
               JSLiteral ";"
             ]            
@@ -430,13 +429,13 @@ _case11 = JSSourceElements
 _case12 :: JSNode
 _case12 = JSSourceElements 
           [
-            JSVariables "var" [JSVarDecl (JSIdentifier (U.fromString "newlines")) 
-                               [JSIdentifier (U.fromString "spaces"),JSMemberDot [JSIdentifier (U.fromString "match")],
-                                JSArguments [[JSRegEx (U.fromString "/\\n/g")]]]],
+            JSVariables "var" [JSVarDecl (JSIdentifier "newlines") 
+                               [JSIdentifier "spaces",JSMemberDot [JSIdentifier "match"],
+                                JSArguments [[JSRegEx "/\\n/g"]]]],
             JSLiteral ";",
-            JSVariables "var" [JSVarDecl (JSIdentifier (U.fromString "newlines")) 
-                               [JSIdentifier (U.fromString "spaces"),JSMemberDot [JSIdentifier (U.fromString "match")],
-                                JSArguments [[JSRegEx (U.fromString "/\\n/g")]]]],
+            JSVariables "var" [JSVarDecl (JSIdentifier "newlines") 
+                               [JSIdentifier "spaces",JSMemberDot [JSIdentifier "match"],
+                                JSArguments [[JSRegEx "/\\n/g"]]]],
             JSLiteral ";"
           ]            
 
@@ -444,19 +443,19 @@ _case12 = JSSourceElements
 _case13 :: JSNode
 _case13 = JSSourceElements 
           [
-            JSFor [JSExpression [JSElement "assignmentExpression" [JSIdentifier (U.fromString "i"),JSOperator "=",JSDecimal 0]]] 
+            JSFor [JSExpression [JSElement "assignmentExpression" [JSIdentifier "i",JSOperator "=",JSDecimal 0]]] 
             [] 
             [] 
             (JSBlock (
-                JSStatementList [JSVariables "var" [JSVarDecl (JSIdentifier (U.fromString "t")) [JSDecimal 1]]]
+                JSStatementList [JSVariables "var" [JSVarDecl (JSIdentifier "t") [JSDecimal 1]]]
                 )
             ),
             JSLiteral ";",
-            JSForVar [JSVarDecl (JSIdentifier (U.fromString "i")) [JSDecimal 0],JSVarDecl (JSIdentifier (U.fromString "j")) [JSDecimal 1]] 
+            JSForVar [JSVarDecl (JSIdentifier "i") [JSDecimal 0],JSVarDecl (JSIdentifier "j") [JSDecimal 1]] 
             [] 
             [] 
             (JSBlock (
-                JSStatementList [JSExpression [JSElement "assignmentExpression" [JSIdentifier (U.fromString "x"),JSOperator "=",JSDecimal 1]]]
+                JSStatementList [JSExpression [JSElement "assignmentExpression" [JSIdentifier "x",JSOperator "=",JSDecimal 1]]]
                 )
             )
           ]          
@@ -466,19 +465,19 @@ _case14 :: JSNode
 _case14 = JSSourceElements 
           [
             JSIfElse 
-              (JSExpression [JSRegEx (U.fromString "/^[a-z]/"),JSMemberDot [JSIdentifier (U.fromString "test")],JSArguments [[JSIdentifier (U.fromString "t")]]]) 
+              (JSExpression [JSRegEx "/^[a-z]/",JSMemberDot [JSIdentifier "test"],JSArguments [[JSIdentifier "t"]]]) 
               (JSBlock (JSStatementList 
                         [
                           JSExpression [
                              JSElement "assignmentExpression" 
-                               [JSIdentifier (U.fromString "consts"),JSOperator "+=",JSIdentifier (U.fromString "t"),
-                                JSMemberDot [JSIdentifier (U.fromString "toUpperCase")],JSArguments [[]]]
+                               [JSIdentifier "consts",JSOperator "+=",JSIdentifier "t",
+                                JSMemberDot [JSIdentifier "toUpperCase"],JSArguments [[]]]
                              ],
                           JSLiteral ";",
                           JSExpression [
-                            JSElement "assignmentExpression" [JSIdentifier (U.fromString "keywords"),
-                                                              JSMemberSquare (JSExpression [JSIdentifier (U.fromString "t")]) [],
-                                                              JSOperator "=",JSIdentifier (U.fromString "i")]],
+                            JSElement "assignmentExpression" [JSIdentifier "keywords",
+                                                              JSMemberSquare (JSExpression [JSIdentifier "t"]) [],
+                                                              JSOperator "=",JSIdentifier "i"]],
                           JSLiteral ""])) 
               (JSBlock (JSStatementList 
                         [
@@ -486,23 +485,23 @@ _case14 = JSSourceElements
                             [
                               JSElement "assignmentExpression" 
                                 [
-                                  JSIdentifier (U.fromString "consts"),JSOperator "+=",
+                                  JSIdentifier "consts",JSOperator "+=",
                                   JSExpressionParen 
                                     (
                                       JSExpression 
                                         [
                                           JSExpressionTernary 
                                             [
-                                              JSRegEx (U.fromString "/^\\W/"),
-                                              JSMemberDot [JSIdentifier (U.fromString "test")],
-                                              JSArguments [[JSIdentifier (U.fromString "t")]]
+                                              JSRegEx "/^\\W/",
+                                              JSMemberDot [JSIdentifier "test"],
+                                              JSArguments [[JSIdentifier "t"]]
                                             ] 
                                             [
-                                              JSIdentifier (U.fromString "opTypeNames"),
-                                              JSMemberSquare (JSExpression [JSIdentifier (U.fromString "t")]) 
+                                              JSIdentifier "opTypeNames",
+                                              JSMemberSquare (JSExpression [JSIdentifier "t"]) 
                                               []
                                             ] 
-                                            [JSIdentifier (U.fromString "t")]
+                                            [JSIdentifier "t"]
                                         ]
                                     )
                                 ]
@@ -512,15 +511,15 @@ _case14 = JSSourceElements
                        )
               ),
             JSExpression [JSElement "assignmentExpression" 
-                          [JSIdentifier (U.fromString "consts"),JSOperator "+=",JSStringLiteral '"' (U.fromString " = "),
-                           JSExpressionBinary "+" [JSIdentifier (U.fromString "x")] []]],
+                          [JSIdentifier "consts",JSOperator "+=",JSStringLiteral '"' " = ",
+                           JSExpressionBinary "+" [JSIdentifier "x"] []]],
             JSLiteral ";"]          
           
 -- doParse program "a+1;{}"
 _case15 :: JSNode
 _case15 = JSSourceElements 
             [
-              JSExpression [JSIdentifier (U.fromString "a"),JSExpressionBinary "+" [JSDecimal 1] []],
+              JSExpression [JSIdentifier "a",JSExpressionBinary "+" [JSDecimal 1] []],
               JSLiteral ";",
               JSLiteral ";"
             ]
@@ -530,17 +529,17 @@ _case15 = JSSourceElements
 _case16 :: JSNode
 _case16 = JSSourceElementsTop 
             [
-              JSFor [JSExpression [JSElement "assignmentExpression" [JSIdentifier (U.fromString "i"),JSOperator "=",JSDecimal 0]]] [] [] 
+              JSFor [JSExpression [JSElement "assignmentExpression" [JSIdentifier "i",JSOperator "=",JSDecimal 0]]] [] [] 
                 (JSBlock 
                  (JSStatementList 
                   [
-                    JSVariables "var" [JSVarDecl (JSIdentifier (U.fromString "t")) [JSDecimal 1]],
+                    JSVariables "var" [JSVarDecl (JSIdentifier "t") [JSDecimal 1]],
                     JSLiteral ";",
                     JSLiteral ""
                   ]
                  )
                 ),
-              JSExpression [JSElement "assignmentExpression" [JSIdentifier (U.fromString "x"),JSOperator "=",JSDecimal 1]],
+              JSExpression [JSElement "assignmentExpression" [JSIdentifier "x",JSOperator "=",JSDecimal 1]],
               JSLiteral ";"
             ]
 
@@ -550,7 +549,7 @@ _case17 = JSSourceElementsTop
             [
               JSReturn 
                 [
-                  JSExpression [JSLiteral "new ",JSIdentifier (U.fromString "global"),JSMemberDot [JSIdentifier (U.fromString "Boolean")],JSArguments [[JSIdentifier (U.fromString "v")]]],
+                  JSExpression [JSLiteral "new ",JSIdentifier "global",JSMemberDot [JSIdentifier "Boolean"],JSArguments [[JSIdentifier "v"]]],
                   JSLiteral ";"]
                 ]
             
@@ -559,13 +558,13 @@ _case18 :: JSNode
 _case18 = JSSourceElementsTop 
             [
               JSIf 
-                (JSExpression [JSUnary "typeof ",JSIdentifier (U.fromString "s"),JSExpressionBinary "!=" [JSStringLiteral '"' (U.fromString "string")] []]) 
+                (JSExpression [JSUnary "typeof ",JSIdentifier "s",JSExpressionBinary "!=" [JSStringLiteral '"' "string"] []]) 
                 (JSReturn [JSLiteral ";"]),
-              JSWhile (JSExpression [JSUnary "--",JSIdentifier (U.fromString "n"),JSExpressionBinary ">=" [JSDecimal 0] []]) 
+              JSWhile (JSExpression [JSUnary "--",JSIdentifier "n",JSExpressionBinary ">=" [JSDecimal 0] []]) 
                 (JSExpression 
                    [
                      JSElement "assignmentExpression" 
-                       [JSIdentifier (U.fromString "s"),JSOperator "+=",JSIdentifier (U.fromString "t")]
+                       [JSIdentifier "s",JSOperator "+=",JSIdentifier "t"]
                    ]
                 ),
               JSLiteral ";"
@@ -575,16 +574,16 @@ _case18 = JSSourceElementsTop
 _case19 :: JSNode
 _case19 = JSSourceElementsTop 
             [
-              JSFunction (JSIdentifier (U.fromString "f")) [] 
+              JSFunction (JSIdentifier "f") [] 
                 (JSFunctionBody 
                  [
                    JSSourceElements 
                      [
-                       JSReturn [JSExpression [JSIdentifier (U.fromString "n")],JSLiteral ";"],
+                       JSReturn [JSExpression [JSIdentifier "n"],JSLiteral ";"],
                        JSExpression 
                          [JSElement "assignmentExpression" 
                           [
-                            JSIdentifier (U.fromString "x"),JSOperator "=",JSDecimal 1
+                            JSIdentifier "x",JSOperator "=",JSDecimal 1
                           ]
                          ]
                      ]
@@ -595,37 +594,37 @@ _case19 = JSSourceElementsTop
 --fixSourceElements ([JSReturn [JSExpression [JSIdentifier "n"],JSLiteral ";"],JSExpression [JSElement "assignmentExpression" [JSIdentifier "x",JSOperator "=",JSDecimal 1]]])
 _case20 :: [JSNode]
 _case20 = [
-           JSReturn [JSExpression [JSIdentifier (U.fromString "n")],JSLiteral ";"],
+           JSReturn [JSExpression [JSIdentifier "n"],JSLiteral ";"],
            JSExpression 
-             [JSElement "assignmentExpression" [JSIdentifier (U.fromString "x"),JSOperator "=",JSDecimal 1]]
+             [JSElement "assignmentExpression" [JSIdentifier "x",JSOperator "=",JSDecimal 1]]
           ]            
             
 --doParse program "if(!u)continue;t=n"
 _case21 :: JSNode
 _case21 = JSSourceElementsTop 
             [
-              JSIf (JSExpression [JSUnary "!",JSIdentifier (U.fromString "u")]) 
+              JSIf (JSExpression [JSUnary "!",JSIdentifier "u"]) 
                    (JSContinue [JSLiteral ";"]),
-              JSExpression [JSElement "assignmentExpression" [JSIdentifier (U.fromString "t"),JSOperator "=",JSIdentifier (U.fromString "n")]]
+              JSExpression [JSElement "assignmentExpression" [JSIdentifier "t",JSOperator "=",JSIdentifier "n"]]
             ]          
             
 --doParse program "if (!v.base){throw new ReferenceError(v.propertyName + \" is not defined\");};x=1"
 _case22 :: JSNode
 _case22 = JSSourceElementsTop 
             [
-              JSIf (JSExpression [JSUnary "!",JSIdentifier (U.fromString "v"),JSMemberDot [JSIdentifier (U.fromString "base")]]) 
+              JSIf (JSExpression [JSUnary "!",JSIdentifier "v",JSMemberDot [JSIdentifier "base"]]) 
                    (JSBlock (JSStatementList 
                              [
                                JSThrow (JSExpression 
                                         [
                                           JSLiteral "new ",
-                                          JSIdentifier (U.fromString "ReferenceError"),
+                                          JSIdentifier "ReferenceError",
                                           JSArguments 
                                             [
                                               [
-                                                JSIdentifier (U.fromString "v"),
-                                                JSMemberDot [JSIdentifier (U.fromString "propertyName")],
-                                                JSExpressionBinary "+" [JSStringLiteral '"' (U.fromString " is not defined")] []
+                                                JSIdentifier "v",
+                                                JSMemberDot [JSIdentifier "propertyName"],
+                                                JSExpressionBinary "+" [JSStringLiteral '"' " is not defined"] []
                                               ]
                                             ]
                                         ]
@@ -634,7 +633,7 @@ _case22 = JSSourceElementsTop
                              ]
                             )
                    ),
-              JSLiteral ";",JSExpression [JSElement "assignmentExpression" [JSIdentifier (U.fromString "x"),JSOperator "=",JSDecimal 1]]]            
+              JSLiteral ";",JSExpression [JSElement "assignmentExpression" [JSIdentifier "x",JSOperator "=",JSDecimal 1]]]            
 
 --doParse program "{throw new TypeError(\"Function.prototype.apply called on\"+\n\" uncallable object\");}"
 _case23 :: JSNode
@@ -648,14 +647,14 @@ _case23 = JSSourceElementsTop
                        (JSExpression 
                           [
                             JSLiteral "new ",
-                            JSIdentifier (U.fromString "TypeError"),
+                            JSIdentifier "TypeError",
                             JSArguments 
                               [
                                 [
-                                  JSStringLiteral '"' (U.fromString "Function.prototype.apply called on"),
+                                  JSStringLiteral '"' "Function.prototype.apply called on"
                                   JSExpressionBinary "+" 
                                     [
-                                      JSStringLiteral '"' (U.fromString " uncallable object")
+                                      JSStringLiteral '"' " uncallable object"
                                     ] 
                                     []
                                 ]
@@ -674,11 +673,11 @@ _case24 = JSSourceElementsTop
               JSExpression 
                 [
                   JSElement "assignmentExpression" 
-                    [JSIdentifier (U.fromString "x"),
+                    [JSIdentifier "x",
                      JSOperator "=",
-                     JSStringLiteral '"' (U.fromString "hello "),
+                     JSStringLiteral '"' "hello ",
                      JSExpressionBinary "+" 
-                       [JSStringLiteral '"' (U.fromString "world")] []
+                       [JSStringLiteral '"' "world"] []
                     ]
                 ],
               JSLiteral ";"
@@ -692,7 +691,7 @@ _case25 = JSSourceElementsTop
                 (JSBlock (JSStatementList [])) 
                 [
                   JSCatch 
-                    (JSIdentifier (U.fromString "e")) 
+                    (JSIdentifier "e") 
                     [] 
                     (JSBlock 
                       (JSStatementList 
@@ -703,6 +702,7 @@ _case25 = JSSourceElementsTop
                     )
                 ]
             ]
+-}
 
 -- EOF
 

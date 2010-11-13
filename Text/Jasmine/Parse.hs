@@ -7,6 +7,7 @@ module Text.Jasmine.Parse
     , defaultJasmineSettings
     , JSNode(..)  
     , parseFile  
+    , parseString  
     -- For testing      
     , doParse
     , program  
@@ -22,15 +23,16 @@ module Text.Jasmine.Parse
 
 import Control.Applicative ( (<|>) )
 import Control.Monad
-import Data.Attoparsec
+import Data.Attoparsec ()
+import Data.Attoparsec.Char8 (char, satisfy, try, feed, Parser, Result(..), (<?>), endOfInput, many, parse, sepBy, sepBy1, many1)
 import Data.Char
 import Data.Data
 import Data.List 
-import Data.Word
 import Prelude hiding (catch)
 import System.Environment
 import qualified Data.ByteString as B
-import qualified Data.ByteString.UTF8 as U
+import qualified Data.Text as T
+import qualified Data.Text.Encoding as E
 import qualified Text.Jasmine.Token as P
 
 -- ---------------------------------------------------------------------
@@ -80,7 +82,7 @@ data JSNode = JSArguments [[JSNode]]
               | JSFunctionBody [JSNode]
               | JSFunctionExpression [JSNode] JSNode -- name, parameter list, body                
               | JSHexInteger Integer  
-              | JSIdentifier B.ByteString
+              | JSIdentifier T.Text
               | JSIf JSNode JSNode  
               | JSIfElse JSNode JSNode JSNode 
               | JSLabelled JSNode JSNode  
@@ -90,12 +92,12 @@ data JSNode = JSArguments [[JSNode]]
               | JSObjectLiteral [JSNode]  
               | JSOperator String  
               | JSPropertyNameandValue JSNode [JSNode]
-              | JSRegEx B.ByteString
+              | JSRegEx T.Text
               | JSReturn [JSNode]
               | JSSourceElements [JSNode]
               | JSSourceElementsTop [JSNode]
               | JSStatementList [JSNode]
-              | JSStringLiteral Char B.ByteString
+              | JSStringLiteral Char [Char]
               | JSSwitch JSNode [JSNode]
               | JSThrow JSNode  
               | JSTry JSNode [JSNode]  
@@ -142,11 +144,8 @@ rOp = P.rOp
 -- ---------------------------------------------------------------------
 -- Make Attoparsec work with parsec
 
-char :: Char -> Parser Word8
-char c = word8 (fromIntegral $ ord c)
-
-letter :: Parser Word8
-letter = satisfy P.isAlpha       <?> "letter"
+letter :: Parser Char
+letter = satisfy isAlpha <?> "letter"
 
 eof :: Parser ()
 eof = endOfInput
@@ -161,15 +160,17 @@ eof = endOfInput
 stringLiteral :: Parser JSNode
 stringLiteral = P.lexeme $ 
                 try( do { _ <- char '"'; val<- many stringCharDouble; _ <- char '"';
-                     return (JSStringLiteral '"' (B.pack val))})
+                     return (JSStringLiteral '"' val)})
             <|> do { _ <- char '\''; val<- many stringCharSingle; _ <- char '\'';
-                     return (JSStringLiteral '\'' (B.pack val))}
+                     return (JSStringLiteral '\'' val)}
 
-stringCharDouble :: Parser Word8
-stringCharDouble = satisfy (\c -> isPrint (chr $ fromIntegral c) && c /= fromIntegral (ord '"'))
+stringCharDouble :: Parser Char
+--stringCharDouble = satisfy (\c -> isPrint (chr $ fromIntegral c) && c /= fromIntegral (ord '"'))
+stringCharDouble = satisfy (\c -> isPrint c && c /= '"')
 
-stringCharSingle :: Parser Word8
-stringCharSingle = satisfy (\c -> isPrint (chr $ fromIntegral c) && c /= fromIntegral (ord '\''))
+stringCharSingle :: Parser Char
+--stringCharSingle = satisfy (\c -> isPrint (chr $ fromIntegral c) && c /= fromIntegral (ord '\''))
+stringCharSingle = satisfy (\c -> isPrint c && c /= '\'')
 
 
 
@@ -177,10 +178,10 @@ stringCharSingle = satisfy (\c -> isPrint (chr $ fromIntegral c) && c /= fromInt
 
 
 decimalLiteral :: Parser Integer
-decimalLiteral = P.decimal 
+decimalLiteral = P.dec
 
 hexIntegerLiteral :: Parser Integer
-hexIntegerLiteral = P.hexadecimal  
+hexIntegerLiteral = P.hex  
 
 -- {String Chars1} = {Printable} + {HT} - ["\] 
 -- {RegExp Chars} = {Letter}+{Digit}+['^']+['$']+['*']+['+']+['?']+['{']+['}']+['|']+['-']+['.']+[',']+['#']+['[']+[']']+['_']+['<']+['>']
@@ -190,23 +191,24 @@ hexIntegerLiteral = P.hexadecimal
 -- ---------------------------------------------------------------------
 -- From HJS
 
-regex :: Parser [Word8]
+regex :: Parser [Char]
 regex = do { _ <- char '/'; body <- do { c <- firstchar; cs <- many otherchar; return $ concat (c:cs) }; _ <- char '/'; 
-             flg <- identPart; return $ ((B.unpack $ U.fromString "/")++body++(B.unpack $ U.fromString "/")++flg) }
+             -- flg <- identPart; return $ ((T.unpack $ U.fromString "/")++body++(T.unpack $ U.fromString "/")++flg) }
+             flg <- identPart; return $ ("/"++body++"/"++flg) }
 
-firstchar :: Parser [Word8]
-firstchar = do { c <- satisfy (\c -> isPrint (chr $ fromIntegral c) && c /= fromIntegral (ord '*') && c /= fromIntegral (ord '\\') && c /= fromIntegral (ord '/')); 
+firstchar :: Parser [Char]
+firstchar = do { c <- satisfy (\c -> isPrint c && c /= '*' && c /= '\\' && c /= '/'); 
                  return [c]} <|> escapeseq
             
 
-escapeseq :: Parser [Word8]
-escapeseq = do { _ <- char '\\'; c <- satisfy (\cc -> isPrint (chr $ fromIntegral cc)); return [fromIntegral (ord '\\'),c]}
+escapeseq :: Parser [Char]
+escapeseq = do { _ <- char '\\'; c <- satisfy (\cc -> isPrint cc); return ['\\',c]}
 
-otherchar :: Parser [Word8]
-otherchar = do { c <- satisfy (\c -> isPrint (chr $ fromIntegral c) && c /= fromIntegral (ord '\\') && c /= fromIntegral (ord '/')); 
+otherchar :: Parser [Char]
+otherchar = do { c <- satisfy (\c -> isPrint c && c /= '\\' && c /= '/'); 
                  return [c]} <|> escapeseq
 
-identPart :: Parser [Word8]
+identPart :: Parser [Char]
 identPart = many letter
 
 -- ---------------------------------------------------------------------
@@ -214,7 +216,7 @@ identPart = many letter
 
 regExp :: Parser JSNode
 regExp = P.lexeme $ do { v1 <- regex;       
-              return (JSRegEx (B.pack v1))}
+              return (JSRegEx (T.pack v1))}
 
 -- <Literal> ::= <Null Literal>
 --             | <Boolean Literal>
@@ -1121,8 +1123,8 @@ flatten xs = foldl' (++) [] xs
 main :: IO ()
 main =
   do args <- getArgs
-     x <- readFile (args !! 0)
-     putStrLn (show $ doParse program (U.fromString x))            
+     x <- B.readFile (args !! 0)
+     putStrLn (show $ doParse program x)            
 
     
 -- ---------------------------------------------------------------------     
@@ -1138,9 +1140,7 @@ main =
      
 -- ---------------------------------------------------------------------
           
---readJs :: String -> String
---readJs :: [Char] -> JSNode
-readJs :: U.ByteString -> JSNode
+readJs :: B.ByteString -> JSNode
 readJs input = case doParse program input of
     Fail _unparsed contexts err -> error("Parse failed" ++ show(contexts) ++ ":" ++ show err)
     Partial _f -> error("Unexpected partial")
@@ -1149,14 +1149,17 @@ readJs input = case doParse program input of
 -- ---------------------------------------------------------------------
     
 _doParse' :: Parser a -> String -> a
-_doParse' p input = case parse (p' p) (U.fromString input) of
+_doParse' p input = case parse (p' p) (E.encodeUtf8 $ T.pack input) of
     Fail _unparsed contexts err -> error("Parse failed" ++ show(contexts) ++ ":" ++ show err)
     Partial _f -> error("Unexpected partial")
     Done _unparsed val -> val
 
-doParse :: Parser r -> U.ByteString -> Result r
+doParse :: Parser r -> B.ByteString -> Result r
 doParse p input = {-maybeResult $-} feed (parse (p' p) input) B.empty
                        
+parseString :: Parser r -> String -> Result r
+parseString p input = doParse p (E.encodeUtf8 $ T.pack input)
+
 -- ---------------------------------------------------------------------
     
 p' :: Parser b -> Parser b
@@ -1177,7 +1180,7 @@ _showFile filename =
 parseFile :: FilePath -> IO JSNode
 parseFile filename =
   do 
-     x <- readFile (filename)
-     return $ (readJs (U.fromString x))
+     x <- B.readFile (filename)
+     return $ (readJs x)
 
 -- EOF
