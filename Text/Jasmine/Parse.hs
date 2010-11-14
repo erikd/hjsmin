@@ -2,6 +2,7 @@
 module Text.Jasmine.Parse
     (       
       readJs
+    , readJsm  
     , JasmineSettings (..)
     , defaultJasmineSettings
     , JSNode(..)  
@@ -21,7 +22,7 @@ module Text.Jasmine.Parse
 
 import Control.Applicative ( (<|>) )
 import Control.Monad
-import Data.Attoparsec ()
+import Data.Attoparsec (eitherResult)
 import Data.Attoparsec.Char8 (char, satisfy, try, feed, Parser, Result(..), (<?>), endOfInput, many, parse, sepBy, sepBy1, many1)
 import Data.Char
 import Data.Data
@@ -1123,6 +1124,18 @@ readJs input = case doParse program input of
     Fail _unparsed contexts err -> error("Parse failed" ++ show(contexts) ++ ":" ++ show err)
     Partial _f -> error("Unexpected partial")
     Done _unparsed val -> val
+
+-- ---------------------------------------------------------------------     
+          
+{-
+readJsm :: (Monad m) => B.ByteString -> m JSNode
+readJsm input = case eitherResult $ doParse program input of
+    Left msg  -> fail ("Parse failed:" ++ msg)
+    Right val -> return val
+-}
+--readJsm :: (Monad m) => B.ByteString -> m JSNode
+readJsm :: B.ByteString -> Either String JSNode
+readJsm input = eitherResult $ doParse program input 
 
 -- ---------------------------------------------------------------------
     

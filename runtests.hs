@@ -42,6 +42,8 @@ testSuiteMin = testGroup "Text.Jasmine.Pretty"
     , testCase "01_semi1.js"      caseMin01_semi1 
     , testCase "min_100_animals"  caseMin_min_100_animals
     , testCase "minNestedSquare"  caseMinNestedSquare
+    , testCase "EitherLeft"       caseEitherLeft  
+    , testCase "EitherRight"      caseEitherRight  
     ]
 
 testSuiteFiles :: Test
@@ -194,6 +196,12 @@ caseNestedSquare =
 caseMinNestedSquare =  
   testMinify "this.cursor+=match[0].length" srcNestedSquare
   
+caseEitherLeft  =  
+  Left "endOfInput" @=? minifym ((E.encodeUtf8 $ T.pack "a=*SYNTAX*ERROR*"))
+  
+caseEitherRight  =  
+  Right (LB.fromChunks [(E.encodeUtf8 $ T.pack "a=\"no syntax error\"")]) @=? minifym ((E.encodeUtf8 $ T.pack "a=\"no syntax error\";"))
+                  
 -- ---------------------------------------------------------------------
 -- utilities
 
