@@ -165,11 +165,9 @@ stringLiteral = P.lexeme $
                      return (JSStringLiteral '\'' val)}
 
 stringCharDouble :: Parser Char
---stringCharDouble = satisfy (\c -> isPrint (chr $ fromIntegral c) && c /= fromIntegral (ord '"'))
 stringCharDouble = satisfy (\c -> isPrint c && c /= '"')
 
 stringCharSingle :: Parser Char
---stringCharSingle = satisfy (\c -> isPrint (chr $ fromIntegral c) && c /= fromIntegral (ord '\''))
 stringCharSingle = satisfy (\c -> isPrint c && c /= '\'')
 
 
@@ -193,7 +191,6 @@ hexIntegerLiteral = P.hex
 
 regex :: Parser [Char]
 regex = do { _ <- char '/'; body <- do { c <- firstchar; cs <- many otherchar; return $ concat (c:cs) }; _ <- char '/'; 
-             -- flg <- identPart; return $ ((T.unpack $ U.fromString "/")++body++(T.unpack $ U.fromString "/")++flg) }
              flg <- identPart; return $ ("/"++body++"/"++flg) }
 
 firstchar :: Parser [Char]

@@ -11,7 +11,6 @@ module Text.Jasmine.Token
     , rOp  
     , lexeme  
     -- Testing  
-    --, simpleSpace  
     , oneLineComment  
     , isAlpha  
     ) where
@@ -19,7 +18,6 @@ module Text.Jasmine.Token
 -- ---------------------------------------------------------------------
 
 import Control.Applicative ( (<|>) )
---import Data.Attoparsec ()
 import Data.Attoparsec.Char8 (isSpace, hexadecimal, decimal, char, Parser, satisfy, try, many, (<?>), skipMany, skipMany1, isDigit)
 import Data.Char ( isAlpha )
 import Data.List ( nub, sort)
@@ -228,14 +226,12 @@ oneOf cs = satisfy (\c -> elem c cs)
 --
 -- >  consonant = noneOf "aeiou"
 
---noneOf :: (Stream s m Char) => [Char] -> ParsecT s u m Char
 noneOf :: String -> Parser Char
 noneOf cs = satisfy (\c -> not (elem c cs))
 
 -- | Parses a letter or digit (a character between \'0\' and \'9\').
 -- Returns the parsed character. 
 
---alphaNum :: (Stream s m Char => ParsecT s u m Char)
 alphaNum :: Parser Char
 alphaNum = satisfy isAlphaNum    <?> "letter or digit"
 
@@ -250,10 +246,6 @@ letter = satisfy isAlpha       <?> "letter"
 
 -- | Parses a hexadecimal digit (a digit or a letter between \'a\' and
 -- \'f\' or \'A\' and \'F\'). Returns the parsed character. 
-
---hexDigit :: (Stream s m Char) => ParsecT s u m Char
---hexDigit :: Parser Word8
---hexDigit = satisfy isHexDigit    <?> "hexadecimal digit"
 
 myString :: String -> Parser String
 myString s = mapM (\c -> char c) s
