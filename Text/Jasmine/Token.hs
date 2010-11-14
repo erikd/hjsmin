@@ -1,6 +1,5 @@
 module Text.Jasmine.Token
     (
-    --  TokenParser
       identifier  
     , reserved  
     , whiteSpace  
@@ -21,7 +20,6 @@ import Control.Applicative ( (<|>) )
 import Data.Attoparsec.Char8 (isSpace, hexadecimal, decimal, char, Parser, satisfy, try, many, (<?>), skipMany, skipMany1, isDigit)
 import Data.Char ( isAlpha )
 import Data.List ( nub, sort)
-import qualified Data.Text as T
 
 -- ---------------------------------------------------------------------
 
@@ -50,13 +48,13 @@ autoSemi' = do{ _ <- rOp ";"; return (";");}
 -- ---------------------------------------------------------------------
 
 --identifier = lexeme $ many1 (letter <|> oneOf "_")
-identifier :: Parser T.Text
+identifier :: Parser String
 identifier =
         lexeme $ try $
         do{ name <- ident
-          ; if (isReservedName $ T.pack name)
+          ; if (isReservedName name)
              then fail ("reserved word " ++ show name)
-             else return $ T.pack name
+             else return name
           }
 
 ident :: Parser [Char]
@@ -67,11 +65,11 @@ ident
             }
         <?> "identifier"
 
-isReservedName :: T.Text -> Bool
+isReservedName :: String -> Bool
 isReservedName name = isReserved theReservedNames name
 
 
-isReserved :: [T.Text] -> T.Text -> Bool          
+isReserved :: [String] -> String -> Bool          
 isReserved names name
         = scan names
         where
@@ -81,8 +79,8 @@ isReserved names name
                             EQ  -> True
                             GT  -> False
 
-theReservedNames :: [T.Text]
-theReservedNames = map T.pack $ sort reservedNames
+theReservedNames :: [String]
+theReservedNames = sort reservedNames
 
 -- TODO: fix trailing characters test          
 reserved :: String -> Parser ()

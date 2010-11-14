@@ -10,7 +10,6 @@ import Text.Jasmine.Parse
 import qualified Blaze.ByteString.Builder as BB
 import qualified Blaze.ByteString.Builder.Char.Utf8 as BS
 import qualified Data.ByteString.Lazy as LB
-import qualified Data.Text as T
 
 -- ---------------------------------------------------------------------
 -- Pretty printer stuff via blaze-builder
@@ -19,17 +18,13 @@ import qualified Data.Text as T
 (<>) a b = mappend a b
 
 (<+>) :: BB.Builder -> BB.Builder -> BB.Builder
-(<+>) a b = mconcat [a, (text_t $ T.pack " "), b]
+(<+>) a b = mconcat [a, (text " "), b]
 
 hcat :: (Monoid a) => [a] -> a
 hcat xs = mconcat xs
 
 empty :: BB.Builder
 empty = mempty
-
--- TODO: change this to use BS.fromText
-text_t :: T.Text -> BB.Builder
-text_t s = BS.fromString $ T.unpack s
 
 text :: String -> BB.Builder
 text s = BS.fromString s
@@ -48,7 +43,7 @@ punctuate p xs = intersperse p xs
 
 renderJS :: JSNode -> BB.Builder
 renderJS (JSEmpty l)             = (renderJS l)
-renderJS (JSIdentifier s)        = text_t s
+renderJS (JSIdentifier s)        = text s
 renderJS (JSDecimal i)           = text $ show i
 renderJS (JSOperator s)          = text s
 renderJS (JSExpression xs)       = rJS xs
@@ -117,7 +112,7 @@ renderJS (JSHexInteger i)              = (text $ show i) -- TODO: need to tweak 
 renderJS (JSLabelled l v)              = (renderJS l) <> (text ":") <> (renderJS v)
 renderJS (JSObjectLiteral xs)          = (text "{") <> (commaList xs) <> (text "}")
 renderJS (JSPropertyNameandValue n vs) = (renderJS n) <> (text ":") <> (rJS vs)
-renderJS (JSRegEx s)                   = (text_t s)
+renderJS (JSRegEx s)                   = (text s)
 
 renderJS (JSReturn [])                 = (text "return")
 renderJS (JSReturn [JSLiteral ";"])    = (text "return;")
@@ -239,7 +234,6 @@ spaceNeeded xs =
 -- ---------------------------------------------------------------------
 -- Test stuff
 
-{-
 -- readJs "x=1;"
 _case0 :: JSNode
 _case0 = JSSourceElements 
@@ -249,7 +243,6 @@ _case0 = JSSourceElements
           ]
 
 -- doParse statementList "a=1;"  
-
 _case1 :: [JSNode]
 _case1 = [JSExpression 
          [JSElement "assignmentExpression" 
@@ -635,7 +628,7 @@ _case22 = JSSourceElementsTop
                    ),
               JSLiteral ";",JSExpression [JSElement "assignmentExpression" [JSIdentifier "x",JSOperator "=",JSDecimal 1]]]            
 
---doParse program "{throw new TypeError(\"Function.prototype.apply called on\"+\n\" uncallable object\");}"
+--parseString program "{throw new TypeError(\"Function.prototype.apply called on\"+\n\" uncallable object\");}"
 _case23 :: JSNode
 _case23 = JSSourceElementsTop 
             [
@@ -651,7 +644,7 @@ _case23 = JSSourceElementsTop
                             JSArguments 
                               [
                                 [
-                                  JSStringLiteral '"' "Function.prototype.apply called on"
+                                  JSStringLiteral '"' "Function.prototype.apply called on",
                                   JSExpressionBinary "+" 
                                     [
                                       JSStringLiteral '"' " uncallable object"
@@ -665,6 +658,7 @@ _case23 = JSSourceElementsTop
                    ]
                )
             ]
+
             
 --doParse program "x=\"hello \" + \"world\";"
 _case24 :: JSNode
@@ -702,7 +696,6 @@ _case25 = JSSourceElementsTop
                     )
                 ]
             ]
--}
 
 -- EOF
 

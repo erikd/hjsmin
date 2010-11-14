@@ -1,7 +1,6 @@
 {-# LANGUAGE DeriveDataTypeable #-}
 module Text.Jasmine.Parse
     (       
-    --  parseScript
       readJs
     , JasmineSettings (..)
     , defaultJasmineSettings
@@ -15,7 +14,6 @@ module Text.Jasmine.Parse
     , identifier
     , statementList  
     , iterationStatement  
-    --, m  
     , main  
     ) where
 
@@ -82,7 +80,7 @@ data JSNode = JSArguments [[JSNode]]
               | JSFunctionBody [JSNode]
               | JSFunctionExpression [JSNode] JSNode -- name, parameter list, body                
               | JSHexInteger Integer  
-              | JSIdentifier T.Text
+              | JSIdentifier String
               | JSIf JSNode JSNode  
               | JSIfElse JSNode JSNode JSNode 
               | JSLabelled JSNode JSNode  
@@ -92,7 +90,7 @@ data JSNode = JSArguments [[JSNode]]
               | JSObjectLiteral [JSNode]  
               | JSOperator String  
               | JSPropertyNameandValue JSNode [JSNode]
-              | JSRegEx T.Text
+              | JSRegEx String
               | JSReturn [JSNode]
               | JSSourceElements [JSNode]
               | JSSourceElementsTop [JSNode]
@@ -213,7 +211,7 @@ identPart = many letter
 
 regExp :: Parser JSNode
 regExp = P.lexeme $ do { v1 <- regex;       
-              return (JSRegEx (T.pack v1))}
+              return (JSRegEx v1)}
 
 -- <Literal> ::= <Null Literal>
 --             | <Boolean Literal>
@@ -1104,12 +1102,6 @@ sourceElement = functionDeclaration
 -- ---------------------------------------------------------------
 -- Testing
 
---m :: IO ()
-{-
-m = do args <- getArgs
-       putStrLn (show $ readJs (args !! 0))
--}
-
 -- ---------------------------------------------------------------------
 
 flatten :: [[a]] -> [a]
@@ -1125,17 +1117,6 @@ main =
 
     
 -- ---------------------------------------------------------------------     
--- From HJS     
-{-parse'
-  :: GenParser tok P.JSPState a
-     -> SourceName
-     -> [tok]
-     -> Either ParseError a-}
---parse' p name input = runParser p P.newJSPState name input
-
---parseProgram input = parse' program "" (runLexer $ processComments input)
-     
--- ---------------------------------------------------------------------
           
 readJs :: B.ByteString -> JSNode
 readJs input = case doParse program input of
@@ -1164,7 +1145,6 @@ p' p = do {val <- p; eof; return val}
 
 -- ---------------------------------------------------------------------
 
---_showFile :: FilePath -> IO String
 _showFile :: FilePath -> IO String
 _showFile filename =
   do 
@@ -1173,7 +1153,6 @@ _showFile filename =
 
 -- ---------------------------------------------------------------------
 
---parseFile :: FilePath -> IO JSNode
 parseFile :: FilePath -> IO JSNode
 parseFile filename =
   do 
