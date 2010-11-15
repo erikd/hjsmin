@@ -22,14 +22,14 @@ module Text.Jasmine.Parse
 
 import Control.Applicative ( (<|>) )
 import Control.Monad
-import Data.Attoparsec (eitherResult)
-import Data.Attoparsec.Char8 (char, satisfy, try, feed, Parser, Result(..), (<?>), endOfInput, many, parse, sepBy, sepBy1, many1)
+import Data.Attoparsec.Lazy (eitherResult,parse,Result(..))
+import Data.Attoparsec.Char8 (char, satisfy, try, Parser, (<?>), endOfInput, many, sepBy, sepBy1, many1)
 import Data.Char
 import Data.Data
 import Data.List 
 import Prelude hiding (catch)
 import System.Environment
-import qualified Data.ByteString as B
+import qualified Data.ByteString.Lazy as LB
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as E
 import qualified Text.Jasmine.Token as P
@@ -1113,16 +1113,16 @@ flatten xs = foldl' (++) [] xs
 main :: IO ()
 main =
   do args <- getArgs
-     x <- B.readFile (args !! 0)
+     x <- LB.readFile (args !! 0)
      putStrLn (show $ doParse program x)            
 
     
 -- ---------------------------------------------------------------------     
           
-readJs :: B.ByteString -> JSNode
+readJs :: LB.ByteString -> JSNode
 readJs input = case doParse program input of
     Fail _unparsed contexts err -> error("Parse failed" ++ show(contexts) ++ ":" ++ show err)
-    Partial _f -> error("Unexpected partial")
+    -- Partial _f -> error("Unexpected partial")
     Done _unparsed val -> val
 
 -- ---------------------------------------------------------------------     
@@ -1133,23 +1133,30 @@ readJsm input = case eitherResult $ doParse program input of
     Left msg  -> fail ("Parse failed:" ++ msg)
     Right val -> return val
 -}
---readJsm :: (Monad m) => B.ByteString -> m JSNode
-readJsm :: B.ByteString -> Either String JSNode
+
+readJsm :: LB.ByteString -> Either String JSNode
 readJsm input = eitherResult $ doParse program input 
 
 -- ---------------------------------------------------------------------
     
+{-                
 _doParse' :: Parser a -> String -> a
-_doParse' p input = case parse (p' p) (E.encodeUtf8 $ T.pack input) of
+_doParse' p input = case parse (p' p) (LB.fromChunks [E.encodeUtf8 $ T.pack input]) of
     Fail _unparsed contexts err -> error("Parse failed" ++ show(contexts) ++ ":" ++ show err)
     Partial _f -> error("Unexpected partial")
     Done _unparsed val -> val
+-}
 
-doParse :: Parser r -> B.ByteString -> Result r
-doParse p input = {-maybeResult $-} feed (parse (p' p) input) B.empty
-                       
+{-
+doParseStrict :: Parser r -> B.ByteString -> Result r
+doParseStrict p input = {-maybeResult $-} feed (parse (p' p) input) LB.empty
+-}                       
+
+doParse :: Parser r -> LB.ByteString -> Result r
+doParse p input = parse (p' p) input
+
 parseString :: Parser r -> String -> Result r
-parseString p input = doParse p (E.encodeUtf8 $ T.pack input)
+parseString p input = doParse p (LB.fromChunks [E.encodeUtf8 $ T.pack input])
 
 -- ---------------------------------------------------------------------
     
@@ -1169,7 +1176,7 @@ _showFile filename =
 parseFile :: FilePath -> IO JSNode
 parseFile filename =
   do 
-     x <- B.readFile (filename)
+     x <- LB.readFile (filename)
      return $ (readJs x)
 
 -- EOF
