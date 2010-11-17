@@ -388,16 +388,16 @@ propertyName = identifier
 --                        | <Member Expression> '.' Identifier
 --                        | 'new' <Member Expression> <Arguments>
 memberExpression :: Parser [JSNode]
-memberExpression = (do{ try $ P.reserved "new"; v1 <- memberExpression; v2 <- arguments; 
+memberExpression = (do{ P.reserved "new"; v1 <- memberExpression; v2 <- arguments; 
                         return (((JSLiteral "new "):v1)++[v2])}) -- xxxx
                 <|> memberExpression'
 
 --memberExpression' :: GenParser Char P.JSPState [JSNode]
 memberExpression' :: Parser [JSNode]
-memberExpression' = (do{v1 <- try $ primaryExpression; v2 <- rest;
-                        return (v1:v2)})
-                <|> (do{v1 <- try $ functionExpression; v2 <- rest;
-                        return (v1:v2)})
+memberExpression' = do
+    v1 <- functionExpression <|> primaryExpression
+    v2 <- rest
+    return $ v1 : v2
 
                 where
                   rest = do{ rOp "["; v1 <- expression; rOp "]"; v2 <- rest;
@@ -682,7 +682,7 @@ logicalOrExpression =  do{ v1 <- logicalAndExpression; v2 <- rest;
                            return (v1++v2)}
                        where
                          rest =
-                               try(do{ rOp "||"; v2 <- logicalAndExpression; v3 <- rest;
+                                  (do{ rOp "||"; v2 <- logicalAndExpression; v3 <- rest;
                                    return [(JSExpressionBinary "||" v2 v3)]})
                             <|> return []
 
@@ -702,7 +702,7 @@ conditionalExpression = do{ v1 <- logicalOrExpression;
 -- <Assignment Expression> ::= <Conditional Expression>
 --                           | <Left Hand Side Expression> <Assignment Operator> <Assignment Expression> 
 assignmentExpression :: Parser [JSNode]
-assignmentExpression = try (do {v1 <- assignmentStart; v2 <- assignmentExpression;
+assignmentExpression = try (do {v1 <- assignmentStart; v2 <- assignmentExpression; -- FIXME unintuitive, but tests pass after removing this try
                            return [(JSElement "assignmentExpression" (v1++v2))]})
                     <|> conditionalExpression
                        
@@ -748,11 +748,11 @@ flattenExpression val = flatten $ intersperse litComma val
 --               | <Expression> 
 statement :: Parser JSNode
 statement = statementBlock
-        <|> try(labelledStatement)
+        <|> labelledStatement
         <|> expression 
         <|> variableStatement
         <|> emptyStatement 
-        <|> try(ifElseStatement)
+        <|> ifElseStatement
         <|> ifStatement
         <|> iterationStatement
         <|> continueStatement 
@@ -845,7 +845,7 @@ ifStatement = do{ P.reserved "if"; rOp "("; v1 <- expression; rOp ")"; v2 <- sta
 
 -- <If Else Statement> ::= 'if' '(' <Expression> ')' <Statement> 'else' <Statement>
 ifElseStatement :: Parser JSNode
-ifElseStatement = do{ P.reserved "if"; rOp "("; v1 <- expression; rOp ")"; v2 <- statementSemi; P.reserved "else"; v3 <- statement ;
+ifElseStatement = do{ try $ P.reserved "if"; rOp "("; v1 <- expression; rOp ")"; v2 <- statementSemi; P.reserved "else"; v3 <- statement ; -- FIXME can this try be removed?
                       return (JSIfElse v1 v2 v3) }
 
 statementSemi :: Parser JSNode
@@ -988,7 +988,7 @@ defaultClause = do{ P.reserved "default"; rOp ":"; v1 <- statementList;
 
 -- <Labelled Statement> ::= Identifier ':' <Statement> 
 labelledStatement :: Parser JSNode
-labelledStatement = do { v1 <- identifier; rOp ":"; v2 <- statement;
+labelledStatement = do { v1 <- try identifier; rOp ":"; v2 <- statement; -- FIXME can this try be removed?
                          return (JSLabelled v1 v2)}
 
 -- <Throw Statement> ::= 'throw' <Expression>
