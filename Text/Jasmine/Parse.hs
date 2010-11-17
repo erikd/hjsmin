@@ -23,16 +23,17 @@ module Text.Jasmine.Parse
 import Control.Applicative ( (<|>) )
 import Control.Monad
 import Data.Attoparsec.Lazy (eitherResult,parse,Result(..))
-import Data.Attoparsec.Char8 (char, satisfy, try, Parser, (<?>), endOfInput, many, sepBy, sepBy1, many1)
+import Data.Attoparsec.Char8 (char, satisfy, try, Parser, (<?>), endOfInput, many, sepBy, sepBy1, many1, takeWhile)
 import Data.Char
 import Data.Data
-import Data.List 
-import Prelude hiding (catch)
+import Data.List hiding (takeWhile)
+import Prelude hiding (catch, takeWhile)
 import System.Environment
 import qualified Data.ByteString.Lazy as LB
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as E
 import qualified Text.Jasmine.Token as P
+import qualified Data.ByteString.Char8 as S8
 
 -- ---------------------------------------------------------------------
 {-
@@ -129,12 +130,10 @@ identifier  = do{ val <- P.identifier;
                   return (JSIdentifier val)}
 
 autoSemi :: Parser JSNode
-autoSemi = try (do { v1 <-  P.autoSemi;
-                     return (JSLiteral v1);})
+autoSemi = fmap JSLiteral P.autoSemi
 
 autoSemi' :: Parser JSNode
-autoSemi' = try (do { v1 <-  P.autoSemi';
-                      return (JSLiteral v1);})
+autoSemi' = fmap JSLiteral P.autoSemi'
 
 rOp :: String -> Parser ()
 rOp = P.rOp
@@ -156,20 +155,19 @@ eof = endOfInput
 -- ------------------------------------------------------------
 --Modified from HJS
 
+dquote, squote :: Char
+dquote = '"'
+squote = '\''
+
 stringLiteral :: Parser JSNode
-stringLiteral = P.lexeme $ 
-                try( do { _ <- char '"'; val<- many stringCharDouble; _ <- char '"';
-                     return (JSStringLiteral '"' val)})
-            <|> do { _ <- char '\''; val<- many stringCharSingle; _ <- char '\'';
-                     return (JSStringLiteral '\'' val)}
-
-stringCharDouble :: Parser Char
-stringCharDouble = satisfy (\c -> isPrint c && c /= '"')
-
-stringCharSingle :: Parser Char
-stringCharSingle = satisfy (\c -> isPrint c && c /= '\'')
-
-
+stringLiteral =
+    P.lexeme $ go '"' <|> go '\''
+  where
+    go c = do
+        _ <- char c
+        s <- takeWhile $ \x -> isPrint x && x /= c
+        _ <- char c
+        return $ JSStringLiteral c $ S8.unpack s
 
 -- ------------------------------------------------------------
 
@@ -390,15 +388,15 @@ propertyName = identifier
 --                        | <Member Expression> '.' Identifier
 --                        | 'new' <Member Expression> <Arguments>
 memberExpression :: Parser [JSNode]
-memberExpression = try(do{ P.reserved "new"; v1 <- memberExpression; v2 <- arguments; 
+memberExpression = (do{ try $ P.reserved "new"; v1 <- memberExpression; v2 <- arguments; 
                         return (((JSLiteral "new "):v1)++[v2])}) -- xxxx
                 <|> memberExpression'
 
 --memberExpression' :: GenParser Char P.JSPState [JSNode]
 memberExpression' :: Parser [JSNode]
-memberExpression' = try(do{v1 <- primaryExpression; v2 <- rest;
+memberExpression' = (do{v1 <- try $ primaryExpression; v2 <- rest;
                         return (v1:v2)})
-                <|> try(do{v1 <- functionExpression; v2 <- rest;
+                <|> (do{v1 <- try $ functionExpression; v2 <- rest;
                         return (v1:v2)})
 
                 where
@@ -455,26 +453,31 @@ callExpr = do { x <- memberExpr;
 -}
 -- ---------------------------------------------------------------------
 
+lparen, rparen, comma :: Char
+lparen = '('
+rparen = ')'
+comma  = ','
 
 -- <Arguments> ::= '(' ')'
 --               | '(' <Argument List> ')'
 arguments :: Parser JSNode
-arguments = try(do{ rOp "(";  rOp ")";
-                return (JSArguments [[]])})
-        <|> do{ rOp "("; v1 <- argumentList; rOp ")";
-                return (JSArguments v1)}
+arguments = do
+    _ <- P.lexeme $ char lparen
+    x <- (P.lexeme (char rparen) >> return [[]]) <|> (do
+        x <- argumentList
+        _ <- P.lexeme $ char rparen
+        return x)
+    return $ JSArguments x
 
 -- <Argument List> ::= <Assignment Expression>
 --                   | <Argument List> ',' <Assignment Expression>
 argumentList :: Parser [[JSNode]]
-argumentList = do{ vals <- sepBy1 assignmentExpression (rOp ",");
-                   return vals}
-
+argumentList = sepBy1 assignmentExpression $ P.lexeme $ char comma
 
 -- <Left Hand Side Expression> ::= <New Expression> 
 --                               | <Call Expression>
 leftHandSideExpression :: Parser [JSNode]
-leftHandSideExpression = try (callExpression)
+leftHandSideExpression = callExpression
                      <|> newExpression
                      <?> "leftHandSideExpression"
 
@@ -610,58 +613,53 @@ relationalExpression = do{ v1 <- shiftExpression; v2 <- rest;
 --                         | <Equality Expression> '===' <Relational Expression>
 --                         | <Equality Expression> '!==' <Relational Expression>
 equalityExpression :: Parser [JSNode]
-equalityExpression = do{ v1 <- relationalExpression; v2 <- rest;
-                         return (v1++v2)}
-                         -- TODO: more efficient parsing here, without all the backtracking
-                     where
-                       rest =
-                              try(do{ rOp "=="; v2 <- relationalExpression; v3 <- rest;
-                                      return [(JSExpressionBinary "==" v2 v3)]})
-                          <|> try(do{ rOp "!="; v2 <- relationalExpression; v3 <- rest;
-                                      return [(JSExpressionBinary "!=" v2 v3)]})
-                          <|> try(do{ rOp "==="; v2 <- relationalExpression; v3 <- rest;
-                                      return [(JSExpressionBinary "===" v2 v3)]})
-                          <|> try(do{ rOp "!=="; v2 <- relationalExpression; v3 <- rest;
-                                      return [(JSExpressionBinary "!==" v2 v3)]})
-                          <|> return []
-                        
+equalityExpression = do
+    v1 <- relationalExpression
+    v2 <- rest
+    return $ v1 ++ v2
+  where
+    rest = equals <|> exclaim <|> return []
+    equals = do
+        _ <- char '='
+        _ <- char '='
+        sign <- P.lexeme $ (char '=' >> return "===") <|> return "=="
+        v2 <- relationalExpression
+        v3 <- rest
+        return [JSExpressionBinary sign v2 v3]
+    exclaim = do
+        _ <- char '!'
+        _ <- char '='
+        sign <- P.lexeme $ (char '=' >> return "!==") <|> return "!="
+        v2 <- relationalExpression
+        v3 <- rest
+        return [JSExpressionBinary sign v2 v3]
+
+bitwiseExpression :: Parser [JSNode] -> Char -> Parser [JSNode]
+bitwiseExpression prev op = do
+    v1 <- prev
+    v2 <- rest
+    return $ v1 ++ v2
+  where
+    rest = (do
+        _ <- P.lexeme $ char op
+        v2 <- equalityExpression
+        v3 <- rest
+        return [JSExpressionBinary [op] v2 v3]) <|> return []
 
 -- <Bitwise And Expression> ::= <Equality Expression>
 --                            | <Bitwise And Expression> '&' <Equality Expression>
 bitwiseAndExpression :: Parser [JSNode]
-bitwiseAndExpression = do{ v1 <- equalityExpression; v2 <- rest;
-                           return (v1++v2)}
-                       where
-                         rest =
-                                try(do{ rOp "&"; v2 <- equalityExpression; v3 <- rest;
-                                    return [(JSExpressionBinary "&" v2 v3)]})
-                             <|> return []
-
+bitwiseAndExpression = bitwiseExpression equalityExpression '&'
 
 -- <Bitwise XOr Expression> ::= <Bitwise And Expression>
 --                            | <Bitwise XOr Expression> '^' <Bitwise And Expression>
 bitwiseXOrExpression :: Parser [JSNode]
-bitwiseXOrExpression = do{ v1 <- bitwiseAndExpression; v2 <- rest;
-                           return (v1++v2)}
-                       where
-                         rest =
-                                do{ rOp "^"; v2 <- bitwiseAndExpression; v3 <- rest;
-                                    return [(JSExpressionBinary "^" v2 v3)]}
-                            <|> return []
-
+bitwiseXOrExpression = bitwiseExpression bitwiseAndExpression '^'
 
 -- <Bitwise Or Expression> ::= <Bitwise XOr Expression>
 --                           | <Bitwise Or Expression> '|' <Bitwise XOr Expression>
 bitwiseOrExpression :: Parser [JSNode]
-bitwiseOrExpression = do{ v1 <- bitwiseXOrExpression; v2 <- rest;
-                          return (v1++v2)}
-                      where
-                        rest =
-                               try(do{ rOp "|"; v2 <- bitwiseXOrExpression; v3 <- rest;
-                                   return [(JSExpressionBinary "|" v2 v3)]})
-                           <|> return []
-
-
+bitwiseOrExpression = bitwiseExpression bitwiseXOrExpression '|'
 
 -- <Logical And Expression> ::= <Bitwise Or Expression>
 --                            | <Logical And Expression> '&&' <Bitwise Or Expression>
@@ -773,21 +771,27 @@ statementBlock = do {v1 <- statementBlock'; return (if (v1 == []) then (JSLitera
 -- <Block > ::= '{' '}'
 --            | '{' <Statement List> '}'
 statementBlock' :: Parser [JSNode]
-statementBlock' = try (do {rOp "{"; rOp "}"; 
-                          return []})
-                  <|> do {rOp "{"; val <- statementList; rOp "}"; 
-                          return (if (val == (JSStatementList [JSLiteral ";"])) then ([]) else [(JSBlock val)])}
-                  <?> "statementBlock"
+statementBlock' = (do
+    _ <- P.lexeme $ char '{'
+    (P.lexeme (char '}') >> return []) <|> (do
+        val <- statementList
+        _ <- P.lexeme $ char '}'
+        return $
+            if val == JSStatementList [JSLiteral ";"]
+                then []
+                else [JSBlock val])
+    ) <?> "statementBlock"
 
 -- <Block > ::= '{' '}'
 --            | '{' <Statement List> '}'
 block :: Parser JSNode
-block = try (do {rOp "{"; rOp "}"; 
-            return (JSBlock (JSStatementList []))})
-    <|> do {rOp "{"; val <- statementList; rOp "}"; 
-            return (JSBlock val)}
-    <?> "block"
-
+block = (do
+    _ <- P.lexeme $ char '{'
+    x <- (P.lexeme (char '}') >> return (JSStatementList [])) <|> (do
+        val <- statementList
+        _ <- P.lexeme $ char '}'
+        return val)
+    return $ JSBlock x) <?> "block"
 
 -- <Statement List> ::= <Statement>
 --                    | <Statement List> <Statement>
@@ -949,19 +953,13 @@ switchStatement = do{ P.reserved "switch"; rOp "("; v1 <- expression; rOp ")"; v
 --                | '{' <Default Clause> '}'
 -- TODO: get rid of the try clauses by unwinding this
 caseBlock :: Parser [JSNode]
-caseBlock = try(do{ rOp "{"; rOp "}"; 
-                return []})
-        <|> try(do{ rOp "{"; v1 <- caseClauses; rOp "}"; 
-                return v1})
-        <|> try(do{ rOp "{"; v1 <- caseClauses; v2 <- defaultClause; rOp "}"; 
-                return (v1++[v2])})
-        <|> try(do{ rOp "{"; v1 <- caseClauses; v2 <- defaultClause; v3 <- caseClauses; rOp "}"; 
-                return (v1++[v2]++v3)})
-        <|> try(do{ rOp "{"; v1 <- defaultClause; v2 <- caseClauses; rOp "}"; 
-                return (v1:v2)})
-        <|> do{ rOp "{"; v1 <- defaultClause; rOp "}"; 
-                return [v1]}
-
+caseBlock = do
+    _ <- P.lexeme $ char '{'
+    a <- caseClauses <|> return []
+    b <- fmap return defaultClause <|> return []
+    c <- caseClauses <|> return []
+    _ <- P.lexeme $ char '}'
+    return $ concat [a, b, c]
 
 -- <Case Clauses> ::= <Case Clause>
 --                  | <Case Clauses> <Case Clause>
