@@ -17,16 +17,17 @@ module Text.Jasmine.Token
 -- ---------------------------------------------------------------------
 
 import Control.Applicative ( (<|>) )
-import Data.Attoparsec.Char8 (isSpace, hexadecimal, decimal, char, Parser, satisfy, try, many, (<?>), skipMany, skipMany1, isDigit)
+import Data.Attoparsec.Char8 (isSpace, hexadecimal, decimal, char, Parser, satisfy, try, many, (<?>), skipMany, skipMany1, isDigit, string)
 import Data.Char ( isAlpha )
 import qualified Data.Set as Set
+import qualified Data.ByteString.Char8 as S8
 
 -- ---------------------------------------------------------------------
 
 -- Do not use the lexer, it is greedy and consumes subsequent symbols, 
 --   e.g. "!" in a==!b
 rOp :: String -> Parser ()
-rOp x = lexeme $ do { _ <- myString x; return () }
+rOp x = lexeme $ do { _ <- string $ S8.pack x; return () }
 
                
 -- ---------------------------------------------------------------------
@@ -70,7 +71,7 @@ isReservedName = flip Set.member reservedNames
 
 -- TODO: fix trailing characters test          
 reserved :: String -> Parser ()
-reserved name = lexeme $ do { _ <- myString name; return () }
+reserved name = lexeme $ do { _ <- string $ S8.pack name; return () }
 {-
 reserved name =
         lexeme $ try $
@@ -82,7 +83,7 @@ reserved name =
 --whiteSpace = skipMany (simpleSpace <|> oneLineComment <|> multiLineComment <?> "")
 --whiteSpace = skipMany (simpleSpace <|> oneLineComment <|> multiLineComment <|> do { _ <- char '\n'; setNLFlag} <?> "")
 whiteSpace :: Parser ()
-whiteSpace = skipMany (do { _ <- myString "\n"; return ()} <|> simpleSpace <|> oneLineComment <|> multiLineComment <?> "")
+whiteSpace = skipMany (do { _ <- string $ S8.pack "\n"; return ()} <|> simpleSpace <|> oneLineComment <|> multiLineComment <?> "")
 -- whiteSpace = try $ many $ (do { equal TokenWhite } <|> do { (equal TokenNL); setNLFlag})
 
 
@@ -93,7 +94,7 @@ simpleSpace  = skipMany1 (satisfy (\c -> isSpace c && c /= '\n')) -- From HJS
 
 oneLineComment :: Parser ()
 oneLineComment =
-  do{ _ <- myString commentLine
+  do{ _ <- string $ S8.pack commentLine
     ; skipMany (satisfy (/= '\n'))
     -- ; word8 10 
     ; return ()
@@ -101,7 +102,7 @@ oneLineComment =
 
 multiLineComment :: Parser ()
 multiLineComment =
-  do { _ <- try (myString commentStart)
+  do { _ <- try $ string $ S8.pack commentStart
      ; inComment
      }
 
@@ -112,7 +113,7 @@ inComment
 
 inCommentMulti :: Parser ()
 inCommentMulti
-        =   do{ _ <- try (myString commentEnd)         ; return () }
+        =   do{ _ <- try $ string $ S8.pack commentEnd ; return () }
         <|> do{ multiLineComment                     ; inCommentMulti }
         <|> do{ skipMany1 (noneOf startEnd)          ; inCommentMulti }
         <|> do{ _ <- oneOf startEnd                  ; inCommentMulti }
@@ -122,7 +123,7 @@ inCommentMulti
 
 inCommentSingle :: Parser ()
 inCommentSingle
-        =   do{ _ <- try (myString commentEnd)        ; return () }
+        =   do{ _ <- try $ string $ S8.pack commentEnd ; return () }
         <|> do{ skipMany1 (noneOf startEnd)         ; inCommentSingle }
         <|> do{ _ <- oneOf startEnd                 ; inCommentSingle }
         <?> "end of comment"
@@ -230,9 +231,6 @@ letter = satisfy isAlpha       <?> "letter"
 
 -- | Parses a hexadecimal digit (a digit or a letter between \'a\' and
 -- \'f\' or \'A\' and \'F\'). Returns the parsed character. 
-
-myString :: String -> Parser String
-myString = mapM char
 
 isAlphaNum :: Char -> Bool
 isAlphaNum c            =  isAlpha c || isDigit c
