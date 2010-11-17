@@ -2,6 +2,7 @@ module Text.Jasmine
     (       
       minify
     , minifym  
+    , minifyBb  
     , minifyFile  
     ) where      
     
@@ -15,6 +16,11 @@ minifym s = case readJsm s of
              Left msg -> Left msg
              Right p  -> Right $ BB.toLazyByteString $ renderJS p                   
 
+minifyBb :: LB.ByteString -> Either String BB.Builder
+minifyBb s = case readJsm s of
+             Left msg -> Left msg
+             Right p  -> Right (renderJS p)
+             
 minify :: LB.ByteString -> LB.ByteString
 minify s = BB.toLazyByteString $ renderJS $ readJs s
 
