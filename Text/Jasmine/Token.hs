@@ -19,7 +19,7 @@ module Text.Jasmine.Token
 import Control.Applicative ( (<|>) )
 import Data.Attoparsec.Char8 (isSpace, hexadecimal, decimal, char, Parser, satisfy, try, many, (<?>), skipMany, skipMany1, isDigit)
 import Data.Char ( isAlpha )
-import Data.List ( nub, sort)
+import qualified Data.Set as Set
 
 -- ---------------------------------------------------------------------
 
@@ -66,21 +66,7 @@ ident
         <?> "identifier"
 
 isReservedName :: String -> Bool
-isReservedName name = isReserved theReservedNames name
-
-
-isReserved :: [String] -> String -> Bool          
-isReserved names name
-        = scan names
-        where
-          scan []       = False
-          scan (r:rs)   = case (compare r name) of
-                            LT  -> scan rs
-                            EQ  -> True
-                            GT  -> False
-
-theReservedNames :: [String]
-theReservedNames = sort reservedNames
+isReservedName = flip Set.member reservedNames
 
 -- TODO: fix trailing characters test          
 reserved :: String -> Parser ()
@@ -132,7 +118,7 @@ inCommentMulti
         <|> do{ _ <- oneOf startEnd                  ; inCommentMulti }
         <?> "end of comment"
         where
-          startEnd   = nub (commentEnd ++ commentStart)
+          startEnd   = commentEnd
 
 inCommentSingle :: Parser ()
 inCommentSingle
@@ -141,7 +127,7 @@ inCommentSingle
         <|> do{ _ <- oneOf startEnd                 ; inCommentSingle }
         <?> "end of comment"
         where
-          startEnd   = nub (commentEnd ++ commentStart)
+          startEnd   = commentEnd
 
 commentStart :: [Char]
 commentStart   = "/*"
@@ -161,8 +147,8 @@ identLetter = alphaNum <|> oneOf "_"
 identStart :: Parser Char
 identStart  = letter <|> oneOf "_$"
 
-reservedNames :: [String]
-reservedNames = [ 
+reservedNames :: Set.Set String
+reservedNames = Set.fromAscList [ 
   "break",
   "case", "catch", "const", "continue",
   "debugger", "default", "delete", "do",
@@ -215,7 +201,7 @@ lexeme p = do{ x <- p; whiteSpace; return x  }
 -- >   vowel  = oneOf "aeiou"
 
 oneOf :: String -> Parser Char
-oneOf cs = satisfy (\c -> elem c cs)
+oneOf = satisfy . flip elem
 
 
 -- | As the dual of 'oneOf', @noneOf cs@ succeeds if the current
@@ -225,7 +211,7 @@ oneOf cs = satisfy (\c -> elem c cs)
 -- >  consonant = noneOf "aeiou"
 
 noneOf :: String -> Parser Char
-noneOf cs = satisfy (\c -> not (elem c cs))
+noneOf cs = satisfy $ not . flip elem cs
 
 -- | Parses a letter or digit (a character between \'0\' and \'9\').
 -- Returns the parsed character. 
@@ -246,7 +232,7 @@ letter = satisfy isAlpha       <?> "letter"
 -- \'f\' or \'A\' and \'F\'). Returns the parsed character. 
 
 myString :: String -> Parser String
-myString s = mapM (\c -> char c) s
+myString = mapM char
 
 isAlphaNum :: Char -> Bool
 isAlphaNum c            =  isAlpha c || isDigit c

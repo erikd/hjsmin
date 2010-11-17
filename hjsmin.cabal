@@ -29,6 +29,7 @@ library
                    , attoparsec       >= 0.8     && < 0.9
                    , blaze-builder    >= 0.2     && < 1
                    , text             >= 0.8     && < 1
+                   , containers       >= 0.2     && < 0.5
     exposed-modules: Text.Jasmine
     other-modules:   Text.Jasmine.Parse, Text.Jasmine.Pretty, Text.Jasmine.Token
     ghc-options:     -Wall
