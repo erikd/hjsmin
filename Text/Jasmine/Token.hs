@@ -10,14 +10,13 @@ module Text.Jasmine.Token
     , rOp  
     , lexeme  
     -- Testing  
-    , oneLineComment  
     , isAlpha  
     ) where
 
 -- ---------------------------------------------------------------------
 
 import Control.Applicative ( (<|>) )
-import Data.Attoparsec.Char8 (isSpace, hexadecimal, decimal, char, Parser, satisfy, try, many, (<?>), skipMany, skipMany1, isDigit, string)
+import Data.Attoparsec.Char8 (isSpace, hexadecimal, decimal, char, Parser, satisfy, try, many, (<?>), skipMany, skipMany1, isDigit, string, skipWhile, anyChar)
 import Data.Char ( isAlpha )
 import qualified Data.Set as Set
 import qualified Data.ByteString.Char8 as S8
@@ -83,52 +82,31 @@ reserved name =
 --whiteSpace = skipMany (simpleSpace <|> oneLineComment <|> multiLineComment <?> "")
 --whiteSpace = skipMany (simpleSpace <|> oneLineComment <|> multiLineComment <|> do { _ <- char '\n'; setNLFlag} <?> "")
 whiteSpace :: Parser ()
-whiteSpace = skipMany (do { _ <- string $ S8.pack "\n"; return ()} <|> simpleSpace <|> oneLineComment <|> multiLineComment <?> "")
+whiteSpace = skipMany (do { _ <- string $ S8.pack "\n"; return ()} <|> simpleSpace <|> comment <?> "")
 -- whiteSpace = try $ many $ (do { equal TokenWhite } <|> do { (equal TokenNL); setNLFlag})
 
 
 --simpleSpace = skipMany1 (satisfy isSpace)
 simpleSpace :: Parser ()
-simpleSpace  = skipMany1 (satisfy (\c -> isSpace c && c /= '\n')) -- From HJS
+simpleSpace  = skipMany1 $ oneOf " \t\r"
 
-
-oneLineComment :: Parser ()
-oneLineComment =
-  do{ _ <- string $ S8.pack commentLine
-    ; skipMany (satisfy (/= '\n'))
-    -- ; word8 10 
-    ; return ()
-    }
-
-multiLineComment :: Parser ()
-multiLineComment =
-  do { _ <- try $ string $ S8.pack commentStart
-     ; inComment
-     }
+comment :: Parser ()
+comment = do
+    isMulti <- try $ do
+        char fslash
+        (char asterisk >> return True) <|> (char fslash >> return False)
+    if isMulti then inComment else skipWhile (/= linefeed)
 
 inComment :: Parser ()
-inComment
-  | nestedComments = inCommentMulti
-  | otherwise      = inCommentSingle
+inComment =
+    theEnd <|> (anyChar >> inComment) <?> "end of comment"
+  where
+    theEnd = char asterisk >> (char fslash >> return ()) <|> inComment
 
-inCommentMulti :: Parser ()
-inCommentMulti
-        =   do{ _ <- try $ string $ S8.pack commentEnd ; return () }
-        <|> do{ multiLineComment                     ; inCommentMulti }
-        <|> do{ skipMany1 (noneOf startEnd)          ; inCommentMulti }
-        <|> do{ _ <- oneOf startEnd                  ; inCommentMulti }
-        <?> "end of comment"
-        where
-          startEnd   = commentEnd
-
-inCommentSingle :: Parser ()
-inCommentSingle
-        =   do{ _ <- try $ string $ S8.pack commentEnd ; return () }
-        <|> do{ skipMany1 (noneOf startEnd)         ; inCommentSingle }
-        <|> do{ _ <- oneOf startEnd                 ; inCommentSingle }
-        <?> "end of comment"
-        where
-          startEnd   = commentEnd
+fslash, asterisk, linefeed :: Char
+fslash = '/'
+asterisk = '*'
+linefeed = '\n'
 
 commentStart :: [Char]
 commentStart   = "/*"
@@ -138,9 +116,6 @@ commentEnd     = "*/"
 
 commentLine :: [Char]
 commentLine    = "//"
-
-nestedComments :: Bool
-nestedComments = True
 
 identLetter :: Parser Char
 identLetter = alphaNum <|> oneOf "_"
