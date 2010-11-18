@@ -8,6 +8,7 @@ module Text.Jasmine.Token
     , autoSemi  
     , autoSemi'  
     , rOp  
+    , lChar  
     , lexeme  
     -- Testing  
     , isAlpha  
@@ -16,8 +17,8 @@ module Text.Jasmine.Token
 -- ---------------------------------------------------------------------
 
 import Control.Applicative ( (<|>) )
-import Data.Attoparsec.Char8 (isSpace, hexadecimal, decimal, char, Parser, satisfy, try, many, (<?>), skipMany, skipMany1, isDigit, string, skipWhile, anyChar)
-import Data.Char ( isAlpha )
+import Data.Attoparsec.Char8 (hexadecimal, decimal, char, Parser, satisfy, try, many, (<?>), skipMany, skipMany1, isDigit, string, skipWhile, anyChar)
+import Data.Char ( isAlpha, isSpace )
 import qualified Data.Set as Set
 import qualified Data.ByteString.Char8 as S8
 
@@ -28,6 +29,8 @@ import qualified Data.ByteString.Char8 as S8
 rOp :: String -> Parser ()
 rOp x = lexeme $ do { _ <- string $ S8.pack x; return () }
 
+lChar :: Char -> Parser ()
+lChar x = lexeme $ do { _ <- char x; return () }
                
 -- ---------------------------------------------------------------------
 
@@ -86,14 +89,14 @@ whiteSpace = skipMany (do { _ <- string $ S8.pack "\n"; return ()} <|> simpleSpa
 -- whiteSpace = try $ many $ (do { equal TokenWhite } <|> do { (equal TokenNL); setNLFlag})
 
 
---simpleSpace = skipMany1 (satisfy isSpace)
 simpleSpace :: Parser ()
-simpleSpace  = skipMany1 $ oneOf " \t\r"
+-- Note : Data.Char.isSpace includes a variety of non-breaking space chars, and unicode variants
+simpleSpace  = skipMany1 $ (satisfy isSpace) 
 
 comment :: Parser ()
 comment = do
     isMulti <- try $ do
-        char fslash
+        _ <- char fslash
         (char asterisk >> return True) <|> (char fslash >> return False)
     if isMulti then inComment else skipWhile (/= linefeed)
 
@@ -107,15 +110,6 @@ fslash, asterisk, linefeed :: Char
 fslash = '/'
 asterisk = '*'
 linefeed = '\n'
-
-commentStart :: [Char]
-commentStart   = "/*"
-
-commentEnd :: [Char]
-commentEnd     = "*/"
-
-commentLine :: [Char]
-commentLine    = "//"
 
 identLetter :: Parser Char
 identLetter = alphaNum <|> oneOf "_"
@@ -162,7 +156,6 @@ dec = lexeme $ decimal
 -- >                     ; return (sum ds)
 -- >                     }
 
---lexeme p = do{ x <- p;              whiteSpace; return x  }
 lexeme :: Parser b -> Parser b
 lexeme p = do{ x <- p; whiteSpace; return x  }
 
@@ -179,15 +172,6 @@ lexeme p = do{ x <- p; whiteSpace; return x  }
 oneOf :: String -> Parser Char
 oneOf = satisfy . flip elem
 
-
--- | As the dual of 'oneOf', @noneOf cs@ succeeds if the current
--- character /not/ in the supplied list of characters @cs@. Returns the
--- parsed character.
---
--- >  consonant = noneOf "aeiou"
-
-noneOf :: String -> Parser Char
-noneOf cs = satisfy $ not . flip elem cs
 
 -- | Parses a letter or digit (a character between \'0\' and \'9\').
 -- Returns the parsed character. 
@@ -208,7 +192,7 @@ letter = satisfy isAlpha       <?> "letter"
 -- \'f\' or \'A\' and \'F\'). Returns the parsed character. 
 
 isAlphaNum :: Char -> Bool
-isAlphaNum c            =  isAlpha c || isDigit c
+isAlphaNum c =  isAlpha c || isDigit c
 
 -- ---------------------------------------------------------------------
 {-
