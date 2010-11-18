@@ -135,9 +135,13 @@ autoSemi = fmap JSLiteral P.autoSemi
 autoSemi' :: Parser JSNode
 autoSemi' = fmap JSLiteral P.autoSemi'
 
+-- TODO: Maybe? get rid of these, and call them directly via the full name.
+--       BUT, compiler optimisation should get rid of them anyway
 rOp :: String -> Parser ()
 rOp = P.rOp
 
+lChar :: Char -> Parser ()
+lChar = P.lChar
 
 -- ---------------------------------------------------------------------
 -- Make Attoparsec work with parsec
@@ -155,13 +159,9 @@ eof = endOfInput
 -- ------------------------------------------------------------
 --Modified from HJS
 
-dquote, squote :: Char
-dquote = '"'
-squote = '\''
-
 stringLiteral :: Parser JSNode
 stringLiteral =
-    P.lexeme $ go '"' <|> go '\''
+    P.lexeme $  go '"' <|> go '\''
   where
     go c = do
         _ <- char c
@@ -462,17 +462,17 @@ comma  = ','
 --               | '(' <Argument List> ')'
 arguments :: Parser JSNode
 arguments = do
-    _ <- P.lexeme $ char lparen
-    x <- (P.lexeme (char rparen) >> return [[]]) <|> (do
-        x <- argumentList
-        _ <- P.lexeme $ char rparen
-        return x)
+    _ <- lChar lparen
+    x <- ((lChar rparen) >> return [[]]) 
+         <|> (do x <- argumentList
+                 _ <- lChar rparen
+                 return x)
     return $ JSArguments x
 
 -- <Argument List> ::= <Assignment Expression>
 --                   | <Argument List> ',' <Assignment Expression>
 argumentList :: Parser [[JSNode]]
-argumentList = sepBy1 assignmentExpression $ P.lexeme $ char comma
+argumentList = sepBy1 assignmentExpression $ lChar comma
 
 -- <Left Hand Side Expression> ::= <New Expression> 
 --                               | <Call Expression>
@@ -711,6 +711,7 @@ assignmentStart = do {v1 <- leftHandSideExpression; v2 <- assignmentOperator;
                            return (v1++[v2])}
 
 -- <Assignment Operator> ::= '=' | '*=' | '/=' | '%=' | '+=' | '-=' | '<<=' | '>>=' | '>>>=' | '&=' | '^=' | '|='
+-- TODO : unwind this lot into some sort of deterministic processing, DFA style.
 assignmentOperator :: Parser JSNode
 assignmentOperator = rOp' "=" <|> rOp' "*=" <|> rOp' "/=" <|> rOp' "%=" <|> rOp' "+=" <|> rOp' "-="
                  <|> rOp' "<<=" <|> rOp' ">>=" <|> rOp' ">>>=" <|> rOp' "&=" <|> rOp' "^=" <|> rOp' "|="

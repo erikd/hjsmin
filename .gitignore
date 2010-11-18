@@ -18,3 +18,13 @@
 /test/parsingonly/130_htojs2.js~
 /test/pminified/130_htojs2.js~
 /test/parsingonly/07_expr2.js~
+/Text/Jasmine.hi
+/Text/Jasmine.o
+/Text/Jasmine/Parse.hi
+/Text/Jasmine/Parse.o
+/Text/Jasmine/Pretty.hi
+/Text/Jasmine/Pretty.o
+/Text/Jasmine/Token.hi
+/Text/Jasmine/Token.o
+/runbench.hs~
+/runbench.o
