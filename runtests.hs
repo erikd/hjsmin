@@ -5,7 +5,7 @@ import Test.HUnit hiding (Test)
 
 import Data.Char
 import Text.Jasmine
-import Text.Jasmine.Parse hiding (main)
+import Text.Jasmine.Parse -- hiding (main)
 import Text.Jasmine.Pretty
 import qualified Data.ByteString.Lazy as LB
 import qualified Data.Text as T
@@ -112,52 +112,54 @@ testSuiteFilesUnminified = testGroup "Text.Jasmine.Pretty filesUnminified"
 
 srcHelloWorld = "function Hello(a) {}"
 caseHelloWorld =  
-  "Done Empty JSFunction (JSIdentifier \"Hello\") [JSIdentifier \"a\"] (JSFunctionBody [])"
-  @=? (show $ parseString functionDeclaration srcHelloWorld)
+  "Done Empty JSSourceElementsTop [JSFunction (JSIdentifier \"Hello\") [JSIdentifier \"a\"] (JSFunctionBody [])]"
+  @=? (show $ parseProgram srcHelloWorld)
 caseMinHelloWorld = 
   -- "function Hello(a){}" @=? (minify (U.fromString srcHelloWorld))
   testMinify "function Hello(a){}" srcHelloWorld
   
 srcHelloWorld2 = "function Hello(a) {b=1}" 
 caseHelloWorld2 =  
-  "Done Empty JSFunction (JSIdentifier \"Hello\") [JSIdentifier \"a\"] (JSFunctionBody [JSSourceElements [JSExpression [JSElement \"assignmentExpression\" [JSIdentifier \"b\",JSOperator \"=\",JSDecimal 1]]]])"
-  @=? (show $ parseString functionDeclaration srcHelloWorld2)
+  "Done Empty JSSourceElementsTop [JSFunction (JSIdentifier \"Hello\") [JSIdentifier \"a\"] (JSFunctionBody [JSSourceElements [JSExpression [JSElement \"assignmentExpression\" [JSIdentifier \"b\",JSOperator \"=\",JSDecimal 1]]]])]"
+  @=? (show $ parseProgram srcHelloWorld2)
 caseMinHelloWorld2 =  
   -- "function Hello(a){b=1}" @=? (minify (U.fromString srcHelloWorld2))
   testMinify "function Hello(a){b=1}" srcHelloWorld2
 
 srcSimpleAssignment = "a=1;"   
 caseSimpleAssignment = 
-  "Done Empty JSStatementList [JSExpression [JSElement \"assignmentExpression\" [JSIdentifier \"a\",JSOperator \"=\",JSDecimal 1]],JSLiteral \";\"]"
-  @=? (show $ parseString statementList srcSimpleAssignment)
+  "Done Empty JSSourceElementsTop [JSExpression [JSElement \"assignmentExpression\" [JSIdentifier \"a\",JSOperator \"=\",JSDecimal 1]],JSLiteral \";\"]"
+  @=? (show $ parseProgram srcSimpleAssignment)
 caseMinSimpleAssignment =
   testMinify "a=1" srcSimpleAssignment
 
 srcEmptyFor = "for (i = 0;;){}"
 caseEmptyFor =
-  "Done Empty JSFor [JSExpression [JSElement \"assignmentExpression\" [JSIdentifier \"i\",JSOperator \"=\",JSDecimal 0]]] [] [] (JSLiteral \";\")"
-  @=? (show $ parseString iterationStatement srcEmptyFor)  
+  "Done Empty JSSourceElementsTop [JSFor [JSExpression [JSElement \"assignmentExpression\" [JSIdentifier \"i\",JSOperator \"=\",JSDecimal 0]]] [] [] (JSLiteral \";\")]"
+  @=? (show $ parseProgram srcEmptyFor)  
 srcFullFor = "for (i = 0;i<10;i++){}"
 caseFullFor =
-  "Done Empty JSFor [JSExpression [JSElement \"assignmentExpression\" [JSIdentifier \"i\",JSOperator \"=\",JSDecimal 0]]] [JSExpression [JSIdentifier \"i\",JSExpressionBinary \"<\" [JSDecimal 10] []]] [JSExpression [JSExpressionPostfix \"++\" [JSIdentifier \"i\"]]] (JSLiteral \";\")"
-  @=? (show $ parseString iterationStatement srcFullFor)
+  "Done Empty JSSourceElementsTop [JSFor [JSExpression [JSElement \"assignmentExpression\" [JSIdentifier \"i\",JSOperator \"=\",JSDecimal 0]]] [JSExpression [JSIdentifier \"i\",JSExpressionBinary \"<\" [JSDecimal 10] []]] [JSExpression [JSExpressionPostfix \"++\" [JSIdentifier \"i\"]]] (JSLiteral \";\")]"
+  @=? (show $ parseProgram srcFullFor)
   
 srcForVarFull = "for(var i=0,j=tokens.length;i<j;i++){}"
 caseForVarFull =
-  "Done Empty JSForVar [JSVarDecl (JSIdentifier \"i\") [JSDecimal 0],JSVarDecl (JSIdentifier \"j\") [JSIdentifier \"tokens\",JSMemberDot [JSIdentifier \"length\"]]] [JSExpression [JSIdentifier \"i\",JSExpressionBinary \"<\" [JSIdentifier \"j\"] []]] [JSExpression [JSExpressionPostfix \"++\" [JSIdentifier \"i\"]]] (JSLiteral \";\")"
-  @=? (show $ parseString iterationStatement srcForVarFull)
+  "Done Empty JSSourceElementsTop [JSForVar [JSVarDecl (JSIdentifier \"i\") [JSDecimal 0],JSVarDecl (JSIdentifier \"j\") [JSIdentifier \"tokens\",JSMemberDot [JSIdentifier \"length\"]]] [JSExpression [JSIdentifier \"i\",JSExpressionBinary \"<\" [JSIdentifier \"j\"] []]] [JSExpression [JSExpressionPostfix \"++\" [JSIdentifier \"i\"]]] (JSLiteral \";\")]"
+  @=? (show $ parseProgram srcForVarFull)
 
 srcIfElse1 = "if(a){b=1}else c=2";
 caseIfElse1 =
   "Done Empty JSSourceElementsTop [JSIfElse (JSExpression [JSIdentifier \"a\"]) (JSBlock (JSStatementList [JSExpression [JSElement \"assignmentExpression\" [JSIdentifier \"b\",JSOperator \"=\",JSDecimal 1]]])) (JSExpression [JSElement \"assignmentExpression\" [JSIdentifier \"c\",JSOperator \"=\",JSDecimal 2]])]"
-  @=? (show $ parseString program srcIfElse1)
+  -- @=? (show $ parseString program srcIfElse1)
+  @=? (show $ parseProgram srcIfElse1)
 caseMinIfElse1 =
   testMinify "if(a){b=1}else c=2" srcIfElse1
 
 srcIfElse2 = "if(a){b=1}else {c=2;d=4}";
 caseIfElse2 =
   "Done Empty JSSourceElementsTop [JSIfElse (JSExpression [JSIdentifier \"a\"]) (JSBlock (JSStatementList [JSExpression [JSElement \"assignmentExpression\" [JSIdentifier \"b\",JSOperator \"=\",JSDecimal 1]]])) (JSBlock (JSStatementList [JSExpression [JSElement \"assignmentExpression\" [JSIdentifier \"c\",JSOperator \"=\",JSDecimal 2]],JSLiteral \";\",JSExpression [JSElement \"assignmentExpression\" [JSIdentifier \"d\",JSOperator \"=\",JSDecimal 4]]]))]"
-  @=? (show $ parseString program srcIfElse2)
+  -- @=? (show $ parseString program srcIfElse2)
+  @=? (show $ parseProgram srcIfElse2)
 caseMinIfElse2 =
   testMinify "if(a){b=1}else{c=2;d=4}" srcIfElse2
 
@@ -165,7 +167,8 @@ src0_f = "function Hello(a) {ExprArray(1,1);}"
 case0_f =
   -- "Done Empty JSSourceElementsTop [JSFunction (JSIdentifier \"Hello\") [JSIdentifier \"a\"] (JSFunctionBody [JSSourceElements [JSExpression [JSIdentifier \"ExprArray\",JSArguments [[JSDecimal 1],[JSDecimal 1]]],JSLiteral \"\"]])]"
   "Done Empty JSSourceElementsTop [JSFunction (JSIdentifier \"Hello\") [JSIdentifier \"a\"] (JSFunctionBody [JSSourceElements [JSExpression [JSIdentifier \"ExprArray\",JSArguments [[JSDecimal 1],[JSDecimal 1]]],JSLiteral \";\"]])]"
-  @=? (show $ parseString program src0_f)
+  -- @=? (show $ parseString program src0_f)
+  @=? (show $ parseProgram src0_f)
 caseMin0_f =
   testMinify "function Hello(a){ExprArray(1,1)}" src0_f
   
@@ -178,21 +181,24 @@ src01_semi1 = (
     "five")  
 case01_semi1 =
   "Done Empty JSSourceElementsTop [JSBlock (JSStatementList [JSExpression [JSIdentifier \"zero\",JSMemberDot [JSIdentifier \"one\"]],JSLiteral \";\",JSExpression [JSIdentifier \"zero\"]]),JSExpression [JSIdentifier \"one\"],JSExpression [JSIdentifier \"two\"],JSLiteral \";\",JSExpression [JSIdentifier \"three\"],JSLiteral \";\",JSExpression [JSIdentifier \"four\"],JSLiteral \";\",JSExpression [JSIdentifier \"five\"]]"
-  @=? (show $ parseString program src01_semi1)
+  -- @=? (show $ parseString program src01_semi1)
+  @=? (show $ parseProgram src01_semi1)
 caseMin01_semi1 =
   testMinify "{zero.one;zero};one;two;three;four;five" src01_semi1
   
 src_min_100_animals = "function Animal(name){if(!name)throw new Error('Must specify an animal name');this.name=name};Animal.prototype.toString=function(){return this.name};o=new Animal(\"bob\");o.toString()==\"bob\"" 
 case_min_100_animals =
   "Done Empty JSSourceElementsTop [JSFunction (JSIdentifier \"Animal\") [JSIdentifier \"name\"] (JSFunctionBody [JSSourceElements [JSIf (JSExpression [JSUnary \"!\",JSIdentifier \"name\"]) (JSThrow (JSExpression [JSLiteral \"new \",JSIdentifier \"Error\",JSArguments [[JSStringLiteral '\\'' \"Must specify an animal name\"]]])),JSLiteral \";\",JSExpression [JSElement \"assignmentExpression\" [JSLiteral \"this\",JSMemberDot [JSIdentifier \"name\"],JSOperator \"=\",JSIdentifier \"name\"]]]]),JSLiteral \";\",JSExpression [JSElement \"assignmentExpression\" [JSIdentifier \"Animal\",JSMemberDot [JSIdentifier \"prototype\",JSMemberDot [JSIdentifier \"toString\"]],JSOperator \"=\",JSFunctionExpression [] (JSFunctionBody [JSSourceElements [JSReturn [JSExpression [JSLiteral \"this\",JSMemberDot [JSIdentifier \"name\"]],JSLiteral \"\"]]])]],JSLiteral \";\",JSExpression [JSElement \"assignmentExpression\" [JSIdentifier \"o\",JSOperator \"=\",JSLiteral \"new \",JSIdentifier \"Animal\",JSArguments [[JSStringLiteral '\"' \"bob\"]]]],JSLiteral \";\",JSExpression [JSIdentifier \"o\",JSMemberDot [JSIdentifier \"toString\"],JSArguments [[]],JSExpressionBinary \"==\" [JSStringLiteral '\"' \"bob\"] []]]"
-  @=? (show $ parseString program src_min_100_animals)
+  -- @=? (show $ parseString program src_min_100_animals)
+  @=? (show $ parseProgram src_min_100_animals)
 caseMin_min_100_animals =
   testMinify src_min_100_animals src_min_100_animals
   
 srcNestedSquare = "this.cursor+=match[0].length;"
 caseNestedSquare =
   "Done Empty JSSourceElementsTop [JSExpression [JSElement \"assignmentExpression\" [JSLiteral \"this\",JSMemberDot [JSIdentifier \"cursor\"],JSOperator \"+=\",JSIdentifier \"match\",JSMemberSquare (JSExpression [JSDecimal 0]) [JSMemberDot [JSIdentifier \"length\"]]]],JSLiteral \";\"]"
-  @=? (show $ parseString program srcNestedSquare)
+  -- @=? (show $ parseString program srcNestedSquare)
+  @=? (show $ parseProgram srcNestedSquare)
 caseMinNestedSquare =  
   testMinify "this.cursor+=match[0].length" srcNestedSquare
   
@@ -225,8 +231,6 @@ testFileUnminified filename =
      let x' = trim x
      -- x' @=? (minify (U.fromString y))
      testMinify x' y
-
-
 
 
 trim      :: String -> String

@@ -9,6 +9,8 @@ module Text.Jasmine.Parse
     , parseFile  
     , parseString  
     -- For testing      
+    , parseProgram  
+    {-  
     , doParse
     , program  
     , functionDeclaration
@@ -16,6 +18,7 @@ module Text.Jasmine.Parse
     , statementList  
     , iterationStatement  
     , main  
+    -}
     ) where
 
 -- ---------------------------------------------------------------------
@@ -1156,6 +1159,9 @@ doParse p input = parse (p' p) input
 
 parseString :: Parser r -> String -> Result r
 parseString p input = doParse p (LB.fromChunks [E.encodeUtf8 $ T.pack input])
+
+parseProgram :: String -> Result JSNode
+parseProgram input = doParse program (LB.fromChunks [E.encodeUtf8 $ T.pack input])
 
 -- ---------------------------------------------------------------------
     

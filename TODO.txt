@@ -63,5 +63,17 @@ http://oss.org.cn/ossdocs/web/js/js20/formal/parser-grammar.html
 
 ------------
 
+Integrating language-haskell.
+-----------------------------
+
+Baseline before starting, on my laptop (intel Core2 Duo SU7300)
+
+$ time ./dist/build/runtests/runtests
+
+real	0m1.625s
+user	0m1.616s
+sys	0m0.016s
+
+
 
 EOF
