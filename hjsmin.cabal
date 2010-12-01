@@ -43,6 +43,7 @@ executable             runtests
                        HUnit,
                        test-framework-hunit,
                        test-framework
+
     else
         Buildable: False
     main-is:         runtests.hs
