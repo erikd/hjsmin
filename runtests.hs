@@ -140,12 +140,12 @@ caseEmptyFor =
   @=? (show $ parseProgram srcEmptyFor)  
 srcFullFor = "for (i = 0;i<10;i++){}"
 caseFullFor =
-  "Right (JSSourceElementsTop [JSFor [JSExpression [JSElement \"assignmentExpression\" [JSIdentifier \"i\",JSOperator \"=\",JSDecimal \"0\"]]] [JSExpression [JSIdentifier \"i\",JSExpressionBinary \"<\" [JSDecimal \"10\"] []]] [JSExpression [JSExpressionPostfix \"++\" [JSIdentifier \"i\"]]] (JSLiteral \";\")])"
+  "Right (JSSourceElementsTop [JSFor [JSExpression [JSElement \"assignmentExpression\" [JSIdentifier \"i\",JSOperator \"=\",JSDecimal \"0\"]]] [JSExpression [JSExpressionBinary \"<\" [JSIdentifier \"i\"] [JSDecimal \"10\"]]] [JSExpression [JSExpressionPostfix \"++\" [JSIdentifier \"i\"]]] (JSLiteral \";\")])"
   @=? (show $ parseProgram srcFullFor)
   
 srcForVarFull = "for(var i=0,j=tokens.length;i<j;i++){}"
 caseForVarFull =
-  "Right (JSSourceElementsTop [JSForVar [JSVarDecl (JSIdentifier \"i\") [JSDecimal \"0\"],JSVarDecl (JSIdentifier \"j\") [JSIdentifier \"tokens\",JSMemberDot [JSIdentifier \"length\"]]] [JSExpression [JSIdentifier \"i\",JSExpressionBinary \"<\" [JSIdentifier \"j\"] []]] [JSExpression [JSExpressionPostfix \"++\" [JSIdentifier \"i\"]]] (JSLiteral \";\")])"
+  "Right (JSSourceElementsTop [JSForVar [JSVarDecl (JSIdentifier \"i\") [JSDecimal \"0\"],JSVarDecl (JSIdentifier \"j\") [JSMemberDot [JSIdentifier \"tokens\",JSIdentifier \"length\"]]] [JSExpression [JSExpressionBinary \"<\" [JSIdentifier \"i\"] [JSIdentifier \"j\"]]] [JSExpression [JSExpressionPostfix \"++\" [JSIdentifier \"i\"]]] (JSLiteral \";\")])"
   @=? (show $ parseProgram srcForVarFull)
 
 srcIfElse1 = "if(a){b=1}else c=2";
@@ -181,7 +181,7 @@ src01_semi1 = (
     "// five\n"++
     "five")  
 case01_semi1 =
-  "Right (JSSourceElementsTop [JSBlock (JSStatementList [JSExpression [JSIdentifier \"zero\",JSMemberDot [JSIdentifier \"one\"]],JSLiteral \";\",JSExpression [JSIdentifier \"zero\"]]),JSExpression [JSIdentifier \"one\"],JSExpression [JSIdentifier \"two\"],JSLiteral \";\",JSExpression [JSIdentifier \"three\"],JSLiteral \";\",JSExpression [JSIdentifier \"four\"],JSLiteral \";\",JSExpression [JSIdentifier \"five\"]])"
+  "Right (JSSourceElementsTop [JSBlock (JSStatementList [JSExpression [JSMemberDot [JSIdentifier \"zero\",JSIdentifier \"one\"]],JSLiteral \";\",JSExpression [JSIdentifier \"zero\"]]),JSExpression [JSIdentifier \"one\"],JSExpression [JSIdentifier \"two\"],JSLiteral \";\",JSExpression [JSIdentifier \"three\"],JSLiteral \";\",JSExpression [JSIdentifier \"four\"],JSLiteral \";\",JSExpression [JSIdentifier \"five\"]])"
   @=? (show $ parseProgram src01_semi1)
 caseMin01_semi1 =
   testMinify "{zero.one;zero};one;two;three;four;five" src01_semi1
@@ -195,7 +195,8 @@ caseMin_min_100_animals =
   
 srcNestedSquare = "this.cursor+=match[0].length;"
 caseNestedSquare =
-  "Right (JSSourceElementsTop [JSExpression [JSElement \"assignmentExpression\" [JSLiteral \"this\",JSMemberDot [JSIdentifier \"cursor\"],JSOperator \"+=\",JSIdentifier \"match\",JSMemberSquare (JSExpression [JSDecimal \"0\"]) [JSMemberDot [JSIdentifier \"length\"]]]],JSLiteral \";\"])"
+  -- "Right (JSSourceElementsTop [JSExpression [JSElement \"assignmentExpression\" [JSLiteral \"this\",JSMemberDot [JSIdentifier \"cursor\"],JSOperator \"+=\",JSIdentifier \"match\",JSMemberSquare (JSExpression [JSDecimal \"0\"]) [JSMemberDot [JSIdentifier \"length\"]]]],JSLiteral \";\"])"
+  "Right (JSSourceElementsTop [JSExpression [JSElement \"assignmentExpression\" [JSMemberDot [JSLiteral \"this\",JSIdentifier \"cursor\"],JSOperator \"+=\",JSMemberDot [JSMemberSquare (JSExpression [JSDecimal \"0\"]) [JSIdentifier \"match\"],JSIdentifier \"length\"]]],JSLiteral \";\"])"
   @=? (show $ parseProgram srcNestedSquare)
 caseMinNestedSquare =  
   testMinify "this.cursor+=match[0].length" srcNestedSquare
