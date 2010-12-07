@@ -145,7 +145,7 @@ caseFullFor =
   
 srcForVarFull = "for(var i=0,j=tokens.length;i<j;i++){}"
 caseForVarFull =
-  "Right (JSSourceElementsTop [JSForVar [JSVarDecl (JSIdentifier \"i\") [JSDecimal \"0\"],JSVarDecl (JSIdentifier \"j\") [JSMemberDot [JSIdentifier \"tokens\",JSIdentifier \"length\"]]] [JSExpression [JSExpressionBinary \"<\" [JSIdentifier \"i\"] [JSIdentifier \"j\"]]] [JSExpression [JSExpressionPostfix \"++\" [JSIdentifier \"i\"]]] (JSLiteral \";\")])"
+  "Right (JSSourceElementsTop [JSForVar [JSVarDecl (JSIdentifier \"i\") [JSDecimal \"0\"],JSVarDecl (JSIdentifier \"j\") [JSMemberDot [JSIdentifier \"tokens\"] (JSIdentifier \"length\")]] [JSExpression [JSExpressionBinary \"<\" [JSIdentifier \"i\"] [JSIdentifier \"j\"]]] [JSExpression [JSExpressionPostfix \"++\" [JSIdentifier \"i\"]]] (JSLiteral \";\")])"
   @=? (show $ parseProgram srcForVarFull)
 
 srcIfElse1 = "if(a){b=1}else c=2";
@@ -181,28 +181,28 @@ src01_semi1 = (
     "// five\n"++
     "five")  
 case01_semi1 =
-  "Right (JSSourceElementsTop [JSBlock (JSStatementList [JSExpression [JSMemberDot [JSIdentifier \"zero\",JSIdentifier \"one\"]],JSLiteral \";\",JSExpression [JSIdentifier \"zero\"]]),JSExpression [JSIdentifier \"one\"],JSExpression [JSIdentifier \"two\"],JSLiteral \";\",JSExpression [JSIdentifier \"three\"],JSLiteral \";\",JSExpression [JSIdentifier \"four\"],JSLiteral \";\",JSExpression [JSIdentifier \"five\"]])"
+  "Right (JSSourceElementsTop [JSBlock (JSStatementList [JSExpression [JSMemberDot [JSIdentifier \"zero\"] (JSIdentifier \"one\")],JSLiteral \";\",JSExpression [JSIdentifier \"zero\"]]),JSExpression [JSIdentifier \"one\"],JSExpression [JSIdentifier \"two\"],JSLiteral \";\",JSExpression [JSIdentifier \"three\"],JSLiteral \";\",JSExpression [JSIdentifier \"four\"],JSLiteral \";\",JSExpression [JSIdentifier \"five\"]])"
   @=? (show $ parseProgram src01_semi1)
 caseMin01_semi1 =
   testMinify "{zero.one;zero};one;two;three;four;five" src01_semi1
   
 src_min_100_animals = "function Animal(name){if(!name)throw new Error('Must specify an animal name');this.name=name};Animal.prototype.toString=function(){return this.name};o=new Animal(\"bob\");o.toString()==\"bob\"" 
 case_min_100_animals =
-  "Right (JSSourceElementsTop [JSFunction (JSIdentifier \"Animal\") [JSIdentifier \"name\"] (JSFunctionBody [JSSourceElements [JSIf (JSExpression [JSUnary \"!\",JSIdentifier \"name\"]) (JSThrow (JSExpression [JSLiteral \"new \",JSIdentifier \"Error\",JSArguments [[JSStringLiteral '\\'' \"Must specify an animal name\"]]])),JSLiteral \";\",JSExpression [JSElement \"assignmentExpression\" [JSMemberDot [JSLiteral \"this\",JSIdentifier \"name\"],JSOperator \"=\",JSIdentifier \"name\"]]]]),JSLiteral \";\",JSExpression [JSElement \"assignmentExpression\" [JSMemberDot [JSMemberDot [JSIdentifier \"Animal\",JSIdentifier \"prototype\"],JSIdentifier \"toString\"],JSOperator \"=\",JSFunctionExpression [] (JSFunctionBody [JSSourceElements [JSReturn [JSExpression [JSMemberDot [JSLiteral \"this\",JSIdentifier \"name\"]],JSLiteral \"\"]]])]],JSLiteral \";\",JSExpression [JSElement \"assignmentExpression\" [JSIdentifier \"o\",JSOperator \"=\",JSLiteral \"new \",JSIdentifier \"Animal\",JSArguments [[JSStringLiteral '\"' \"bob\"]]]],JSLiteral \";\",JSExpression [JSExpressionBinary \"==\" [JSMemberDot [JSIdentifier \"o\",JSIdentifier \"toString\"],JSArguments []] [JSStringLiteral '\"' \"bob\"]]])"
+  "Right (JSSourceElementsTop [JSFunction (JSIdentifier \"Animal\") [JSIdentifier \"name\"] (JSFunctionBody [JSSourceElements [JSIf (JSExpression [JSUnary \"!\",JSIdentifier \"name\"]) (JSThrow (JSExpression [JSLiteral \"new \",JSIdentifier \"Error\",JSArguments [[JSStringLiteral '\\'' \"Must specify an animal name\"]]])),JSLiteral \";\",JSExpression [JSElement \"assignmentExpression\" [JSMemberDot [JSLiteral \"this\"] (JSIdentifier \"name\"),JSOperator \"=\",JSIdentifier \"name\"]]]]),JSLiteral \";\",JSExpression [JSElement \"assignmentExpression\" [JSMemberDot [JSMemberDot [JSIdentifier \"Animal\"] (JSIdentifier \"prototype\")] (JSIdentifier \"toString\"),JSOperator \"=\",JSFunctionExpression [] (JSFunctionBody [JSSourceElements [JSReturn [JSExpression [JSMemberDot [JSLiteral \"this\"] (JSIdentifier \"name\")],JSLiteral \"\"]]])]],JSLiteral \";\",JSExpression [JSElement \"assignmentExpression\" [JSIdentifier \"o\",JSOperator \"=\",JSLiteral \"new \",JSIdentifier \"Animal\",JSArguments [[JSStringLiteral '\"' \"bob\"]]]],JSLiteral \";\",JSExpression [JSExpressionBinary \"==\" [JSMemberDot [JSIdentifier \"o\"] (JSIdentifier \"toString\"),JSArguments []] [JSStringLiteral '\"' \"bob\"]]])"
   @=? (show $ parseProgram src_min_100_animals)
 caseMin_min_100_animals =
   testMinify src_min_100_animals src_min_100_animals
   
 srcNestedSquare = "this.cursor+=match[0].length;"
 caseNestedSquare =
-  -- "Right (JSSourceElementsTop [JSExpression [JSElement \"assignmentExpression\" [JSLiteral \"this\",JSMemberDot [JSIdentifier \"cursor\"],JSOperator \"+=\",JSIdentifier \"match\",JSMemberSquare (JSExpression [JSDecimal \"0\"]) [JSMemberDot [JSIdentifier \"length\"]]]],JSLiteral \";\"])"
-  "Right (JSSourceElementsTop [JSExpression [JSElement \"assignmentExpression\" [JSMemberDot [JSLiteral \"this\",JSIdentifier \"cursor\"],JSOperator \"+=\",JSMemberDot [JSMemberSquare (JSExpression [JSDecimal \"0\"]) [JSIdentifier \"match\"],JSIdentifier \"length\"]]],JSLiteral \";\"])"
+  "Right (JSSourceElementsTop [JSExpression [JSElement \"assignmentExpression\" [JSMemberDot [JSLiteral \"this\"] (JSIdentifier \"cursor\"),JSOperator \"+=\",JSMemberDot [JSMemberSquare [JSIdentifier \"match\"] (JSExpression [JSDecimal \"0\"])] (JSIdentifier \"length\")]],JSLiteral \";\"])"
   @=? (show $ parseProgram srcNestedSquare)
 caseMinNestedSquare =  
   testMinify "this.cursor+=match[0].length" srcNestedSquare
   
 caseEitherLeft  =  
-  Left "endOfInput" @=? minifym (LB.fromChunks [(E.encodeUtf8 $ T.pack "a=*SYNTAX*ERROR*")])
+  Left "UnexpectedToken (MulToken {token_span = SpanPoint {span_filename = \"src\", span_row = 1, span_column = 3}})"
+  @=? minifym (LB.fromChunks [(E.encodeUtf8 $ T.pack "a=*SYNTAX*ERROR*")])
   
 caseEitherRight  =  
   Right (LB.fromChunks [(E.encodeUtf8 $ T.pack "a=\"no syntax error\"")]) @=? minifym (LB.fromChunks [(E.encodeUtf8 $ T.pack "a=\"no syntax error\";")])

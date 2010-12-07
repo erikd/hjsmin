@@ -11,8 +11,6 @@ import Language.JavaScript.Parser
 import Text.Jasmine.Pretty
 import qualified Blaze.ByteString.Builder as BB
 import qualified Data.ByteString.Lazy as LB
-import qualified Data.Text as T
-import qualified Data.Text.Encoding as E
 import qualified Data.ByteString.Lazy.Char8 as S8
 
 minifym :: LB.ByteString -> Either String LB.ByteString
@@ -38,10 +36,14 @@ minifyFile filename =
      x <- LB.readFile (filename)
      return $ minify x
     
+parse' :: S8.ByteString -> Either ParseError JSNode
 parse' input = parse (lbToStr input) "src"
 
+lbToStr :: S8.ByteString -> [Char]
 lbToStr str = S8.unpack str
 
-strToLb str = (LB.fromChunks [(E.encodeUtf8 $ T.pack str)])
+strToLb :: String -> S8.ByteString
+strToLb str = S8.pack str
+--strToLb str = (LB.fromChunks [(E.encodeUtf8 $ T.pack str)])
      
 -- EOF    

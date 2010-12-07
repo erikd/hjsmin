@@ -196,7 +196,6 @@ regex = do { _ <- char '/'; body <- do { c <- firstchar; cs <- many otherchar; r
 firstchar :: Parser [Char]
 firstchar = do { c <- satisfy (\c -> isPrint c && c /= '*' && c /= '\\' && c /= '/'); 
                  return [c]} <|> escapeseq
-            
 
 escapeseq :: Parser [Char]
 escapeseq = do { _ <- char '\\'; c <- satisfy (\cc -> isPrint cc); return ['\\',c]}
