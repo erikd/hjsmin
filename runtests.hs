@@ -29,7 +29,7 @@ testSuite = testGroup "Text.Jasmine.Parse"
     , testCase "0_f.js"           case0_f
     , testCase "01_semi1.js"      case01_semi1 
     , testCase "min_100_animals"  case_min_100_animals
-    , testCase "nestedSquare"     caseNestedSquare
+    , testCase "mergeStrings"     caseMergeStrings
     ]
 
 testSuiteMin :: Test
@@ -43,6 +43,7 @@ testSuiteMin = testGroup "Text.Jasmine.Pretty"
     , testCase "01_semi1.js"      caseMin01_semi1 
     , testCase "min_100_animals"  caseMin_min_100_animals
     , testCase "minNestedSquare"  caseMinNestedSquare
+    , testCase "minMergeStrings"  caseMinMergeStrings
     , testCase "EitherLeft"       caseEitherLeft  
     , testCase "EitherRight"      caseEitherRight  
     ]
@@ -193,6 +194,13 @@ case_min_100_animals =
   @=? (show $ parseProgram src_min_100_animals)
 caseMin_min_100_animals =
   testMinify src_min_100_animals src_min_100_animals
+  
+srcMergeStrings = "throw new TypeError(\"Function.prototype.apply called on\"+\" uncallable object\");"
+caseMergeStrings =  
+  "Right (JSSourceElementsTop [JSThrow (JSExpression [JSLiteral \"new \",JSIdentifier \"TypeError\",JSArguments [[JSExpressionBinary \"+\" [JSStringLiteral '\"' \"Function.prototype.apply called on\"] [JSStringLiteral '\"' \" uncallable object\"]]]]),JSLiteral \";\"])"
+  @=? (show $ parseProgram srcMergeStrings)
+caseMinMergeStrings =  
+  testMinify "throw new TypeError(\"Function.prototype.apply called on uncallable object\")" srcMergeStrings
   
 srcNestedSquare = "this.cursor+=match[0].length;"
 caseNestedSquare =

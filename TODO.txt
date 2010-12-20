@@ -74,6 +74,12 @@ real	0m1.625s
 user	0m1.616s
 sys	0m0.016s
 
+Baseline 2010-12-20, after getting all tests to pass at last
+
+real	0m0.209s
+user	0m0.196s
+sys	0m0.004s
+
 
 
 EOF

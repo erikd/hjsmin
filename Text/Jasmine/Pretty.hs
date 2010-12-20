@@ -182,6 +182,10 @@ myFix ((JSVariables t1 x1s):(JSLiteral l):(JSVariables t2 x2s):xs)
   | t1 == t2 = myFix ((JSVariables t1 (x1s++x2s)):xs)
   | otherwise = (JSVariables t1 x1s):myFix ((JSLiteral l):(JSVariables t2 x2s):xs)
 
+myFix ((JSVariables t1 x1s):(JSVariables t2 x2s):xs) 
+  | t1 == t2 = myFix ((JSVariables t1 (x1s++x2s)):xs)
+  | otherwise = (JSVariables t1 x1s):myFix ((JSVariables t2 x2s):xs)
+
 -- Merge adjacent semi colons
 myFix ((JSLiteral ";"):(JSLiteral ";"):xs)  = myFix ((JSLiteral ";"):xs)
 myFix ((JSLiteral ";"):(JSLiteral "" ):xs)  = myFix ((JSLiteral ""):xs)
@@ -191,10 +195,15 @@ myFix (x:xs)  = x : myFix xs
 -- Merge strings split over lines and using "+"
 fixLiterals :: [JSNode] -> [JSNode]
 fixLiterals [] = []
-fixLiterals [x] = [x]
+-- Old version
 fixLiterals ((JSStringLiteral d1 s1):(JSExpressionBinary "+" [JSStringLiteral d2 s2] r):xs)
        | d1 == d2 = fixLiterals ((JSStringLiteral d1 (s1++s2)):(r++xs))
        | otherwise = (JSStringLiteral d1 s1):fixLiterals ((JSExpressionBinary "+" [JSStringLiteral d2 s2] r):xs) 
+
+fixLiterals ((JSExpressionBinary "+" [JSStringLiteral d1 s1] [JSStringLiteral d2 s2]):xs)
+       | d1 == d2 = fixLiterals ((JSStringLiteral d1 (s1++s2)):xs)
+       | otherwise = (JSExpressionBinary "+" [JSStringLiteral d1 s1] [JSStringLiteral d2 s2]):fixLiterals xs              
+
 
 fixLiterals (x:xs) = x:fixLiterals xs
 
@@ -560,5 +569,49 @@ _case25 = JSSourceElementsTop
                 ]
             ]
 
+-- readJs "var newlines=spaces.match(/\\n/g);var newlines=spaces.match(/\\n/g);"
+_case26 :: JSNode
+_case26 = JSSourceElementsTop 
+          [
+            JSVariables "var" 
+              [
+                JSVarDecl (JSIdentifier "newlines") 
+                  [JSMemberDot [JSIdentifier "spaces"] (JSIdentifier "match"),JSArguments [[JSRegEx "/\\n/g"]]]
+              ],
+            JSVariables "var" 
+              [
+                JSVarDecl (JSIdentifier "newlines") [JSMemberDot [JSIdentifier "spaces"] (JSIdentifier "match"),
+                                                     JSArguments [[JSRegEx "/\\n/g"]]]
+              ]
+          ]
+          
+-- readJs "\"mary\"+\"had\""
+_case27 :: JSNode
+_case27 = JSSourceElementsTop 
+          [
+            JSExpression [JSExpressionBinary "+" [JSStringLiteral '"' "mary"] [JSStringLiteral '"' "had"]]
+          ]
+          
+-- readJs "throw new TypeError(\"Function.prototype.apply called on\"+\" uncallable object\")"
+_case28 :: JSNode
+_case28 = JSSourceElementsTop 
+          [
+            JSThrow 
+              (
+                JSExpression 
+                  [
+                    JSLiteral "new ",
+                    JSIdentifier "TypeError",
+                    JSArguments 
+                      [
+                        [
+                          JSExpressionBinary "+" 
+                            [JSStringLiteral '"' "Function.prototype.apply called on"] 
+                            [JSStringLiteral '"' " uncallable object"]
+                        ]
+                      ]
+                  ]
+              )
+          ]          
 -- EOF
 
