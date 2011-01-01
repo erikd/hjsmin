@@ -80,6 +80,12 @@ real	0m0.209s
 user	0m0.196s
 sys	0m0.004s
 
+After working in unicode, in language-javascript-0.0.3 [2010-12-28]
+
+real	0m0.236s
+user	0m0.224s
+sys	0m0.012s
+
 
 
 EOF

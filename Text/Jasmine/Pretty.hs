@@ -50,7 +50,7 @@ renderJS (JSOperator s)          = text s
 renderJS (JSExpression xs)       = rJS xs
 renderJS (JSSourceElements xs)   = rJS (map fixBlock $ fixSourceElements xs)
 renderJS (JSSourceElementsTop xs)= rJS (fixTop $ map fixBlock $ fixSourceElements xs)
-renderJS (JSElement _s xs)       = rJS $ fixLiterals xs
+--renderJS (JSElement _s xs)       = rJS $ fixLiterals xs
 renderJS (JSFunction s p xs)     = (text "function") <+> (renderJS s) <> (text "(") <> (commaList p) <> (text ")") <> (renderJS xs)
 renderJS (JSFunctionBody xs)     = (text "{") <> (rJS xs) <> (text "}")
 renderJS (JSFunctionExpression as s) = (text "function") <> (text "(") <> (commaList as) <> (text ")") <> (renderJS s)
@@ -91,7 +91,7 @@ renderJS (JSCatch i c s)         = (text "catch") <> (char '(') <> (renderJS i) 
 renderJS (JSContinue is)         = (text "continue") <> (rJS is) -- <> (char ';')
 renderJS (JSDefault xs)          = (text "default") <> (char ':') <> (renderJS xs)
 renderJS (JSDoWhile s e _ms)     = (text "do") <> (renderJS s) <> (text "while") <> (char '(') <> (renderJS e) <> (char ')') -- <> (renderJS ms)
-renderJS (JSElementList xs)      = rJS xs
+--renderJS (JSElementList xs)      = rJS xs
 renderJS (JSElision xs)          = (char ',') <> (rJS xs)
 renderJS (JSExpressionBinary o e1 e2) = (rJS e1) <> (text o) <> (rJS e2)
 --renderJS (JSExpressionBinary o e1 e2) = (text o) <> (rJS e1) <> (rJS e2)
@@ -248,16 +248,14 @@ spaceNeeded xs =
 _case0 :: JSNode
 _case0 = JSSourceElements 
           [
-            JSExpression [JSElement "assignmentExpression" [JSIdentifier "x",JSOperator "=",JSDecimal "1"]],
+            JSExpression [JSIdentifier "x",JSOperator "=",JSDecimal "1"],
             JSEmpty (JSLiteral ";")
           ]
 
 -- doParse statementList "a=1;"  
 _case1 :: [JSNode]
 _case1 = [JSExpression 
-         [JSElement "assignmentExpression" 
-          [JSIdentifier "a",JSOperator "=",JSDecimal "1"]
-         ]
+         [JSIdentifier "a",JSOperator "=",JSDecimal "1"]
         ,JSEmpty (JSLiteral ";")
         ]
         
@@ -266,8 +264,6 @@ _case1 = [JSExpression
 _case4 :: JSNode
 _case4 = JSExpression 
           [
-            JSElement "assignmentExpression" 
-               [
                JSIdentifier "opTypeNames",
                JSOperator "=",
                JSObjectLiteral 
@@ -275,7 +271,6 @@ _case4 = JSExpression
                   JSPropertyNameandValue (JSStringLiteral '\'' ";")   [JSStringLiteral '"' "SEMICOLON"],
                   JSPropertyNameandValue (JSStringLiteral '\'' ",")   [JSStringLiteral '"' "COMMA"]
                  ]
-               ]
           ]
           
 
@@ -293,7 +288,7 @@ _case5 = JSSourceElements
                                      JSExpressionBinary "!=" [JSStringLiteral '"' "string"] []]) 
                       (JSReturn [JSExpression [JSIdentifier "s"],JSLiteral ";"])
                     ,JSLiteral ";"
-                    ,JSExpression [JSElement "assignmentExpression" [JSIdentifier "a",JSOperator "=",JSDecimal "1"]]
+                    ,JSExpression [JSIdentifier "a",JSOperator "=",JSDecimal "1"]
                     ]
               ]
              )
@@ -388,7 +383,7 @@ _case12 = undefined
 _case13 :: JSNode
 _case13 = JSSourceElements 
           [
-            JSFor [JSExpression [JSElement "assignmentExpression" [JSIdentifier "i",JSOperator "=",JSDecimal "0"]]] 
+            JSFor [JSExpression [JSIdentifier "i",JSOperator "=",JSDecimal "0"]] 
             [] 
             [] 
             (JSBlock (
@@ -400,7 +395,7 @@ _case13 = JSSourceElements
             [] 
             [] 
             (JSBlock (
-                JSStatementList [JSExpression [JSElement "assignmentExpression" [JSIdentifier "x",JSOperator "=",JSDecimal "1"]]]
+                JSStatementList [JSExpression [JSIdentifier "x",JSOperator "=",JSDecimal "1"]]
                 )
             )
           ]          
@@ -423,7 +418,7 @@ _case15 = JSSourceElements
 _case16 :: JSNode
 _case16 = JSSourceElementsTop 
             [
-              JSFor [JSExpression [JSElement "assignmentExpression" [JSIdentifier "i",JSOperator "=",JSDecimal "0"]]] [] [] 
+              JSFor [JSExpression [JSIdentifier "i",JSOperator "=",JSDecimal "0"]] [] [] 
                 (JSBlock 
                  (JSStatementList 
                   [
@@ -433,7 +428,7 @@ _case16 = JSSourceElementsTop
                   ]
                  )
                 ),
-              JSExpression [JSElement "assignmentExpression" [JSIdentifier "x",JSOperator "=",JSDecimal "1"]],
+              JSExpression [JSIdentifier "x",JSOperator "=",JSDecimal "1"],
               JSLiteral ";"
             ]
 
@@ -450,10 +445,7 @@ _case18 = JSSourceElementsTop
                 (JSReturn [JSLiteral ";"]),
               JSWhile (JSExpression [JSUnary "--",JSIdentifier "n",JSExpressionBinary ">=" [JSDecimal "0"] []]) 
                 (JSExpression 
-                   [
-                     JSElement "assignmentExpression" 
-                       [JSIdentifier "s",JSOperator "+=",JSIdentifier "t"]
-                   ]
+                   [JSIdentifier "s",JSOperator "+=",JSIdentifier "t"]
                 ),
               JSLiteral ";"
             ]            
@@ -469,10 +461,8 @@ _case19 = JSSourceElementsTop
                      [
                        JSReturn [JSExpression [JSIdentifier "n"],JSLiteral ";"],
                        JSExpression 
-                         [JSElement "assignmentExpression" 
-                          [
+                         [
                             JSIdentifier "x",JSOperator "=",JSDecimal "1"
-                          ]
                          ]
                      ]
                  ]
@@ -484,7 +474,7 @@ _case20 :: [JSNode]
 _case20 = [
            JSReturn [JSExpression [JSIdentifier "n"],JSLiteral ";"],
            JSExpression 
-             [JSElement "assignmentExpression" [JSIdentifier "x",JSOperator "=",JSDecimal "1"]]
+             [JSIdentifier "x",JSOperator "=",JSDecimal "1"]
           ]            
             
 --doParse program "if(!u)continue;t=n"
@@ -493,7 +483,7 @@ _case21 = JSSourceElementsTop
             [
               JSIf (JSExpression [JSUnary "!",JSIdentifier "u"]) 
                    (JSContinue [JSLiteral ";"]),
-              JSExpression [JSElement "assignmentExpression" [JSIdentifier "t",JSOperator "=",JSIdentifier "n"]]
+              JSExpression [JSIdentifier "t",JSOperator "=",JSIdentifier "n"]
             ]          
             
 --doParse program "if (!v.base){throw new ReferenceError(v.propertyName + \" is not defined\");};x=1"
@@ -537,15 +527,13 @@ _case24 :: JSNode
 _case24 = JSSourceElementsTop 
             [
               JSExpression 
-                [
-                  JSElement "assignmentExpression" 
                     [JSIdentifier "x",
                      JSOperator "=",
                      JSStringLiteral '"' "hello ",
                      JSExpressionBinary "+" 
                        [JSStringLiteral '"' "world"] []
                     ]
-                ],
+                ,
               JSLiteral ";"
             ]            
             
