@@ -1,5 +1,5 @@
 name:            hjsmin
-version:         0.0.6
+version:         0.0.7
 license:         BSD3
 license-file:    LICENSE
 author:          Alan Zimmerman <alan.zimm@gmail.com>
@@ -30,7 +30,7 @@ library
                    , blaze-builder       >= 0.2     && < 1
                    , text                >= 0.8     && < 1
                    , containers          >= 0.2     && < 0.5
-                   , language-javascript >= 0.1     && < 0.5
+                   , language-javascript >= 0.2     && < 0.5
     exposed-modules: Text.Jasmine
     other-modules:   Text.Jasmine.Parse, Text.Jasmine.Pretty, Text.Jasmine.Token
     ghc-options:     -Wall

@@ -50,10 +50,10 @@ renderJS (JSOperator s)          = text s
 renderJS (JSExpression xs)       = rJS xs
 renderJS (JSSourceElements xs)   = rJS (map fixBlock $ fixSourceElements xs)
 renderJS (JSSourceElementsTop xs)= rJS (fixTop $ map fixBlock $ fixSourceElements xs)
---renderJS (JSElement _s xs)       = rJS $ fixLiterals xs
 renderJS (JSFunction s p xs)     = (text "function") <+> (renderJS s) <> (text "(") <> (commaList p) <> (text ")") <> (renderJS xs)
 renderJS (JSFunctionBody xs)     = (text "{") <> (rJS xs) <> (text "}")
-renderJS (JSFunctionExpression as s) = (text "function") <> (text "(") <> (commaList as) <> (text ")") <> (renderJS s)
+renderJS (JSFunctionExpression [] p xs) = (text "function")             <> (text "(") <> (commaList p) <> (text ")") <> (renderJS xs)
+renderJS (JSFunctionExpression  s p xs) = (text "function") <+> (rJS s) <> (text "(") <> (commaList p) <> (text ")") <> (renderJS xs)
 renderJS (JSArguments xs)        = (text "(") <> (commaListList $ map fixLiterals xs) <> (text ")")
 
 renderJS (JSBlock x)             = (text "{") <> (renderJS x) <> (text "}")
