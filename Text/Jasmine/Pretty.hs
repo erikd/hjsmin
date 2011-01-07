@@ -142,7 +142,10 @@ rJS :: [JSNode] -> BB.Builder
 rJS xs = hcat $ map renderJS xs
 
 commaList :: [JSNode] -> BB.Builder
-commaList xs = (hcat $ (punctuate comma (toDoc xs)))
+commaList [] = empty
+commaList xs = (hcat $ (punctuate comma (toDoc xs') ++ trail))
+  where
+    (xs', trail) = if (last xs == JSLiteral ",") then (init xs, [comma]) else (xs,[])
 
 commaListList :: [[JSNode]] -> BB.Builder
 commaListList xs = (hcat $ punctuate comma $ map rJS xs)

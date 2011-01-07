@@ -5,7 +5,6 @@ import Test.HUnit hiding (Test)
 
 import Data.Char
 import Text.Jasmine
---import Text.Jasmine.Parse -- hiding (main)
 import Language.JavaScript.Parser
 import Text.Jasmine.Pretty
 import qualified Data.ByteString.Lazy as LB
@@ -30,6 +29,7 @@ testSuite = testGroup "Text.Jasmine.Parse"
     , testCase "01_semi1.js"      case01_semi1 
     , testCase "min_100_animals"  case_min_100_animals
     , testCase "mergeStrings"     caseMergeStrings
+    , testCase "TrailingCommas"   caseTrailingCommas
     ]
 
 testSuiteMin :: Test
@@ -46,6 +46,7 @@ testSuiteMin = testGroup "Text.Jasmine.Pretty"
     , testCase "minMergeStrings"  caseMinMergeStrings
     , testCase "EitherLeft"       caseEitherLeft  
     , testCase "EitherRight"      caseEitherRight  
+    , testCase "TrailingCommas"   caseMinTrailingCommas
     ]
 
 testSuiteFiles :: Test
@@ -216,6 +217,13 @@ caseEitherLeft  =
 caseEitherRight  =  
   Right (LB.fromChunks [(E.encodeUtf8 $ T.pack "a=\"no syntax error\"")]) @=? minifym (LB.fromChunks [(E.encodeUtf8 $ T.pack "a=\"no syntax error\";")])
                   
+srcTrailingCommas = "x={a:1,};y=[d,e,];"
+caseTrailingCommas =
+  "Right (JSSourceElementsTop [JSExpression [JSIdentifier \"x\",JSOperator \"=\",JSObjectLiteral [JSPropertyNameandValue (JSIdentifier \"a\") [JSDecimal \"1\"],JSLiteral \",\"]],JSLiteral \";\",JSExpression [JSIdentifier \"y\",JSOperator \"=\",JSArrayLiteral [JSIdentifier \"d\",JSElision [],JSIdentifier \"e\",JSLiteral \",\"]],JSLiteral \";\"])"
+  @=? (show $ parseProgram srcTrailingCommas)
+caseMinTrailingCommas =  
+  testMinify "x={a:1,};y=[d,e,]" srcTrailingCommas
+  
 -- ---------------------------------------------------------------------
 -- utilities
 
