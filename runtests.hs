@@ -176,17 +176,17 @@ caseMin0_f =
   testMinify "function Hello(a){ExprArray(1,1)}" src0_f
   
 src01_semi1 = (
-    "{zero.one;zero}\n"++
-    "one\n"++
+    "{zero.one1;zero}\n"++
+    "one1\n"++
     "two;three\n"++
     "{{}} four;\n"++
     "// five\n"++
     "five")  
 case01_semi1 =
-  "Right (JSSourceElementsTop [JSBlock (JSStatementList [JSExpression [JSMemberDot [JSIdentifier \"zero\"] (JSIdentifier \"one\")],JSLiteral \";\",JSExpression [JSIdentifier \"zero\"]]),JSExpression [JSIdentifier \"one\"],JSExpression [JSIdentifier \"two\"],JSLiteral \";\",JSExpression [JSIdentifier \"three\"],JSLiteral \";\",JSExpression [JSIdentifier \"four\"],JSLiteral \";\",JSExpression [JSIdentifier \"five\"]])"
+  "Right (JSSourceElementsTop [JSBlock (JSStatementList [JSExpression [JSMemberDot [JSIdentifier \"zero\"] (JSIdentifier \"one1\")],JSLiteral \";\",JSExpression [JSIdentifier \"zero\"]]),JSExpression [JSIdentifier \"one1\"],JSExpression [JSIdentifier \"two\"],JSLiteral \";\",JSExpression [JSIdentifier \"three\"],JSLiteral \";\",JSExpression [JSIdentifier \"four\"],JSLiteral \";\",JSExpression [JSIdentifier \"five\"]])"
   @=? (show $ parseProgram src01_semi1)
 caseMin01_semi1 =
-  testMinify "{zero.one;zero};one;two;three;four;five" src01_semi1
+  testMinify "{zero.one1;zero};one1;two;three;four;five" src01_semi1
   
 src_min_100_animals = "function Animal(name){if(!name)throw new Error('Must specify an animal name');this.name=name};Animal.prototype.toString=function(){return this.name};o=new Animal(\"bob\");o.toString()==\"bob\"" 
 case_min_100_animals =
