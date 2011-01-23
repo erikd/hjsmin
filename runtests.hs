@@ -116,7 +116,7 @@ testSuiteFilesUnminified = testGroup "Text.Jasmine.Pretty filesUnminified"
 srcHelloWorld = "function Hello(a) {}"
 caseHelloWorld =  
   "Right (JSSourceElementsTop [JSFunction (JSIdentifier \"Hello\") [JSIdentifier \"a\"] (JSFunctionBody [])])"
-  @=? (show $ parseProgram srcHelloWorld)
+  @=? (showStrippedMaybe $ parseProgram srcHelloWorld)
 caseMinHelloWorld = 
   -- "function Hello(a){}" @=? (minify (U.fromString srcHelloWorld))
   testMinify "function Hello(a){}" srcHelloWorld
@@ -124,7 +124,7 @@ caseMinHelloWorld =
 srcHelloWorld2 = "function Hello(a) {b=1}" 
 caseHelloWorld2 =  
   "Right (JSSourceElementsTop [JSFunction (JSIdentifier \"Hello\") [JSIdentifier \"a\"] (JSFunctionBody [JSSourceElements [JSExpression [JSIdentifier \"b\",JSOperator \"=\",JSDecimal \"1\"]]])])"
-  @=? (show $ parseProgram srcHelloWorld2)
+  @=? (showStrippedMaybe $ parseProgram srcHelloWorld2)
 caseMinHelloWorld2 =  
   -- "function Hello(a){b=1}" @=? (minify (U.fromString srcHelloWorld2))
   testMinify "function Hello(a){b=1}" srcHelloWorld2
@@ -132,37 +132,35 @@ caseMinHelloWorld2 =
 srcSimpleAssignment = "a=1;"   
 caseSimpleAssignment = 
   "Right (JSSourceElementsTop [JSExpression [JSIdentifier \"a\",JSOperator \"=\",JSDecimal \"1\"],JSLiteral \";\"])"
-  @=? (show $ parseProgram srcSimpleAssignment)
+  @=? (showStrippedMaybe $ parseProgram srcSimpleAssignment)
 caseMinSimpleAssignment =
   testMinify "a=1" srcSimpleAssignment
 
 srcEmptyFor = "for (i = 0;;){}"
 caseEmptyFor =
-  "Right (JSSourceElementsTop [JSFor [JSExpression [JSIdentifier \"i\",JSOperator \"=\",JSDecimal \"0\"]] [] [] (JSLiteral \";\")])"
-  @=? (show $ parseProgram srcEmptyFor)  
+  "Right (JSSourceElementsTop [JSFor [JSExpression [JSIdentifier \"i\",JSOperator \"=\",JSDecimal \"0\"]] [] [] (JSStatementBlock (JSStatementList []))])"
+  @=? (showStrippedMaybe $ parseProgram srcEmptyFor)  
 srcFullFor = "for (i = 0;i<10;i++){}"
 caseFullFor =
-  "Right (JSSourceElementsTop [JSFor [JSExpression [JSIdentifier \"i\",JSOperator \"=\",JSDecimal \"0\"]] [JSExpression [JSExpressionBinary \"<\" [JSIdentifier \"i\"] [JSDecimal \"10\"]]] [JSExpression [JSExpressionPostfix \"++\" [JSIdentifier \"i\"]]] (JSLiteral \";\")])"
-  @=? (show $ parseProgram srcFullFor)
+  "Right (JSSourceElementsTop [JSFor [JSExpression [JSIdentifier \"i\",JSOperator \"=\",JSDecimal \"0\"]] [JSExpression [JSExpressionBinary \"<\" [JSIdentifier \"i\"] [JSDecimal \"10\"]]] [JSExpression [JSExpressionPostfix \"++\" [JSIdentifier \"i\"]]] (JSStatementBlock (JSStatementList []))])"
+  @=? (showStrippedMaybe $ parseProgram srcFullFor)
   
 srcForVarFull = "for(var i=0,j=tokens.length;i<j;i++){}"
 caseForVarFull =
-  "Right (JSSourceElementsTop [JSForVar [JSVarDecl (JSIdentifier \"i\") [JSDecimal \"0\"],JSVarDecl (JSIdentifier \"j\") [JSMemberDot [JSIdentifier \"tokens\"] (JSIdentifier \"length\")]] [JSExpression [JSExpressionBinary \"<\" [JSIdentifier \"i\"] [JSIdentifier \"j\"]]] [JSExpression [JSExpressionPostfix \"++\" [JSIdentifier \"i\"]]] (JSLiteral \";\")])"
-  @=? (show $ parseProgram srcForVarFull)
+  "Right (JSSourceElementsTop [JSForVar [JSVarDecl (JSIdentifier \"i\") [JSDecimal \"0\"],JSVarDecl (JSIdentifier \"j\") [JSMemberDot [JSIdentifier \"tokens\"] (JSIdentifier \"length\")]] [JSExpression [JSExpressionBinary \"<\" [JSIdentifier \"i\"] [JSIdentifier \"j\"]]] [JSExpression [JSExpressionPostfix \"++\" [JSIdentifier \"i\"]]] (JSStatementBlock (JSStatementList []))])"
+  @=? (showStrippedMaybe $ parseProgram srcForVarFull)
 
 srcIfElse1 = "if(a){b=1}else c=2";
 caseIfElse1 =
-  "Right (JSSourceElementsTop [JSIfElse (JSExpression [JSIdentifier \"a\"]) (JSBlock (JSStatementList [JSExpression [JSIdentifier \"b\",JSOperator \"=\",JSDecimal \"1\"]])) (JSExpression [JSIdentifier \"c\",JSOperator \"=\",JSDecimal \"2\"])])"
-  -- @=? (show $ parseString program srcIfElse1)
-  @=? (show $ parseProgram srcIfElse1)
+  "Right (JSSourceElementsTop [JSIfElse (JSExpression [JSIdentifier \"a\"]) (JSStatementBlock (JSStatementList [JSExpression [JSIdentifier \"b\",JSOperator \"=\",JSDecimal \"1\"]])) (JSExpression [JSIdentifier \"c\",JSOperator \"=\",JSDecimal \"2\"])])"
+  @=? (showStrippedMaybe $ parseProgram srcIfElse1)
 caseMinIfElse1 =
   testMinify "if(a){b=1}else c=2" srcIfElse1
 
 srcIfElse2 = "if(a){b=1}else {c=2;d=4}";
 caseIfElse2 =
-  "Right (JSSourceElementsTop [JSIfElse (JSExpression [JSIdentifier \"a\"]) (JSBlock (JSStatementList [JSExpression [JSIdentifier \"b\",JSOperator \"=\",JSDecimal \"1\"]])) (JSBlock (JSStatementList [JSExpression [JSIdentifier \"c\",JSOperator \"=\",JSDecimal \"2\"],JSLiteral \";\",JSExpression [JSIdentifier \"d\",JSOperator \"=\",JSDecimal \"4\"]]))])"
-  -- @=? (show $ parseString program srcIfElse2)
-  @=? (show $ parseProgram srcIfElse2)
+  "Right (JSSourceElementsTop [JSIfElse (JSExpression [JSIdentifier \"a\"]) (JSStatementBlock (JSStatementList [JSExpression [JSIdentifier \"b\",JSOperator \"=\",JSDecimal \"1\"]])) (JSStatementBlock (JSStatementList [JSExpression [JSIdentifier \"c\",JSOperator \"=\",JSDecimal \"2\"],JSLiteral \";\",JSExpression [JSIdentifier \"d\",JSOperator \"=\",JSDecimal \"4\"]]))])"
+  @=? (showStrippedMaybe $ parseProgram srcIfElse2)
 caseMinIfElse2 =
   testMinify "if(a){b=1}else{c=2;d=4}" srcIfElse2
 
@@ -171,7 +169,7 @@ case0_f =
   -- "Right (JSSourceElementsTop [JSFunction (JSIdentifier \"Hello\") [JSIdentifier \"a\"] (JSFunctionBody [JSSourceElements [JSExpression [JSIdentifier \"ExprArray\",JSArguments [[JSDecimal 1],[JSDecimal 1]]],JSLiteral \"\"]])]"
   "Right (JSSourceElementsTop [JSFunction (JSIdentifier \"Hello\") [JSIdentifier \"a\"] (JSFunctionBody [JSSourceElements [JSExpression [JSIdentifier \"ExprArray\",JSArguments [[JSDecimal \"1\"],[JSDecimal \"1\"]]],JSLiteral \";\"]])])"
   -- @=? (show $ parseString program src0_f)
-  @=? (show $ parseProgram src0_f)
+  @=? (showStrippedMaybe $ parseProgram src0_f)
 caseMin0_f =
   testMinify "function Hello(a){ExprArray(1,1)}" src0_f
   
@@ -183,29 +181,29 @@ src01_semi1 = (
     "// five\n"++
     "five")  
 case01_semi1 =
-  "Right (JSSourceElementsTop [JSBlock (JSStatementList [JSExpression [JSMemberDot [JSIdentifier \"zero\"] (JSIdentifier \"one1\")],JSLiteral \";\",JSExpression [JSIdentifier \"zero\"]]),JSExpression [JSIdentifier \"one1\"],JSExpression [JSIdentifier \"two\"],JSLiteral \";\",JSExpression [JSIdentifier \"three\"],JSLiteral \";\",JSExpression [JSIdentifier \"four\"],JSLiteral \";\",JSExpression [JSIdentifier \"five\"]])"
-  @=? (show $ parseProgram src01_semi1)
+  "Right (JSSourceElementsTop [JSStatementBlock (JSStatementList [JSExpression [JSMemberDot [JSIdentifier \"zero\"] (JSIdentifier \"one1\")],JSLiteral \";\",JSExpression [JSIdentifier \"zero\"]]),JSExpression [JSIdentifier \"one1\"],JSExpression [JSIdentifier \"two\"],JSLiteral \";\",JSExpression [JSIdentifier \"three\"],JSStatementBlock (JSStatementList [JSStatementBlock (JSStatementList [])]),JSExpression [JSIdentifier \"four\"],JSLiteral \";\",JSExpression [JSIdentifier \"five\"]])"
+  @=? (showStrippedMaybe $ parseProgram src01_semi1)
 caseMin01_semi1 =
   testMinify "{zero.one1;zero};one1;two;three;four;five" src01_semi1
   
 src_min_100_animals = "function Animal(name){if(!name)throw new Error('Must specify an animal name');this.name=name};Animal.prototype.toString=function(){return this.name};o=new Animal(\"bob\");o.toString()==\"bob\"" 
 case_min_100_animals =
   "Right (JSSourceElementsTop [JSFunction (JSIdentifier \"Animal\") [JSIdentifier \"name\"] (JSFunctionBody [JSSourceElements [JSIf (JSExpression [JSUnary \"!\",JSIdentifier \"name\"]) (JSBlock (JSStatementList [JSThrow (JSExpression [JSLiteral \"new \",JSIdentifier \"Error\",JSArguments [[JSStringLiteral '\\'' \"Must specify an animal name\"]]])])),JSExpression [JSMemberDot [JSLiteral \"this\"] (JSIdentifier \"name\"),JSOperator \"=\",JSIdentifier \"name\"]]]),JSLiteral \";\",JSExpression [JSMemberDot [JSMemberDot [JSIdentifier \"Animal\"] (JSIdentifier \"prototype\")] (JSIdentifier \"toString\"),JSOperator \"=\",JSFunctionExpression [] [] (JSFunctionBody [JSSourceElements [JSReturn [JSExpression [JSMemberDot [JSLiteral \"this\"] (JSIdentifier \"name\")],JSLiteral \"\"]]])],JSLiteral \";\",JSExpression [JSIdentifier \"o\",JSOperator \"=\",JSLiteral \"new \",JSIdentifier \"Animal\",JSArguments [[JSStringLiteral '\"' \"bob\"]]],JSLiteral \";\",JSExpression [JSExpressionBinary \"==\" [JSMemberDot [JSIdentifier \"o\"] (JSIdentifier \"toString\"),JSArguments []] [JSStringLiteral '\"' \"bob\"]]])"
-  @=? (show $ parseProgram src_min_100_animals)
+  @=? (showStrippedMaybe $ parseProgram src_min_100_animals)
 caseMin_min_100_animals =
   testMinify src_min_100_animals src_min_100_animals
   
 srcMergeStrings = "throw new TypeError(\"Function.prototype.apply called on\"+\" uncallable object\");"
 caseMergeStrings =  
   "Right (JSSourceElementsTop [JSThrow (JSExpression [JSLiteral \"new \",JSIdentifier \"TypeError\",JSArguments [[JSExpressionBinary \"+\" [JSStringLiteral '\"' \"Function.prototype.apply called on\"] [JSStringLiteral '\"' \" uncallable object\"]]]]),JSLiteral \";\"])"
-  @=? (show $ parseProgram srcMergeStrings)
+  @=? (showStrippedMaybe $ parseProgram srcMergeStrings)
 caseMinMergeStrings =  
   testMinify "throw new TypeError(\"Function.prototype.apply called on uncallable object\")" srcMergeStrings
   
 srcNestedSquare = "this.cursor+=match[0].length;"
 caseNestedSquare =
   "Right (JSSourceElementsTop [JSExpression [JSMemberDot [JSLiteral \"this\"] (JSIdentifier \"cursor\"),JSOperator \"+=\",JSMemberDot [JSMemberSquare [JSIdentifier \"match\"] (JSExpression [JSDecimal \"0\"])] (JSIdentifier \"length\")],JSLiteral \";\"])"
-  @=? (show $ parseProgram srcNestedSquare)
+  @=? (showStrippedMaybe $ parseProgram srcNestedSquare)
 caseMinNestedSquare =  
   testMinify "this.cursor+=match[0].length" srcNestedSquare
   
@@ -220,7 +218,7 @@ caseEitherRight  =
 srcTrailingCommas = "x={a:1,};y=[d,e,];"
 caseTrailingCommas =
   "Right (JSSourceElementsTop [JSExpression [JSIdentifier \"x\",JSOperator \"=\",JSObjectLiteral [JSPropertyNameandValue (JSIdentifier \"a\") [JSDecimal \"1\"],JSLiteral \",\"]],JSLiteral \";\",JSExpression [JSIdentifier \"y\",JSOperator \"=\",JSArrayLiteral [JSIdentifier \"d\",JSElision [],JSIdentifier \"e\",JSLiteral \",\"]],JSLiteral \";\"])"
-  @=? (show $ parseProgram srcTrailingCommas)
+  @=? (showStrippedMaybe $ parseProgram srcTrailingCommas)
 caseMinTrailingCommas =  
   testMinify "x={a:1,};y=[d,e,]" srcTrailingCommas
   

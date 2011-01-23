@@ -41,101 +41,106 @@ punctuate p xs = intersperse p xs
 
 -- ---------------------------------------------------------------------
 
-
 renderJS :: JSNode -> BB.Builder
-renderJS (JSEmpty l)             = (renderJS l)
-renderJS (JSIdentifier s)        = text s
-renderJS (JSDecimal i)           = text i
-renderJS (JSOperator s)          = text s
-renderJS (JSExpression xs)       = rJS xs
-renderJS (JSSourceElements xs)   = rJS (map fixBlock $ fixSourceElements xs)
-renderJS (JSSourceElementsTop xs)= rJS (fixTop $ map fixBlock $ fixSourceElements xs)
-renderJS (JSFunction s p xs)     = (text "function") <+> (renderJS s) <> (text "(") <> (commaList p) <> (text ")") <> (renderJS xs)
-renderJS (JSFunctionBody xs)     = (text "{") <> (rJS xs) <> (text "}")
-renderJS (JSFunctionExpression [] p xs) = (text "function")             <> (text "(") <> (commaList p) <> (text ")") <> (renderJS xs)
-renderJS (JSFunctionExpression  s p xs) = (text "function") <+> (rJS s) <> (text "(") <> (commaList p) <> (text ")") <> (renderJS xs)
-renderJS (JSArguments xs)        = (text "(") <> (commaListList $ map fixLiterals xs) <> (text ")")
+renderJS (NS node _) = rn node
 
-renderJS (JSBlock x)             = (text "{") <> (renderJS x) <> (text "}")
+rn :: Node -> BB.Builder
+rn (JSEmpty l)             = (renderJS l)
+rn (JSIdentifier s)        = text s
+rn (JSDecimal i)           = text i
+rn (JSOperator s)          = text s
+rn (JSExpression xs)       = rJS xs
+rn (JSSourceElements xs)   = rJS (map fixBlock $ fixSourceElements xs)
+rn (JSSourceElementsTop xs)= rJS (fixTop $ map fixBlock $ fixSourceElements xs)
+rn (JSFunction s p xs)     = (text "function") <+> (renderJS s) <> (text "(") <> (commaList p) <> (text ")") <> (renderJS xs)
+rn (JSFunctionBody xs)     = (text "{") <> (rJS xs) <> (text "}")
+rn (JSFunctionExpression [] p xs) = (text "function")             <> (text "(") <> (commaList p) <> (text ")") <> (renderJS xs)
+rn (JSFunctionExpression  s p xs) = (text "function") <+> (rJS s) <> (text "(") <> (commaList p) <> (text ")") <> (renderJS xs)
+rn (JSArguments xs)        = (text "(") <> (commaListList $ map fixLiterals xs) <> (text ")")
 
-renderJS (JSIf c (JSLiteral ";"))= (text "if") <> (text "(") <> (renderJS c) <> (text ")") 
-renderJS (JSIf c t)              = (text "if") <> (text "(") <> (renderJS c) <> (text ")") <> (renderJS $ fixBlock t)
+rn (JSBlock x)             = (text "{") <> (renderJS x) <> (text "}")
 
-renderJS (JSIfElse c t (JSLiteral ";")) = (text "if") <> (text "(") <> (renderJS c) <> (text ")")  <> (renderJS t) 
+rn (JSIf c (NS (JSLiteral ";") _))= (text "if") <> (text "(") <> (renderJS c) <> (text ")") 
+rn (JSIf c t)              = (text "if") <> (text "(") <> (renderJS c) <> (text ")") <> (renderJS $ fixBlock t)
+
+rn (JSIfElse c t (NS (JSLiteral ";") _)) = (text "if") <> (text "(") <> (renderJS c) <> (text ")")  <> (renderJS t) 
                                    <> (text "else") 
-renderJS (JSIfElse c t e)        = (text "if") <> (text "(") <> (renderJS c) <> (text ")") <> (renderJS t) 
+rn (JSIfElse c t e)        = (text "if") <> (text "(") <> (renderJS c) <> (text ")") <> (renderJS t) 
                                    <> (text "else") <> (spaceOrBlock $ fixBlock e)
-renderJS (JSMemberDot xs y)        = (rJS xs) <> (text ".") <> (renderJS y)
-renderJS (JSMemberSquare xs x)   = (rJS xs) <> (text "[") <> (renderJS x) <> (text "]") 
-renderJS (JSLiteral l)           = (text l)
-renderJS (JSStringLiteral s l)   = empty <> (char s) <> (text l) <> (char s)
-renderJS (JSUnary l  )           = text l
-renderJS (JSArrayLiteral xs)     = (text "[") <> (rJS xs) <> (text "]")
+rn (JSMemberDot xs y)        = (rJS xs) <> (text ".") <> (renderJS y)
+rn (JSMemberSquare xs x)   = (rJS xs) <> (text "[") <> (renderJS x) <> (text "]") 
+rn (JSLiteral l)           = (text l)
+rn (JSStringLiteral s l)   = empty <> (char s) <> (text l) <> (char s)
+rn (JSUnary l  )           = text l
+rn (JSArrayLiteral xs)     = (text "[") <> (rJS xs) <> (text "]")
 
-renderJS (JSBreak [] [])            = (text "break")
-renderJS (JSBreak [] _xs)           = (text "break") -- <> (rJS xs) -- <> (text ";")
-renderJS (JSBreak is _xs)           = (text "break") <+> (rJS is) -- <> (rJS xs)
+rn (JSBreak [] [])            = (text "break")
+rn (JSBreak [] _xs)           = (text "break") -- <> (rJS xs) -- <> (text ";")
+rn (JSBreak is _xs)           = (text "break") <+> (rJS is) -- <> (rJS xs)
 
-renderJS (JSCallExpression "()" xs) = (rJS xs)
-renderJS (JSCallExpression   t  xs) = (char $ head t) <> (rJS xs) <> (if ((length t) > 1) then (char $ last t) else empty)
+rn (JSCallExpression "()" xs) = (rJS xs)
+rn (JSCallExpression   t  xs) = (char $ head t) <> (rJS xs) <> (if ((length t) > 1) then (char $ last t) else empty)
 
 -- No space between 'case' and string literal. TODO: what about expression in parentheses?
-renderJS (JSCase (JSExpression [JSStringLiteral sepa s]) xs) = (text "case") <> (renderJS (JSStringLiteral sepa s)) 
+--rn (JSCase (JSExpression [JSStringLiteral sepa s]) xs) = (text "case") <> (renderJS (JSStringLiteral sepa s)) 
+rn (JSCase (NS (JSExpression [(NS (JSStringLiteral sepa s) s1)]) _) xs) = (text "case") <> (renderJS (NS (JSStringLiteral sepa s) s1)) 
                                                                <> (char ':') <> (renderJS xs)          
-renderJS (JSCase e xs)           = (text "case") <+> (renderJS e) <> (char ':') <> (renderJS xs) -- <> (text ";");         
+rn (JSCase e xs)           = (text "case") <+> (renderJS e) <> (char ':') <> (renderJS xs) -- <> (text ";");         
 
-renderJS (JSCatch i [] s)        = (text "catch") <> (char '(') <> (renderJS i) <>  (char ')') <> (renderJS s)
-renderJS (JSCatch i c s)         = (text "catch") <> (char '(') <> (renderJS i) <>  
+rn (JSCatch i [] s)        = (text "catch") <> (char '(') <> (renderJS i) <>  (char ')') <> (renderJS s)
+rn (JSCatch i c s)         = (text "catch") <> (char '(') <> (renderJS i) <>  
                                    (text " if ") <> (rJS c) <> (char ')') <> (renderJS s)
 
-renderJS (JSContinue is)         = (text "continue") <> (rJS is) -- <> (char ';')
-renderJS (JSDefault xs)          = (text "default") <> (char ':') <> (renderJS xs)
-renderJS (JSDoWhile s e _ms)     = (text "do") <> (renderJS s) <> (text "while") <> (char '(') <> (renderJS e) <> (char ')') -- <> (renderJS ms)
---renderJS (JSElementList xs)      = rJS xs
-renderJS (JSElision xs)          = (char ',') <> (rJS xs)
-renderJS (JSExpressionBinary o e1 e2) = (rJS e1) <> (text o) <> (rJS e2)
---renderJS (JSExpressionBinary o e1 e2) = (text o) <> (rJS e1) <> (rJS e2)
-renderJS (JSExpressionParen e)        = (char '(') <> (renderJS e) <> (char ')')
-renderJS (JSExpressionPostfix o e)    = (rJS e) <> (text o)
-renderJS (JSExpressionTernary c v1 v2) = (rJS c) <> (char '?') <> (rJS v1) <> (char ':') <> (rJS v2)
-renderJS (JSFinally b)                 = (text "finally") <> (renderJS b)
+rn (JSContinue is)         = (text "continue") <> (rJS is) -- <> (char ';')
+rn (JSDefault xs)          = (text "default") <> (char ':') <> (renderJS xs)
+rn (JSDoWhile s e _ms)     = (text "do") <> (renderJS s) <> (text "while") <> (char '(') <> (renderJS e) <> (char ')') -- <> (renderJS ms)
+--rn (JSElementList xs)      = rJS xs
+rn (JSElision xs)          = (char ',') <> (rJS xs)
+rn (JSExpressionBinary o e1 e2) = (rJS e1) <> (text o) <> (rJS e2)
+--rn (JSExpressionBinary o e1 e2) = (text o) <> (rJS e1) <> (rJS e2)
+rn (JSExpressionParen e)        = (char '(') <> (renderJS e) <> (char ')')
+rn (JSExpressionPostfix o e)    = (rJS e) <> (text o)
+rn (JSExpressionTernary c v1 v2) = (rJS c) <> (char '?') <> (rJS v1) <> (char ':') <> (rJS v2)
+rn (JSFinally b)                 = (text "finally") <> (renderJS b)
 
-renderJS (JSFor e1 e2 e3 s)            = (text "for") <> (char '(') <> (commaList e1) <> (char ';') 
+rn (JSFor e1 e2 e3 s)            = (text "for") <> (char '(') <> (commaList e1) <> (char ';') 
                                          <> (rJS e2) <> (char ';') <> (rJS e3) <> (char ')') <> (renderJS $ fixBlock s)
-renderJS (JSForIn e1 e2 s)             = (text "for") <> (char '(') <> (rJS e1) <+> (text "in")
+rn (JSForIn e1 e2 s)             = (text "for") <> (char '(') <> (rJS e1) <+> (text "in")
                                          <+> (renderJS e2) <> (char ')') <> (renderJS $ fixBlock s)
-renderJS (JSForVar e1 e2 e3 s)         = (text "for") <> (char '(') <> (text "var") <+> (commaList e1) <> (char ';') 
+rn (JSForVar e1 e2 e3 s)         = (text "for") <> (char '(') <> (text "var") <+> (commaList e1) <> (char ';') 
                                          <> (rJS e2) <> (char ';') <> (rJS e3) <> (char ')') <> (renderJS $ fixBlock s)
-renderJS (JSForVarIn e1 e2 s)          = (text "for") <> (char '(') <> (text "var") <+> (renderJS e1) <+> (text "in") 
+rn (JSForVarIn e1 e2 s)          = (text "for") <> (char '(') <> (text "var") <+> (renderJS e1) <+> (text "in") 
                                          <+> (renderJS e2) <> (char ')') <> (renderJS $ fixBlock s)
                                          
-renderJS (JSHexInteger i)              = (text $ show i) -- TODO: need to tweak this                                         
-renderJS (JSLabelled l v)              = (renderJS l) <> (text ":") <> (renderJS v)
-renderJS (JSObjectLiteral xs)          = (text "{") <> (commaList xs) <> (text "}")
-renderJS (JSPropertyNameandValue n vs) = (renderJS n) <> (text ":") <> (rJS vs)
-renderJS (JSRegEx s)                   = (text s)
+rn (JSHexInteger i)              = (text $ show i) -- TODO: need to tweak this                                         
+rn (JSLabelled l v)              = (renderJS l) <> (text ":") <> (renderJS v)
+rn (JSObjectLiteral xs)          = (text "{") <> (commaList xs) <> (text "}")
+rn (JSPropertyNameandValue n vs) = (renderJS n) <> (text ":") <> (rJS vs)
+rn (JSRegEx s)                   = (text s)
 
-renderJS (JSReturn [])                 = (text "return")
-renderJS (JSReturn [JSLiteral ";"])    = (text "return;")
-renderJS (JSReturn xs)                 = (text "return") <> (if (spaceNeeded xs) then (text " ") else (empty)) <> (rJS $ fixSourceElements xs) 
+rn (JSReturn [])                 = (text "return")
+rn (JSReturn [(NS (JSLiteral ";") _)])    = (text "return;")
+rn (JSReturn xs)                 = (text "return") <> (if (spaceNeeded xs) then (text " ") else (empty)) <> (rJS $ fixSourceElements xs) 
 
-renderJS (JSThrow e)                   = (text "throw") <+> (renderJS e)
+rn (JSThrow e)                   = (text "throw") <+> (renderJS e)
 
-renderJS (JSStatementList xs)          = rJS (fixSourceElements $ map fixBlock xs)
+rn (JSStatementBlock x)          = (text "{") <> (renderJS x) <> (text "}")
 
-renderJS (JSSwitch e xs)               = (text "switch") <> (char '(') <> (renderJS e) <> (char ')') <> 
+rn (JSStatementList xs)          = rJS (fixSourceElements $ map fixBlock xs)
+
+rn (JSSwitch e xs)               = (text "switch") <> (char '(') <> (renderJS e) <> (char ')') <> 
                                          (char '{') <> (rJS $ fixSemis xs)  <> (char '}')
-renderJS (JSTry e xs)                  = (text "try") <> (renderJS e) <> (rJS xs)
+rn (JSTry e xs)                  = (text "try") <> (renderJS e) <> (rJS xs)
 
-renderJS (JSVarDecl i [])              = (renderJS i) 
-renderJS (JSVarDecl i xs)              = (renderJS i) <> (text "=") <> (rJS xs)
+rn (JSVarDecl i [])              = (renderJS i) 
+rn (JSVarDecl i xs)              = (renderJS i) <> (text "=") <> (rJS xs)
 
-renderJS (JSVariables kw xs)           = (text kw) <+> (commaList xs)
+rn (JSVariables kw xs)           = (text kw) <+> (commaList xs)
 
-renderJS (JSWhile e (JSLiteral ";"))   = (text "while") <> (char '(') <> (renderJS e) <> (char ')') -- <> (renderJS s)
-renderJS (JSWhile e s)                 = (text "while") <> (char '(') <> (renderJS e) <> (char ')') <> (renderJS s)
+rn (JSWhile e (NS (JSLiteral ";") _))   = (text "while") <> (char '(') <> (renderJS e) <> (char ')') -- <> (renderJS s)
+rn (JSWhile e s)                 = (text "while") <> (char '(') <> (renderJS e) <> (char ')') <> (renderJS s)
 
-renderJS (JSWith e s)                  = (text "with") <> (char '(') <> (renderJS e) <> (char ')') <> (rJS s)
+rn (JSWith e s)                  = (text "with") <> (char '(') <> (renderJS e) <> (char ')') <> (rJS s)
           
 -- Helper functions
 rJS :: [JSNode] -> BB.Builder
@@ -145,8 +150,10 @@ commaList :: [JSNode] -> BB.Builder
 commaList [] = empty
 commaList xs = (hcat $ (punctuate comma (toDoc xs') ++ trail))
   where
-    (xs', trail) = if (last xs == JSLiteral ",") then (init xs, [comma]) else (xs,[])
-
+    -- (xs', trail) = if (last xs == JSLiteral ",") then (init xs, [comma]) else (xs,[])
+    (xs', trail) = if (x' == JSLiteral ",") then (init xs, [comma]) else (xs,[])
+    (NS x' _) = last xs
+    
 commaListList :: [[JSNode]] -> BB.Builder
 commaListList xs = (hcat $ punctuate comma $ map rJS xs)
 
@@ -154,7 +161,7 @@ toDoc :: [JSNode] -> [BB.Builder]
 toDoc xs = map renderJS xs
 
 spaceOrBlock :: JSNode -> BB.Builder
-spaceOrBlock (JSBlock xs) = renderJS (JSBlock xs)
+spaceOrBlock (NS (JSBlock xs) _) = rn (JSBlock xs)
 spaceOrBlock x            = (text " ") <> (renderJS x)
 
 -- ---------------------------------------------------------------
@@ -163,7 +170,9 @@ spaceOrBlock x            = (text " ") <> (renderJS x)
 
 fixTop :: [JSNode] -> [JSNode]
 fixTop [] = []
-fixTop xs = if (last xs == (JSLiteral ";")) then (init xs) else (xs)
+fixTop xs = if (n == (JSLiteral ";")) then (init xs) else (xs)
+  where
+    (NS n _) = last xs
 
 -- Fix semicolons in output of sourceelements and statementlist
 
@@ -173,25 +182,25 @@ fixSourceElements xs = fixSemis $ myFix xs
 myFix :: [JSNode] -> [JSNode]
 myFix []      = []
 myFix [x]     = [x]
-myFix (x:(JSFunction v1 v2 v3):xs)  = x : (JSLiteral "\n") : myFix ((JSFunction v1 v2 v3) : xs)
+myFix (x:(NS (JSFunction v1 v2 v3) s1):xs)  = x : (NS (JSLiteral "\n") s1) : myFix ((NS (JSFunction v1 v2 v3) s1) : xs)
 -- Messy way, but it works, until the 3rd element arrives ..
-myFix ((JSExpression x):(JSExpression y):xs) = (JSExpression x):(JSLiteral ";"):myFix ((JSExpression y):xs)
-myFix ((JSExpression x):(JSBlock y):xs)      = (JSExpression x):(JSLiteral ";"):myFix ((JSBlock y):xs)
-myFix ((JSBlock x)     :(JSBlock y):xs)      = (JSBlock x)     :(JSLiteral ";"):myFix ((JSBlock y):xs)
-myFix ((JSBlock x)     :(JSExpression y):xs) = (JSBlock x)     :(JSLiteral ";"):myFix ((JSExpression y):xs)
+myFix ((NS (JSExpression x) s1):(NS (JSExpression y) s2):xs) = (NS (JSExpression x) s1):(NS (JSLiteral ";") s1):myFix ((NS (JSExpression y) s2):xs)
+myFix ((NS (JSExpression x) s1):(NS (JSBlock y) s2):xs)      = (NS (JSExpression x) s1):(NS (JSLiteral ";") s1):myFix ((NS (JSBlock y) s2):xs)
+myFix ((NS (JSBlock x) s1)     :(NS (JSBlock y) s2):xs)      = (NS (JSBlock x) s1)     :(NS (JSLiteral ";") s1):myFix ((NS (JSBlock y) s2):xs)
+myFix ((NS (JSBlock x) s1)     :(NS (JSExpression y) s2):xs) = (NS (JSBlock x) s1)     :(NS (JSLiteral ";") s1):myFix ((NS (JSExpression y) s2):xs)
 
 -- Merge adjacent variable declarations, but only of the same type
-myFix ((JSVariables t1 x1s):(JSLiteral l):(JSVariables t2 x2s):xs) 
-  | t1 == t2 = myFix ((JSVariables t1 (x1s++x2s)):xs)
-  | otherwise = (JSVariables t1 x1s):myFix ((JSLiteral l):(JSVariables t2 x2s):xs)
+myFix ((NS (JSVariables t1 x1s) s1):(NS (JSLiteral l) s2):(NS (JSVariables t2 x2s) s3):xs) 
+  | t1 == t2 = myFix ((NS (JSVariables t1 (x1s++x2s)) s1):xs)
+  | otherwise = (NS (JSVariables t1 x1s) s1):myFix ((NS (JSLiteral l) s2):(NS (JSVariables t2 x2s) s3):xs)
 
-myFix ((JSVariables t1 x1s):(JSVariables t2 x2s):xs) 
-  | t1 == t2 = myFix ((JSVariables t1 (x1s++x2s)):xs)
-  | otherwise = (JSVariables t1 x1s):myFix ((JSVariables t2 x2s):xs)
+myFix ((NS (JSVariables t1 x1s) s1):(NS (JSVariables t2 x2s) s2):xs) 
+  | t1 == t2 = myFix ((NS (JSVariables t1 (x1s++x2s)) s1):xs)
+  | otherwise = (NS (JSVariables t1 x1s) s1):myFix ((NS (JSVariables t2 x2s) s2):xs)
 
 -- Merge adjacent semi colons
-myFix ((JSLiteral ";"):(JSLiteral ";"):xs)  = myFix ((JSLiteral ";"):xs)
-myFix ((JSLiteral ";"):(JSLiteral "" ):xs)  = myFix ((JSLiteral ""):xs)
+myFix ((NS (JSLiteral ";") s1):(NS (JSLiteral ";") s2):xs)  = myFix ((NS (JSLiteral ";") s1):xs)
+myFix ((NS (JSLiteral ";") s1):(NS (JSLiteral "" ) s2):xs)  = myFix ((NS (JSLiteral "") s1):xs)
 
 myFix (x:xs)  = x : myFix xs
 
@@ -199,40 +208,44 @@ myFix (x:xs)  = x : myFix xs
 fixLiterals :: [JSNode] -> [JSNode]
 fixLiterals [] = []
 -- Old version
-fixLiterals ((JSStringLiteral d1 s1):(JSExpressionBinary "+" [JSStringLiteral d2 s2] r):xs)
-       | d1 == d2 = fixLiterals ((JSStringLiteral d1 (s1++s2)):(r++xs))
-       | otherwise = (JSStringLiteral d1 s1):fixLiterals ((JSExpressionBinary "+" [JSStringLiteral d2 s2] r):xs) 
+fixLiterals ((NS (JSStringLiteral d1 s1) ss1):(NS (JSExpressionBinary "+" [(NS (JSStringLiteral d2 s2) ss2)] r) ss3):xs)
+       | d1 == d2 = fixLiterals ((NS (JSStringLiteral d1 (s1++s2)) ss1):(r++xs))
+       | otherwise = (NS (JSStringLiteral d1 s1) ss1):fixLiterals ((NS (JSExpressionBinary "+" [(NS (JSStringLiteral d2 s2) ss2)] r) ss3):xs) 
 
-fixLiterals ((JSExpressionBinary "+" [JSStringLiteral d1 s1] [JSStringLiteral d2 s2]):xs)
-       | d1 == d2 = fixLiterals ((JSStringLiteral d1 (s1++s2)):xs)
-       | otherwise = (JSExpressionBinary "+" [JSStringLiteral d1 s1] [JSStringLiteral d2 s2]):fixLiterals xs              
-
+fixLiterals ((NS (JSExpressionBinary "+" [(NS (JSStringLiteral d1 s1) ss2)] [(NS (JSStringLiteral d2 s2) ss3)]) ss4):xs)
+       | d1 == d2 = fixLiterals ((NS (JSStringLiteral d1 (s1++s2)) ss2):xs)
+       | otherwise = (NS (JSExpressionBinary "+" [(NS (JSStringLiteral d1 s1) ss2)] [(NS (JSStringLiteral d2 s2) ss3)]) ss4):fixLiterals xs           
 
 fixLiterals (x:xs) = x:fixLiterals xs
 
 -- Sort out Semicolons
 fixSemis :: [JSNode] -> [JSNode]
-fixSemis xs = fixSemis' $ filter (\x -> x /= JSLiteral ";" && x /= JSLiteral "") xs
+--fixSemis xs = fixSemis' $ filter (\x -> x /= JSLiteral ";" && x /= JSLiteral "") xs
+fixSemis xs = fixSemis' $ filter (\(NS x _) -> x /= JSLiteral ";" && x /= JSLiteral "") xs
 
 fixSemis' :: [JSNode] -> [JSNode]
 fixSemis' [] = []
-fixSemis' [JSContinue [JSLiteral ";"]] = [JSContinue []]
+fixSemis' [(NS (JSContinue [(NS (JSLiteral ";") _)]) s2)] = [(NS (JSContinue []) s2)]
 fixSemis' [x] = [x]
-fixSemis' ((JSIf c (JSReturn [JSLiteral ";"])):xs)    = (JSIf c (JSReturn [JSLiteral ";"])):(fixSemis' xs)
-fixSemis' ((JSIf c (JSContinue [JSLiteral ";"])):xs)    = (JSIf c (JSContinue [JSLiteral ";"])):(fixSemis' xs)
-fixSemis' (x:(JSLiteral "\n"):xs) = x:(JSLiteral "\n"):(fixSemis' xs)
-fixSemis' ((JSCase e1 ((JSStatementList []))):(JSCase e2 x):xs) = (JSCase e1 ((JSStatementList []))):fixSemis' ((JSCase e2 x):xs)
-fixSemis' (x:xs) = x:(JSLiteral ";"):fixSemis' xs
+fixSemis' ((NS (JSIf c (NS (JSReturn [(NS (JSLiteral ";") s1)]) s2) ) s3):xs)  = 
+  (NS (JSIf c (NS (JSReturn [(NS (JSLiteral ";") s1)]) s2)) s3):(fixSemis' xs)
+fixSemis' ((NS (JSIf c (NS (JSContinue [(NS (JSLiteral ";") s1)]) s2) ) s3):xs)    = 
+  (NS (JSIf c (NS (JSContinue [(NS (JSLiteral ";") s1)]) s2)) s3):(fixSemis' xs)
+fixSemis' (x:(NS (JSLiteral "\n") s1):xs) = x:(NS (JSLiteral "\n") s1):(fixSemis' xs) -- TODO: is this needed?
+fixSemis' ((NS (JSCase e1 ((NS (JSStatementList []) s1))) s2):(NS (JSCase e2 x) s3):xs) = 
+  (NS (JSCase e1 ((NS (JSStatementList []) s1))) s2):fixSemis' ((NS (JSCase e2 x) s3):xs)
+fixSemis' (x:xs) = x:(NS (JSLiteral ";") SpanEmpty):fixSemis' xs
 
 -- Remove extraneous braces around blocks
 fixBlock :: JSNode -> JSNode
-fixBlock (JSBlock (JSStatementList [x])) = x
-fixBlock (JSBlock (JSStatementList xs)) = fixBlock' (JSBlock (JSStatementList (fixSourceElements xs)))
+fixBlock (NS (JSBlock (NS (JSStatementList [x]) _) ) _) = x
+fixBlock (NS (JSBlock (NS (JSStatementList xs) s1) ) s2) = 
+  fixBlock' (NS (JSBlock (NS (JSStatementList (fixSourceElements xs)) s1)) s2)
 fixBlock x = x
 
 fixBlock' :: JSNode -> JSNode
-fixBlock' (JSBlock (JSStatementList [x])) = x
-fixBlock' (JSBlock (JSStatementList [x,JSLiteral ""])) = x -- TODO: fix parser to not emit this case
+fixBlock' (NS (JSBlock (NS (JSStatementList [x]) _)) _) = x
+--fixBlock' (JSBlock (JSStatementList [x,JSLiteral ""])) = x -- TODO: fix parser to not emit this case
 fixBlock' x = x
 
 -- A space is needed if this expression starts with an identifier etc, but not if with a '('
@@ -246,7 +259,7 @@ spaceNeeded xs =
 
 -- ---------------------------------------------------------------------
 -- Test stuff
-
+{-
 -- readJs "x=1;"
 _case0 :: JSNode
 _case0 = JSSourceElements 
@@ -604,5 +617,6 @@ _case28 = JSSourceElementsTop
                   ]
               )
           ]          
+-}
 -- EOF
 

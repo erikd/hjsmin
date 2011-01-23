@@ -25,6 +25,10 @@ Running the tests
 
 ./dist/build/runtests/runtests
 
+Changes
+-------
+
+0.0.10 - Removed attoparsec dependency and historical Parse/Token
 
 
 
