@@ -42,8 +42,8 @@ parse' input = parse (lbToStr input) "src"
 lbToStr :: S8.ByteString -> [Char]
 lbToStr str = S8.unpack str
 
-strToLb :: String -> S8.ByteString
-strToLb str = S8.pack str
---strToLb str = (LB.fromChunks [(E.encodeUtf8 $ T.pack str)])
+_strToLb :: String -> S8.ByteString
+_strToLb str = S8.pack str
+
      
 -- EOF    

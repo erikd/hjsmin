@@ -30,6 +30,7 @@ testSuite = testGroup "Text.Jasmine.Parse"
     , testCase "min_100_animals"  case_min_100_animals
     , testCase "mergeStrings"     caseMergeStrings
     , testCase "TrailingCommas"   caseTrailingCommas
+    , testCase "GetSet"           caseGetSet
     ]
 
 testSuiteMin :: Test
@@ -47,6 +48,7 @@ testSuiteMin = testGroup "Text.Jasmine.Pretty"
     , testCase "EitherLeft"       caseEitherLeft  
     , testCase "EitherRight"      caseEitherRight  
     , testCase "TrailingCommas"   caseMinTrailingCommas
+    , testCase "GetSet"           caseMinGetSet
     ]
 
 testSuiteFiles :: Test
@@ -221,6 +223,13 @@ caseTrailingCommas =
   @=? (showStrippedMaybe $ parseProgram srcTrailingCommas)
 caseMinTrailingCommas =  
   testMinify "x={a:1,};y=[d,e,]" srcTrailingCommas
+  
+srcGetSet = "x={get foo() {return 1},set foo(a) {x=a}}"
+caseGetSet =
+  "Right (JSSourceElementsTop [JSExpression [JSIdentifier \"x\",JSOperator \"=\",JSObjectLiteral [JSPropertyAccessor \"get\" (JSIdentifier \"foo\") [] (JSFunctionBody [JSSourceElements [JSReturn [JSExpression [JSDecimal \"1\"],JSLiteral \"\"]]]),JSPropertyAccessor \"set\" (JSIdentifier \"foo\") [JSIdentifier \"a\"] (JSFunctionBody [JSSourceElements [JSExpression [JSIdentifier \"x\",JSOperator \"=\",JSIdentifier \"a\"]]])]]])"
+  @=? (showStrippedMaybe $ parseProgram srcGetSet)
+caseMinGetSet =  
+  testMinify "x={get foo(){return 1},set foo(a){x=a}}" srcGetSet
   
 -- ---------------------------------------------------------------------
 -- utilities

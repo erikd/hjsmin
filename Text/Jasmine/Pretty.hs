@@ -121,6 +121,7 @@ rn (JSForVarIn e1 e2 s)          = (text "for") <> (char '(') <> (text "var") <+
 rn (JSHexInteger i)              = (text $ show i) -- TODO: need to tweak this                                         
 rn (JSLabelled l v)              = (renderJS l) <> (text ":") <> (rJS $ fixSourceElements [fixBlock v])
 rn (JSObjectLiteral xs)          = (text "{") <> (commaList xs) <> (text "}")
+rn (JSPropertyAccessor s n ps b) = (text s) <+> (renderJS n) <> (char '(') <> (rJS ps) <> (text ")") <> (renderJS b)
 rn (JSPropertyNameandValue n vs) = (renderJS n) <> (text ":") <> (rJS vs)
 rn (JSRegEx s)                   = (text s)
 
@@ -197,7 +198,7 @@ myFix :: [JSNode] -> [JSNode]
 myFix []      = []
 
 -- Sort out empty IF statements
-myFix ((NS (JSIf c (NS (JSStatementBlock (NS (JSStatementList []) s1)) s2)) s3):xs) = (NS (JSIf c (NS (JSLiteral "") s1)) s2) : myFix (xs)
+myFix ((NS (JSIf c (NS (JSStatementBlock (NS (JSStatementList []) s1)) s2)) _s3):xs) = (NS (JSIf c (NS (JSLiteral "") s1)) s2) : myFix (xs)
 
 myFix [x]     = [x]
 
@@ -226,8 +227,8 @@ myFix ((NS (JSVariables t1 x1s) s1):(NS (JSVariables t2 x2s) s2):xs)
   | otherwise = (NS (JSVariables t1 x1s) s1):myFix ((NS (JSVariables t2 x2s) s2):xs)
 
 -- Merge adjacent semi colons
-myFix ((NS (JSLiteral ";") s1):(NS (JSLiteral ";") s2):xs)  = myFix ((NS (JSLiteral ";") s1):xs)
-myFix ((NS (JSLiteral ";") s1):(NS (JSLiteral "" ) s2):xs)  = myFix ((NS (JSLiteral "") s1):xs)
+myFix ((NS (JSLiteral ";") s1):(NS (JSLiteral ";") _s2):xs)  = myFix ((NS (JSLiteral ";") s1):xs)
+myFix ((NS (JSLiteral ";") s1):(NS (JSLiteral "" ) _s2):xs)  = myFix ((NS (JSLiteral "") s1):xs)
 
                        
 myFix (x:xs)  = x : myFix xs
@@ -299,382 +300,29 @@ spaceNeeded xs =
 -- ---------------------------------------------------------------------
 -- Test stuff
 
-r js = map (\x -> chr (fromIntegral x)) $ LB.unpack $ BB.toLazyByteString $ renderJS js
+_r :: JSNode -> [Char]
+_r js = map (\x -> chr (fromIntegral x)) $ LB.unpack $ BB.toLazyByteString $ renderJS js
 
 --readJs "{{{}}}"
 _case0 :: JSNode
 _case0 = NS (JSSourceElementsTop [NS (JSStatementBlock (NS (JSStatementList [NS (JSStatementBlock (NS (JSStatementList [NS (JSStatementBlock (NS (JSStatementList []) (SpanPoint {span_filename = "", span_row = 1, span_column = 3}))) (SpanPoint {span_filename = "", span_row = 1, span_column = 3})]) (SpanPoint {span_filename = "", span_row = 1, span_column = 3}))) (SpanPoint {span_filename = "", span_row = 1, span_column = 2})]) (SpanPoint {span_filename = "", span_row = 1, span_column = 2}))) (SpanPoint {span_filename = "", span_row = 1, span_column = 1})]) (SpanPoint {span_filename = "", span_row = 1, span_column = 1})
 
+_case01 :: [JSNode]
 _case01 = [NS (JSStatementBlock (NS (JSStatementList [NS (JSStatementBlock (NS (JSStatementList [NS (JSStatementBlock (NS (JSStatementList []) (SpanPoint {span_filename = "", span_row = 1, span_column = 3}))) (SpanPoint {span_filename = "", span_row = 1, span_column = 3})]) (SpanPoint {span_filename = "", span_row = 1, span_column = 3}))) (SpanPoint {span_filename = "", span_row = 1, span_column = 2})]) (SpanPoint {span_filename = "", span_row = 1, span_column = 2}))) (SpanPoint {span_filename = "", span_row = 1, span_column = 1})] 
 
 -- readJs "if(x){}{a=2}"
+_case1 :: JSNode
 _case1 = NS (JSSourceElementsTop [NS (JSIf (NS (JSExpression [NS (JSIdentifier "x") (SpanPoint {span_filename = "", span_row = 1, span_column = 4})]) (SpanPoint {span_filename = "", span_row = 1, span_column = 4})) (NS (JSStatementBlock (NS (JSStatementList []) (SpanPoint {span_filename = "", span_row = 1, span_column = 6}))) (SpanPoint {span_filename = "", span_row = 1, span_column = 6}))) (SpanPoint {span_filename = "", span_row = 1, span_column = 1}),NS (JSStatementBlock (NS (JSStatementList [NS (JSExpression [NS (JSIdentifier "a") (SpanPoint {span_filename = "", span_row = 1, span_column = 9}),NS (JSOperator "=") (SpanPoint {span_filename = "", span_row = 1, span_column = 10}),NS (JSDecimal "2") (SpanPoint {span_filename = "", span_row = 1, span_column = 11})]) (SpanPoint {span_filename = "", span_row = 1, span_column = 9})]) (SpanPoint {span_filename = "", span_row = 1, span_column = 9}))) (SpanPoint {span_filename = "", span_row = 1, span_column = 8})]) (SpanPoint {span_filename = "", span_row = 1, span_column = 1})
 
+_case11 :: [JSNode]
 _case11 = [NS (JSIf (NS (JSExpression [NS (JSIdentifier "x") (SpanPoint {span_filename = "", span_row = 1, span_column = 4})]) (SpanPoint {span_filename = "", span_row = 1, span_column = 4})) (NS (JSStatementBlock (NS (JSStatementList []) (SpanPoint {span_filename = "", span_row = 1, span_column = 6}))) (SpanPoint {span_filename = "", span_row = 1, span_column = 6}))) (SpanPoint {span_filename = "", span_row = 1, span_column = 1}),NS (JSStatementBlock (NS (JSStatementList [NS (JSExpression [NS (JSIdentifier "a") (SpanPoint {span_filename = "", span_row = 1, span_column = 9}),NS (JSOperator "=") (SpanPoint {span_filename = "", span_row = 1, span_column = 10}),NS (JSDecimal "2") (SpanPoint {span_filename = "", span_row = 1, span_column = 11})]) (SpanPoint {span_filename = "", span_row = 1, span_column = 9})]) (SpanPoint {span_filename = "", span_row = 1, span_column = 9}))) (SpanPoint {span_filename = "", span_row = 1, span_column = 8})]
 
+_case12 :: JSNode
 _case12 = (NS (JSIf (NS (JSExpression [NS (JSIdentifier "x") (SpanPoint {span_filename = "", span_row = 1, span_column = 4})]) (SpanPoint {span_filename = "", span_row = 1, span_column = 4})) (NS (JSLiteral "") (SpanPoint {span_filename = "", span_row = 1, span_column = 6}))) (SpanPoint {span_filename = "", span_row = 1, span_column = 6}))
 
 -- readJs "bob:if(x){}\n{a}"
+_case2 :: JSNode
 _case2 = NS (JSSourceElementsTop [NS (JSLabelled (NS (JSIdentifier "bob") (SpanPoint {span_filename = "", span_row = 1, span_column = 1})) (NS (JSIf (NS (JSExpression [NS (JSIdentifier "x") (SpanPoint {span_filename = "", span_row = 1, span_column = 8})]) (SpanPoint {span_filename = "", span_row = 1, span_column = 8})) (NS (JSStatementBlock (NS (JSStatementList []) (SpanPoint {span_filename = "", span_row = 1, span_column = 10}))) (SpanPoint {span_filename = "", span_row = 1, span_column = 10}))) (SpanPoint {span_filename = "", span_row = 1, span_column = 5}))) (SpanPoint {span_filename = "", span_row = 1, span_column = 1}),NS (JSStatementBlock (NS (JSStatementList [NS (JSExpression [NS (JSIdentifier "a") (SpanPoint {span_filename = "", span_row = 2, span_column = 2})]) (SpanPoint {span_filename = "", span_row = 2, span_column = 2})]) (SpanPoint {span_filename = "", span_row = 2, span_column = 2}))) (SpanPoint {span_filename = "", span_row = 2, span_column = 1})]) (SpanPoint {span_filename = "", span_row = 1, span_column = 1})
 
-{-
--- readJs "x=1;"
-_case0 :: JSNode
-_case0 = JSSourceElements 
-          [
-            JSExpression [JSIdentifier "x",JSOperator "=",JSDecimal "1"],
-            JSEmpty (JSLiteral ";")
-          ]
-
--- doParse statementList "a=1;"  
-_case1 :: [JSNode]
-_case1 = [JSExpression 
-         [JSIdentifier "a",JSOperator "=",JSDecimal "1"]
-        ,JSEmpty (JSLiteral ";")
-        ]
-        
-          
--- doParse expression "opTypeNames={'\\n':\"NEWLINE\",';':\"SEMICOLON\",',':\"COMMA\"}"          
-_case4 :: JSNode
-_case4 = JSExpression 
-          [
-               JSIdentifier "opTypeNames",
-               JSOperator "=",
-               JSObjectLiteral 
-                 [JSPropertyNameandValue (JSStringLiteral '\'' "\\n") [JSStringLiteral '"' "NEWLINE"],
-                  JSPropertyNameandValue (JSStringLiteral '\'' ";")   [JSStringLiteral '"' "SEMICOLON"],
-                  JSPropertyNameandValue (JSStringLiteral '\'' ",")   [JSStringLiteral '"' "COMMA"]
-                 ]
-          ]
-          
-
--- doParse program "function load(s){if(typeof s!=\"string\")return s;a=1}"
-_case5 :: JSNode
-_case5 = JSSourceElements 
-          [JSFunction (JSIdentifier "load") 
-           [JSIdentifier "s"] 
-             (JSFunctionBody 
-              [
-                JSSourceElements 
-                  [
-                    JSIf 
-                      (JSExpression [JSUnary "typeof ",JSIdentifier "s",
-                                     JSExpressionBinary "!=" [JSStringLiteral '"' "string"] []]) 
-                      (JSReturn [JSExpression [JSIdentifier "s"],JSLiteral ";"])
-                    ,JSLiteral ";"
-                    ,JSExpression [JSIdentifier "a",JSOperator "=",JSDecimal "1"]
-                    ]
-              ]
-             )
-          ]
-          
--- doParse program "{if(typeof s!=\"string\")return s;evaluate(1)}"
-_case6 :: JSNode
-_case6 = JSSourceElements [] 
-
---doParse program  "function load(s){if(typeof s!=\"string\")return s;evaluate(1)}"
-_case7 :: JSNode
-_case7 = JSSourceElements 
-        [
-          JSFunction (JSIdentifier "load") [JSIdentifier "s"] 
-            (JSFunctionBody 
-             [JSSourceElements 
-              [JSIf 
-                 (JSExpression [JSUnary "typeof ",JSIdentifier "s",JSExpressionBinary "!=" [JSStringLiteral '"' "string"] []]) 
-                 (JSReturn [JSExpression [JSIdentifier "s"],JSLiteral ";"])
-              ,
-               JSExpression [JSIdentifier "evaluate",JSArguments [[JSDecimal "1"]]]
-              ]
-             ]
-            )
-        ]
-
---doParse program "for(i=0,j=assignOps.length;i<j;i++){}"
-_case8 :: JSNode
-_case8 = undefined
-          
-                 
--- doParse returnStatement "return this.name;"
-_case9 :: JSNode
-_case9 = undefined
-
---parseFile "./test/parsingonly/02_sm.js"
-{-
-
-{zero}
-one;two
-{
- three
- four;five;
-  {
-  six;{seven;}
-  }
-}
-
--}
-_case10 :: JSNode
-_case10 = JSSourceElements 
-            [
-              JSBlock (JSStatementList [JSExpression [JSIdentifier "zero"]]),
-              JSExpression [JSIdentifier "one"],
-              JSLiteral ";",
-              JSExpression [JSIdentifier "two"],
-              JSBlock (JSStatementList 
-                       [JSExpression [JSIdentifier "three"],
-                        JSExpression [JSIdentifier "four"],
-                        JSLiteral ";",
-                        JSExpression [JSIdentifier "five"],
-                        JSLiteral ";",
-                        JSBlock (JSStatementList 
-                                 [JSExpression [JSIdentifier "six"],
-                                  JSLiteral ";",
-                                  JSBlock (JSStatementList 
-                                           [
-                                             JSExpression [JSIdentifier "seven"],
-                                             JSLiteral ""
-                                           ]
-                                          )
-                                 ]
-                                )
-                       ]
-                      )
-            ]
-            
---parseFile "./test/parsingonly/05_comments_simple.js"
-_case11 :: JSNode
-_case11 = JSSourceElements 
-            [
-              JSExpression [JSIdentifier "a",JSExpressionBinary "+" [JSDecimal "1"] []],
-              JSLiteral ";",
-              JSLiteral ";"
-            ]            
-            
---doParse program "var newlines=spaces.match(/\\n/g);var newlines=spaces.match(/\\n/g);"
-_case12 :: JSNode
-_case12 = undefined
-
---doParse program "for(i=0;;){var t=1};for(var i=0,j=1;;){x=1}"
-_case13 :: JSNode
-_case13 = JSSourceElements 
-          [
-            JSFor [JSExpression [JSIdentifier "i",JSOperator "=",JSDecimal "0"]] 
-            [] 
-            [] 
-            (JSBlock (
-                JSStatementList [JSVariables "var" [JSVarDecl (JSIdentifier "t") [JSDecimal "1"]]]
-                )
-            ),
-            JSLiteral ";",
-            JSForVar [JSVarDecl (JSIdentifier "i") [JSDecimal "0"],JSVarDecl (JSIdentifier "j") [JSDecimal "1"]] 
-            [] 
-            [] 
-            (JSBlock (
-                JSStatementList [JSExpression [JSIdentifier "x",JSOperator "=",JSDecimal "1"]]
-                )
-            )
-          ]          
-          
--- doParse program "if (/^[a-z]/.test(t)) {consts += t.toUpperCase();keywords[t] = i;} else {consts += (/^\\W/.test(t) ? opTypeNames[t] : t);}consts += \" = \" + x;"
-_case14 :: JSNode
-_case14 = undefined
-          
--- doParse program "a+1;{}"
-_case15 :: JSNode
-_case15 = JSSourceElements 
-            [
-              JSExpression [JSIdentifier "a",JSExpressionBinary "+" [JSDecimal "1"] []],
-              JSLiteral ";",
-              JSLiteral ";"
-            ]
-            
--- doParse program "for (i = 0;;){var t=1;;}\nx=1;"
--- (renderJS _case16) should become "for (i = 0;;)var t=1;x=1"
-_case16 :: JSNode
-_case16 = JSSourceElementsTop 
-            [
-              JSFor [JSExpression [JSIdentifier "i",JSOperator "=",JSDecimal "0"]] [] [] 
-                (JSBlock 
-                 (JSStatementList 
-                  [
-                    JSVariables "var" [JSVarDecl (JSIdentifier "t") [JSDecimal "1"]],
-                    JSLiteral ";",
-                    JSLiteral ""
-                  ]
-                 )
-                ),
-              JSExpression [JSIdentifier "x",JSOperator "=",JSDecimal "1"],
-              JSLiteral ";"
-            ]
-
--- doParse program "return new global.Boolean(v);"
-_case17 :: JSNode
-_case17 = undefined
-            
---doParse program "if(typeof s!=\"string\")return;while(--n>=0)s+=t;"
-_case18 :: JSNode
-_case18 = JSSourceElementsTop 
-            [
-              JSIf 
-                (JSExpression [JSUnary "typeof ",JSIdentifier "s",JSExpressionBinary "!=" [JSStringLiteral '"' "string"] []]) 
-                (JSReturn [JSLiteral ";"]),
-              JSWhile (JSExpression [JSUnary "--",JSIdentifier "n",JSExpressionBinary ">=" [JSDecimal "0"] []]) 
-                (JSExpression 
-                   [JSIdentifier "s",JSOperator "+=",JSIdentifier "t"]
-                ),
-              JSLiteral ";"
-            ]            
-
--- doParse program "function f(){return n;\nx=1}"
-_case19 :: JSNode
-_case19 = JSSourceElementsTop 
-            [
-              JSFunction (JSIdentifier "f") [] 
-                (JSFunctionBody 
-                 [
-                   JSSourceElements 
-                     [
-                       JSReturn [JSExpression [JSIdentifier "n"],JSLiteral ";"],
-                       JSExpression 
-                         [
-                            JSIdentifier "x",JSOperator "=",JSDecimal "1"
-                         ]
-                     ]
-                 ]
-                )
-            ]
-            
---fixSourceElements ([JSReturn [JSExpression [JSIdentifier "n"],JSLiteral ";"],JSExpression [JSElement "assignmentExpression" [JSIdentifier "x",JSOperator "=",JSDecimal 1]]])
-_case20 :: [JSNode]
-_case20 = [
-           JSReturn [JSExpression [JSIdentifier "n"],JSLiteral ";"],
-           JSExpression 
-             [JSIdentifier "x",JSOperator "=",JSDecimal "1"]
-          ]            
-            
---doParse program "if(!u)continue;t=n"
-_case21 :: JSNode
-_case21 = JSSourceElementsTop 
-            [
-              JSIf (JSExpression [JSUnary "!",JSIdentifier "u"]) 
-                   (JSContinue [JSLiteral ";"]),
-              JSExpression [JSIdentifier "t",JSOperator "=",JSIdentifier "n"]
-            ]          
-            
---doParse program "if (!v.base){throw new ReferenceError(v.propertyName + \" is not defined\");};x=1"
-_case22 :: JSNode
-_case22 = undefined
-
---parseString program "{throw new TypeError(\"Function.prototype.apply called on\"+\n\" uncallable object\");}"
-_case23 :: JSNode
-_case23 = JSSourceElementsTop 
-            [
-              JSBlock 
-               (
-                 JSStatementList 
-                   [
-                     JSThrow 
-                       (JSExpression 
-                          [
-                            JSLiteral "new ",
-                            JSIdentifier "TypeError",
-                            JSArguments 
-                              [
-                                [
-                                  JSStringLiteral '"' "Function.prototype.apply called on",
-                                  JSExpressionBinary "+" 
-                                    [
-                                      JSStringLiteral '"' " uncallable object"
-                                    ] 
-                                    []
-                                ]
-                              ]
-                          ]
-                       ),
-                     JSLiteral ""
-                   ]
-               )
-            ]
-
-            
---doParse program "x=\"hello \" + \"world\";"
-_case24 :: JSNode
-_case24 = JSSourceElementsTop 
-            [
-              JSExpression 
-                    [JSIdentifier "x",
-                     JSOperator "=",
-                     JSStringLiteral '"' "hello ",
-                     JSExpressionBinary "+" 
-                       [JSStringLiteral '"' "world"] []
-                    ]
-                ,
-              JSLiteral ";"
-            ]            
-            
---doParse program (U.fromString "try{}catch(e){continue;}")
-_case25 :: JSNode
-_case25 = JSSourceElementsTop 
-            [
-              JSTry 
-                (JSBlock (JSStatementList [])) 
-                [
-                  JSCatch 
-                    (JSIdentifier "e") 
-                    [] 
-                    (JSBlock 
-                      (JSStatementList 
-                        [
-                          JSContinue [JSLiteral ";"]
-                        ]
-                      )
-                    )
-                ]
-            ]
-
--- readJs "var newlines=spaces.match(/\\n/g);var newlines=spaces.match(/\\n/g);"
-_case26 :: JSNode
-_case26 = JSSourceElementsTop 
-          [
-            JSVariables "var" 
-              [
-                JSVarDecl (JSIdentifier "newlines") 
-                  [JSMemberDot [JSIdentifier "spaces"] (JSIdentifier "match"),JSArguments [[JSRegEx "/\\n/g"]]]
-              ],
-            JSVariables "var" 
-              [
-                JSVarDecl (JSIdentifier "newlines") [JSMemberDot [JSIdentifier "spaces"] (JSIdentifier "match"),
-                                                     JSArguments [[JSRegEx "/\\n/g"]]]
-              ]
-          ]
-          
--- readJs "\"mary\"+\"had\""
-_case27 :: JSNode
-_case27 = JSSourceElementsTop 
-          [
-            JSExpression [JSExpressionBinary "+" [JSStringLiteral '"' "mary"] [JSStringLiteral '"' "had"]]
-          ]
-          
--- readJs "throw new TypeError(\"Function.prototype.apply called on\"+\" uncallable object\")"
-_case28 :: JSNode
-_case28 = JSSourceElementsTop 
-          [
-            JSThrow 
-              (
-                JSExpression 
-                  [
-                    JSLiteral "new ",
-                    JSIdentifier "TypeError",
-                    JSArguments 
-                      [
-                        [
-                          JSExpressionBinary "+" 
-                            [JSStringLiteral '"' "Function.prototype.apply called on"] 
-                            [JSStringLiteral '"' " uncallable object"]
-                        ]
-                      ]
-                  ]
-              )
-          ]          
--}
 -- EOF
 
