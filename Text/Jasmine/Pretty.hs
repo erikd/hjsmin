@@ -50,8 +50,14 @@ rn (JSIdentifier s)        = text s
 rn (JSDecimal i)           = text i
 rn (JSOperator s)          = text s
 rn (JSExpression xs)       = rJS xs
-rn (JSSourceElements xs)   = rJS (map fixBlock $ fixSourceElements xs)
-rn (JSSourceElementsTop xs)= rJS (fixTop $ map fixBlock $ fixSourceElements xs)
+
+--rn (JSSourceElements xs)   = rJS (map fixBlock $ fixSourceElements xs)
+rn (JSSourceElements xs)   = rJS (fixSourceElements $ map fixBlock xs)
+
+--rn (JSSourceElementsTop xs)= rJS (fixTop $ map fixBlock $ fixSourceElements xs)
+rn (JSSourceElementsTop xs)= rJS (fixTop $ fixSourceElements $ map fixBlock xs)
+
+
 rn (JSFunction s p xs)     = (text "function") <+> (renderJS s) <> (text "(") <> (commaList p) <> (text ")") <> (renderJS xs)
 rn (JSFunctionBody xs)     = (text "{") <> (rJS xs) <> (text "}")
 rn (JSFunctionExpression [] p xs) = (text "function")             <> (text "(") <> (commaList p) <> (text ")") <> (renderJS xs)
@@ -61,7 +67,7 @@ rn (JSArguments xs)        = (text "(") <> (commaListList $ map fixLiterals xs) 
 rn (JSBlock x)             = (text "{") <> (renderJS x) <> (text "}")
 
 rn (JSIf c (NS (JSLiteral ";") _))= (text "if") <> (text "(") <> (renderJS c) <> (text ")") 
-rn (JSIf c t)              = (text "if") <> (text "(") <> (renderJS c) <> (text ")") <> (renderJS $ fixBlock t)
+rn (JSIf c t)                     = (text "if") <> (text "(") <> (renderJS c) <> (text ")") <> (renderJS $ fixBlock t)
 
 rn (JSIfElse c t (NS (JSLiteral ";") _)) = (text "if") <> (text "(") <> (renderJS c) <> (text ")")  <> (renderJS t) 
                                    <> (text "else") 
@@ -162,8 +168,16 @@ toDoc xs = map renderJS xs
 
 spaceOrBlock :: JSNode -> BB.Builder
 spaceOrBlock (NS (JSBlock xs) _) = rn (JSBlock xs)
+spaceOrBlock (NS (JSStatementBlock xs) _) = rn (JSStatementBlock xs)
 spaceOrBlock x            = (text " ") <> (renderJS x)
 
+
+{-
+
+TODO: Collapse this into JSLiteral ";"
+
+JSStatementBlock (JSStatementList [JSStatementBlock (JSStatementList [])])
+-}
 -- ---------------------------------------------------------------
 -- Utility stuff
 
@@ -184,10 +198,18 @@ myFix []      = []
 myFix [x]     = [x]
 myFix (x:(NS (JSFunction v1 v2 v3) s1):xs)  = x : (NS (JSLiteral "\n") s1) : myFix ((NS (JSFunction v1 v2 v3) s1) : xs)
 -- Messy way, but it works, until the 3rd element arrives ..
+-- TODO: JSStatementBlock.  Damn.
 myFix ((NS (JSExpression x) s1):(NS (JSExpression y) s2):xs) = (NS (JSExpression x) s1):(NS (JSLiteral ";") s1):myFix ((NS (JSExpression y) s2):xs)
 myFix ((NS (JSExpression x) s1):(NS (JSBlock y) s2):xs)      = (NS (JSExpression x) s1):(NS (JSLiteral ";") s1):myFix ((NS (JSBlock y) s2):xs)
 myFix ((NS (JSBlock x) s1)     :(NS (JSBlock y) s2):xs)      = (NS (JSBlock x) s1)     :(NS (JSLiteral ";") s1):myFix ((NS (JSBlock y) s2):xs)
 myFix ((NS (JSBlock x) s1)     :(NS (JSExpression y) s2):xs) = (NS (JSBlock x) s1)     :(NS (JSLiteral ";") s1):myFix ((NS (JSExpression y) s2):xs)
+
+myFix ((NS (JSExpression x) s1):(NS (JSStatementBlock y) s2):xs)      = 
+  (NS (JSExpression x) s1):(NS (JSLiteral ";") s1):myFix ((NS (JSStatementBlock y) s2):xs)
+myFix ((NS (JSStatementBlock x) s1)     :(NS (JSStatementBlock y) s2):xs)      = 
+  (NS (JSStatementBlock x) s1)     :(NS (JSLiteral ";") s1):myFix ((NS (JSStatementBlock y) s2):xs)
+myFix ((NS (JSStatementBlock x) s1)     :(NS (JSExpression y) s2):xs) = 
+  (NS (JSStatementBlock x) s1)     :(NS (JSLiteral ";") s1):myFix ((NS (JSExpression y) s2):xs)
 
 -- Merge adjacent variable declarations, but only of the same type
 myFix ((NS (JSVariables t1 x1s) s1):(NS (JSLiteral l) s2):(NS (JSVariables t2 x2s) s3):xs) 
@@ -202,6 +224,9 @@ myFix ((NS (JSVariables t1 x1s) s1):(NS (JSVariables t2 x2s) s2):xs)
 myFix ((NS (JSLiteral ";") s1):(NS (JSLiteral ";") s2):xs)  = myFix ((NS (JSLiteral ";") s1):xs)
 myFix ((NS (JSLiteral ";") s1):(NS (JSLiteral "" ) s2):xs)  = myFix ((NS (JSLiteral "") s1):xs)
 
+-- Sort out empty IF statements
+myFix ((NS (JSIf c (NS (JSStatementBlock (NS (JSStatementList []) s1)) s2)) s3):x:xs) = (NS (JSIf c (NS (JSLiteral "") s1)) s2) : myFix (x:xs)
+                       
 myFix (x:xs)  = x : myFix xs
 
 -- Merge strings split over lines and using "+"
@@ -238,13 +263,24 @@ fixSemis' (x:xs) = x:(NS (JSLiteral ";") SpanEmpty):fixSemis' xs
 
 -- Remove extraneous braces around blocks
 fixBlock :: JSNode -> JSNode
-fixBlock (NS (JSBlock (NS (JSStatementList [x]) _) ) _) = x
+
+fixBlock (NS (JSBlock          (NS (JSStatementList []) s1) ) _) = (NS (JSLiteral ";") s1)
+fixBlock (NS (JSStatementBlock (NS (JSStatementList []) s1) ) _) = (NS (JSLiteral ";") s1)
+
+fixBlock (NS (JSBlock          (NS (JSStatementList [x]) _) ) _) = fixBlock x
+fixBlock (NS (JSStatementBlock (NS (JSStatementList [x]) _) ) _) = fixBlock x
+
 fixBlock (NS (JSBlock (NS (JSStatementList xs) s1) ) s2) = 
   fixBlock' (NS (JSBlock (NS (JSStatementList (fixSourceElements xs)) s1)) s2)
+
+fixBlock (NS (JSStatementBlock (NS (JSStatementList xs) s1) ) s2) = 
+  fixBlock' (NS (JSStatementBlock (NS (JSStatementList (fixSourceElements xs)) s1)) s2)
+
 fixBlock x = x
 
 fixBlock' :: JSNode -> JSNode
-fixBlock' (NS (JSBlock (NS (JSStatementList [x]) _)) _) = x
+fixBlock' (NS (JSBlock          (NS (JSStatementList [x]) _)) _) = x
+fixBlock' (NS (JSStatementBlock (NS (JSStatementList [x]) _)) _) = x
 --fixBlock' (JSBlock (JSStatementList [x,JSLiteral ""])) = x -- TODO: fix parser to not emit this case
 fixBlock' x = x
 
@@ -259,6 +295,20 @@ spaceNeeded xs =
 
 -- ---------------------------------------------------------------------
 -- Test stuff
+
+r js = map (\x -> chr (fromIntegral x)) $ LB.unpack $ BB.toLazyByteString $ renderJS js
+
+--readJs "{{{}}}"
+_case0 :: JSNode
+_case0 = NS (JSSourceElementsTop [NS (JSStatementBlock (NS (JSStatementList [NS (JSStatementBlock (NS (JSStatementList [NS (JSStatementBlock (NS (JSStatementList []) (SpanPoint {span_filename = "", span_row = 1, span_column = 3}))) (SpanPoint {span_filename = "", span_row = 1, span_column = 3})]) (SpanPoint {span_filename = "", span_row = 1, span_column = 3}))) (SpanPoint {span_filename = "", span_row = 1, span_column = 2})]) (SpanPoint {span_filename = "", span_row = 1, span_column = 2}))) (SpanPoint {span_filename = "", span_row = 1, span_column = 1})]) (SpanPoint {span_filename = "", span_row = 1, span_column = 1})
+
+_case01 = [NS (JSStatementBlock (NS (JSStatementList [NS (JSStatementBlock (NS (JSStatementList [NS (JSStatementBlock (NS (JSStatementList []) (SpanPoint {span_filename = "", span_row = 1, span_column = 3}))) (SpanPoint {span_filename = "", span_row = 1, span_column = 3})]) (SpanPoint {span_filename = "", span_row = 1, span_column = 3}))) (SpanPoint {span_filename = "", span_row = 1, span_column = 2})]) (SpanPoint {span_filename = "", span_row = 1, span_column = 2}))) (SpanPoint {span_filename = "", span_row = 1, span_column = 1})] 
+
+-- readJs "if(x){}{a=2}"
+_case1 = NS (JSSourceElementsTop [NS (JSIf (NS (JSExpression [NS (JSIdentifier "x") (SpanPoint {span_filename = "", span_row = 1, span_column = 4})]) (SpanPoint {span_filename = "", span_row = 1, span_column = 4})) (NS (JSStatementBlock (NS (JSStatementList []) (SpanPoint {span_filename = "", span_row = 1, span_column = 6}))) (SpanPoint {span_filename = "", span_row = 1, span_column = 6}))) (SpanPoint {span_filename = "", span_row = 1, span_column = 1}),NS (JSStatementBlock (NS (JSStatementList [NS (JSExpression [NS (JSIdentifier "a") (SpanPoint {span_filename = "", span_row = 1, span_column = 9}),NS (JSOperator "=") (SpanPoint {span_filename = "", span_row = 1, span_column = 10}),NS (JSDecimal "2") (SpanPoint {span_filename = "", span_row = 1, span_column = 11})]) (SpanPoint {span_filename = "", span_row = 1, span_column = 9})]) (SpanPoint {span_filename = "", span_row = 1, span_column = 9}))) (SpanPoint {span_filename = "", span_row = 1, span_column = 8})]) (SpanPoint {span_filename = "", span_row = 1, span_column = 1})
+
+_case11 = [NS (JSIf (NS (JSExpression [NS (JSIdentifier "x") (SpanPoint {span_filename = "", span_row = 1, span_column = 4})]) (SpanPoint {span_filename = "", span_row = 1, span_column = 4})) (NS (JSStatementBlock (NS (JSStatementList []) (SpanPoint {span_filename = "", span_row = 1, span_column = 6}))) (SpanPoint {span_filename = "", span_row = 1, span_column = 6}))) (SpanPoint {span_filename = "", span_row = 1, span_column = 1}),NS (JSStatementBlock (NS (JSStatementList [NS (JSExpression [NS (JSIdentifier "a") (SpanPoint {span_filename = "", span_row = 1, span_column = 9}),NS (JSOperator "=") (SpanPoint {span_filename = "", span_row = 1, span_column = 10}),NS (JSDecimal "2") (SpanPoint {span_filename = "", span_row = 1, span_column = 11})]) (SpanPoint {span_filename = "", span_row = 1, span_column = 9})]) (SpanPoint {span_filename = "", span_row = 1, span_column = 9}))) (SpanPoint {span_filename = "", span_row = 1, span_column = 8})]
+
 {-
 -- readJs "x=1;"
 _case0 :: JSNode
