@@ -119,7 +119,7 @@ rn (JSForVarIn e1 e2 s)          = (text "for") <> (char '(') <> (text "var") <+
                                          <+> (renderJS e2) <> (char ')') <> (renderJS $ fixBlock s)
                                          
 rn (JSHexInteger i)              = (text $ show i) -- TODO: need to tweak this                                         
-rn (JSLabelled l v)              = (renderJS l) <> (text ":") <> (renderJS v)
+rn (JSLabelled l v)              = (renderJS l) <> (text ":") <> (rJS $ fixSourceElements [fixBlock v])
 rn (JSObjectLiteral xs)          = (text "{") <> (commaList xs) <> (text "}")
 rn (JSPropertyNameandValue n vs) = (renderJS n) <> (text ":") <> (rJS vs)
 rn (JSRegEx s)                   = (text s)
@@ -195,7 +195,12 @@ fixSourceElements xs = fixSemis $ myFix xs
   
 myFix :: [JSNode] -> [JSNode]
 myFix []      = []
+
+-- Sort out empty IF statements
+myFix ((NS (JSIf c (NS (JSStatementBlock (NS (JSStatementList []) s1)) s2)) s3):xs) = (NS (JSIf c (NS (JSLiteral "") s1)) s2) : myFix (xs)
+
 myFix [x]     = [x]
+
 myFix (x:(NS (JSFunction v1 v2 v3) s1):xs)  = x : (NS (JSLiteral "\n") s1) : myFix ((NS (JSFunction v1 v2 v3) s1) : xs)
 -- Messy way, but it works, until the 3rd element arrives ..
 -- TODO: JSStatementBlock.  Damn.
@@ -224,8 +229,6 @@ myFix ((NS (JSVariables t1 x1s) s1):(NS (JSVariables t2 x2s) s2):xs)
 myFix ((NS (JSLiteral ";") s1):(NS (JSLiteral ";") s2):xs)  = myFix ((NS (JSLiteral ";") s1):xs)
 myFix ((NS (JSLiteral ";") s1):(NS (JSLiteral "" ) s2):xs)  = myFix ((NS (JSLiteral "") s1):xs)
 
--- Sort out empty IF statements
-myFix ((NS (JSIf c (NS (JSStatementBlock (NS (JSStatementList []) s1)) s2)) s3):x:xs) = (NS (JSIf c (NS (JSLiteral "") s1)) s2) : myFix (x:xs)
                        
 myFix (x:xs)  = x : myFix xs
 
@@ -308,6 +311,11 @@ _case01 = [NS (JSStatementBlock (NS (JSStatementList [NS (JSStatementBlock (NS (
 _case1 = NS (JSSourceElementsTop [NS (JSIf (NS (JSExpression [NS (JSIdentifier "x") (SpanPoint {span_filename = "", span_row = 1, span_column = 4})]) (SpanPoint {span_filename = "", span_row = 1, span_column = 4})) (NS (JSStatementBlock (NS (JSStatementList []) (SpanPoint {span_filename = "", span_row = 1, span_column = 6}))) (SpanPoint {span_filename = "", span_row = 1, span_column = 6}))) (SpanPoint {span_filename = "", span_row = 1, span_column = 1}),NS (JSStatementBlock (NS (JSStatementList [NS (JSExpression [NS (JSIdentifier "a") (SpanPoint {span_filename = "", span_row = 1, span_column = 9}),NS (JSOperator "=") (SpanPoint {span_filename = "", span_row = 1, span_column = 10}),NS (JSDecimal "2") (SpanPoint {span_filename = "", span_row = 1, span_column = 11})]) (SpanPoint {span_filename = "", span_row = 1, span_column = 9})]) (SpanPoint {span_filename = "", span_row = 1, span_column = 9}))) (SpanPoint {span_filename = "", span_row = 1, span_column = 8})]) (SpanPoint {span_filename = "", span_row = 1, span_column = 1})
 
 _case11 = [NS (JSIf (NS (JSExpression [NS (JSIdentifier "x") (SpanPoint {span_filename = "", span_row = 1, span_column = 4})]) (SpanPoint {span_filename = "", span_row = 1, span_column = 4})) (NS (JSStatementBlock (NS (JSStatementList []) (SpanPoint {span_filename = "", span_row = 1, span_column = 6}))) (SpanPoint {span_filename = "", span_row = 1, span_column = 6}))) (SpanPoint {span_filename = "", span_row = 1, span_column = 1}),NS (JSStatementBlock (NS (JSStatementList [NS (JSExpression [NS (JSIdentifier "a") (SpanPoint {span_filename = "", span_row = 1, span_column = 9}),NS (JSOperator "=") (SpanPoint {span_filename = "", span_row = 1, span_column = 10}),NS (JSDecimal "2") (SpanPoint {span_filename = "", span_row = 1, span_column = 11})]) (SpanPoint {span_filename = "", span_row = 1, span_column = 9})]) (SpanPoint {span_filename = "", span_row = 1, span_column = 9}))) (SpanPoint {span_filename = "", span_row = 1, span_column = 8})]
+
+_case12 = (NS (JSIf (NS (JSExpression [NS (JSIdentifier "x") (SpanPoint {span_filename = "", span_row = 1, span_column = 4})]) (SpanPoint {span_filename = "", span_row = 1, span_column = 4})) (NS (JSLiteral "") (SpanPoint {span_filename = "", span_row = 1, span_column = 6}))) (SpanPoint {span_filename = "", span_row = 1, span_column = 6}))
+
+-- readJs "bob:if(x){}\n{a}"
+_case2 = NS (JSSourceElementsTop [NS (JSLabelled (NS (JSIdentifier "bob") (SpanPoint {span_filename = "", span_row = 1, span_column = 1})) (NS (JSIf (NS (JSExpression [NS (JSIdentifier "x") (SpanPoint {span_filename = "", span_row = 1, span_column = 8})]) (SpanPoint {span_filename = "", span_row = 1, span_column = 8})) (NS (JSStatementBlock (NS (JSStatementList []) (SpanPoint {span_filename = "", span_row = 1, span_column = 10}))) (SpanPoint {span_filename = "", span_row = 1, span_column = 10}))) (SpanPoint {span_filename = "", span_row = 1, span_column = 5}))) (SpanPoint {span_filename = "", span_row = 1, span_column = 1}),NS (JSStatementBlock (NS (JSStatementList [NS (JSExpression [NS (JSIdentifier "a") (SpanPoint {span_filename = "", span_row = 2, span_column = 2})]) (SpanPoint {span_filename = "", span_row = 2, span_column = 2})]) (SpanPoint {span_filename = "", span_row = 2, span_column = 2}))) (SpanPoint {span_filename = "", span_row = 2, span_column = 1})]) (SpanPoint {span_filename = "", span_row = 1, span_column = 1})
 
 {-
 -- readJs "x=1;"
