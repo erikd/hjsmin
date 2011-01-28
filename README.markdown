@@ -28,6 +28,8 @@ Running the tests
 Changes
 -------
 
+0.0.12 - Worked in Michael Snoyman's fix for unicode output
+
 0.0.11 - Worked in language-javascript 0.4.*, with source locations in the AST
          Worked in processing of property get/set in object literals
 0.0.10 - Removed attoparsec dependency and historical Parse/Token
