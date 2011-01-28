@@ -238,7 +238,7 @@ caseUnicode =
   "Right (JSSourceElementsTop [JSVariables \"var\" [JSVarDecl (JSIdentifier \"x\") [JSStringLiteral '\"' \"\\1513\\1500\\1493\\1501\"]]])"
   @=? (showStrippedMaybe $ parseProgram srcUnicode)
 caseMinUnicode =  
-  testMinify "var x = \"שלום\";" srcUnicode
+  testMinify "var x=\"שלום\"" srcUnicode
 
 -- ---------------------------------------------------------------------
 -- utilities

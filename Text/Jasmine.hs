@@ -12,6 +12,9 @@ import Text.Jasmine.Pretty
 import qualified Blaze.ByteString.Builder as BB
 import qualified Data.ByteString.Lazy as LB
 import qualified Data.ByteString.Lazy.Char8 as S8
+import Data.Text.Lazy (unpack)
+import Data.Text.Lazy.Encoding (decodeUtf8With)
+import Data.Text.Encoding.Error (lenientDecode)
 
 minifym :: LB.ByteString -> Either String LB.ByteString
 minifym s = case parse' s of
@@ -40,7 +43,7 @@ parse' :: S8.ByteString -> Either ParseError JSNode
 parse' input = parse (lbToStr input) "src"
 
 lbToStr :: S8.ByteString -> [Char]
-lbToStr str = S8.unpack str
+lbToStr = unpack . decodeUtf8With lenientDecode
 
 _strToLb :: String -> S8.ByteString
 _strToLb str = S8.pack str
