@@ -31,6 +31,7 @@ testSuite = testGroup "Text.Jasmine.Parse"
     , testCase "mergeStrings"     caseMergeStrings
     , testCase "TrailingCommas"   caseTrailingCommas
     , testCase "GetSet"           caseGetSet
+    , testCase "Unicode"          caseUnicode
     ]
 
 testSuiteMin :: Test
@@ -49,6 +50,7 @@ testSuiteMin = testGroup "Text.Jasmine.Pretty"
     , testCase "EitherRight"      caseEitherRight  
     , testCase "TrailingCommas"   caseMinTrailingCommas
     , testCase "GetSet"           caseMinGetSet
+    , testCase "Unicode"          caseMinUnicode
     ]
 
 testSuiteFiles :: Test
@@ -231,6 +233,13 @@ caseGetSet =
 caseMinGetSet =  
   testMinify "x={get foo(){return 1},set foo(a){x=a}}" srcGetSet
   
+srcUnicode = "var x = \"שלום\";"
+caseUnicode =
+  "Right (JSSourceElementsTop [JSVariables \"var\" [JSVarDecl (JSIdentifier \"x\") [JSStringLiteral '\"' \"\\1513\\1500\\1493\\1501\"]]])"
+  @=? (showStrippedMaybe $ parseProgram srcUnicode)
+caseMinUnicode =  
+  testMinify "var x = \"שלום\";" srcUnicode
+
 -- ---------------------------------------------------------------------
 -- utilities
 
