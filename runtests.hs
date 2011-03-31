@@ -32,6 +32,7 @@ testSuite = testGroup "Text.Jasmine.Parse"
     , testCase "TrailingCommas"   caseTrailingCommas
     , testCase "GetSet"           caseGetSet
     , testCase "Unicode"          caseUnicode
+    , testCase "Issue3"           caseIssue3
     ]
 
 testSuiteMin :: Test
@@ -51,6 +52,7 @@ testSuiteMin = testGroup "Text.Jasmine.Pretty"
     , testCase "TrailingCommas"   caseMinTrailingCommas
     , testCase "GetSet"           caseMinGetSet
     , testCase "Unicode"          caseMinUnicode
+    , testCase "MinIssue3"        caseMinIssue3
     ]
 
 testSuiteFiles :: Test
@@ -239,6 +241,13 @@ caseUnicode =
   @=? (showStrippedMaybe $ parseProgram srcUnicode)
 caseMinUnicode =  
   testMinify "var x=\"שלום\"" srcUnicode
+
+srcIssue3 = "var myLatlng = new google.maps.LatLng(56.8379100, 60.5806664);"
+caseIssue3 =
+  "Right (JSSourceElementsTop [JSVariables \"var\" [JSVarDecl (JSIdentifier \"myLatlng\") [JSLiteral \"new \",JSMemberDot [JSMemberDot [JSIdentifier \"google\"] (JSIdentifier \"maps\")] (JSIdentifier \"LatLng\"),JSArguments [[JSDecimal \"56.8379100\"],[JSDecimal \"60.5806664\"]]]]])"
+  @=? (showStrippedMaybe $ parseProgram srcIssue3)
+caseMinIssue3 =  
+  testMinify "var myLatlng=new google.maps.LatLng(56.8379100,60.5806664)" srcIssue3
 
 -- ---------------------------------------------------------------------
 -- utilities
