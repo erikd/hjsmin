@@ -33,6 +33,7 @@ testSuite = testGroup "Text.Jasmine.Parse"
     , testCase "GetSet"           caseGetSet
     , testCase "Unicode"          caseUnicode
     , testCase "Issue3"           caseIssue3
+    , testCase "Issue4"           caseIssue4
     ]
 
 testSuiteMin :: Test
@@ -53,6 +54,7 @@ testSuiteMin = testGroup "Text.Jasmine.Pretty"
     , testCase "GetSet"           caseMinGetSet
     , testCase "Unicode"          caseMinUnicode
     , testCase "MinIssue3"        caseMinIssue3
+    , testCase "MinIssue4"        caseMinIssue4
     ]
 
 testSuiteFiles :: Test
@@ -248,6 +250,13 @@ caseIssue3 =
   @=? (showStrippedMaybe $ parseProgram srcIssue3)
 caseMinIssue3 =  
   testMinify "var myLatlng=new google.maps.LatLng(56.8379100,60.5806664)" srcIssue3
+
+srcIssue4 = "/* * geolocation. пытаемся определить свое местоположение * если не получается то используем defaultLocation * @Param {object} map экземпляр карты * @Param {object LatLng} defaultLocation Координаты центра по умолчанию * @Param {function} callbackAfterLocation Фу-ия которая вызывается после * геолокации. Т.к запрос геолокации асинхронен */x"
+caseIssue4 =
+  "Right (JSSourceElementsTop [JSExpression [JSIdentifier \"x\"]])"
+  @=? (showStrippedMaybe $ parseProgram srcIssue4)
+caseMinIssue4 =  
+  testMinify "x" srcIssue4
 
 -- ---------------------------------------------------------------------
 -- utilities

@@ -28,6 +28,10 @@ Running the tests
 Changes
 -------
 
+0.0.14 - Allow unicode characters in comments
+
+0.0.13 - Error in parsing numbers with zeros before decimal point
+
 0.0.12 - Worked in Michael Snoyman's fix for unicode output
 
 0.0.11 - Worked in language-javascript 0.4.*, with source locations in the AST
