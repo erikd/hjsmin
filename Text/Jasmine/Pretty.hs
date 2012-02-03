@@ -5,7 +5,7 @@ module Text.Jasmine.Pretty
 
 import Data.Char
 import Data.List
-import Data.Monoid
+import Data.Monoid (Monoid, mappend, mempty, mconcat)
 -- import Text.Jasmine.Parse
 import Language.JavaScript.Parser
 import qualified Blaze.ByteString.Builder as BB
