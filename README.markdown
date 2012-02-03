@@ -28,6 +28,8 @@ Running the tests
 Changes
 -------
 
+0.0.15 - Fix GHC 7.4.1 compile compatibility. Patch accepted from github.com/luite
+
 0.0.14 - Allow unicode characters in comments
 
 0.0.13 - Error in parsing numbers with zeros before decimal point
