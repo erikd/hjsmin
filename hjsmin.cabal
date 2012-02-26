@@ -1,12 +1,12 @@
 name:            hjsmin
-version:         0.0.15
+version:         0.1.0
 license:         BSD3
 license-file:    LICENSE
 author:          Alan Zimmerman <alan.zimm@gmail.com>
 maintainer:      Alan Zimmerman <alan.zimm@gmail.com>
 synopsis:        Haskell implementation of a javascript minifier
 description:
-   Reduces size of javascript files by stripping out extraneous whitespace and 
+   Reduces size of javascript files by stripping out extraneous whitespace and
    other syntactic elements, without changing the semantics.
 category:        Web
 stability:       unstable
@@ -15,7 +15,7 @@ build-type:      Simple
 homepage:        http://github.com/alanz/hjsmin
 bug-reports:     http://github.com/alanz/hjsmin/issues
 
-Extra-source-files: 
+Extra-source-files:
   TODO.txt, README.markdown, buildall.sh
 
 
@@ -29,7 +29,7 @@ library
                    , blaze-builder       >= 0.2     && < 1
                    , text                >= 0.8     && < 1
                    , containers          >= 0.2     && < 0.5
-                   , language-javascript >= 0.4.4   && < 0.5
+                   , language-javascript >= 0.5.0   && < 0.6
     exposed-modules: Text.Jasmine
     other-modules:   Text.Jasmine.Pretty
     ghc-options:     -Wall
