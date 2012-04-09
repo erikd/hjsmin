@@ -28,6 +28,10 @@ Running the tests
 Changes
 -------
 
+0.0.16 - Fix bug for issue 7, blowing up when calculating if space needed after return
+
+0.0.15 - Fix ambiguous symbols with GHC 7.4.1, from @luite
+
 0.0.14 - Allow unicode characters in comments
 
 0.0.13 - Error in parsing numbers with zeros before decimal point
