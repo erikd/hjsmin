@@ -7,7 +7,7 @@ module Text.Jasmine
     ) where
 
 --import Text.Jasmine.Parse
-import Language.JavaScript.Parser
+import Language.JavaScript.Parser (readJs, parse, JSNode(..))
 import Text.Jasmine.Pretty
 import qualified Blaze.ByteString.Builder as BB
 import qualified Data.ByteString.Lazy as LB
@@ -40,6 +40,8 @@ minifyFile filename =
      return $ minify x
 
 --parse' :: S8.ByteString -> Either ParseError JSNode
+parse'
+  :: S8.ByteString -> Either String JSNode
 parse' input = parse (lbToStr input) "src"
 
 lbToStr :: S8.ByteString -> [Char]
