@@ -37,7 +37,7 @@ testSuite = testGroup "Text.Jasmine.Parse"
     ]
 
 testSuiteMin :: Test
-testSuiteMin = testGroup "Text.Jasmine.Pretty"
+testSuiteMin = testGroup "Text.Jasmine.Pretty Min"
     [ testCase "helloWorld"       caseMinHelloWorld
     , testCase "helloWorld2"      caseMinHelloWorld2
     , testCase "simpleAssignment" caseMinSimpleAssignment

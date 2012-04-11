@@ -58,7 +58,7 @@ rn (JSRegEx s)             = (text s)
 
 -- Non Terminals
 rn (JSOperator x)          = renderJS x
-rn (JSExpression xs)       = rJS xs
+rn (JSExpression xs)       = rJS $ fixNew xs
 
 
 --rn (JSSourceElements xs)   = rJS (map fixBlock $ fixSourceElements xs)
@@ -82,7 +82,8 @@ rn (JSFunctionExpression _f s _lb p _rb _lb2 xs _rb2)  = (text "function") <+> (
 rn (JSArguments _lb xs _rb) = (text "(") <> (rJS $ fixLiterals xs) <> (text ")")
 
 --rn (JSBlock x)             = (text "{") <> (renderJS x) <> (text "}")
-rn (JSBlock _lb x _rb)       = (text "{") <> (renderJS x) <> (text "}")
+--rn (JSBlock _lb x _rb)       = (text "{") <> (renderJS x) <> (text "}")
+rn (JSBlock lb x rb)       = (rJS lb) <> (renderJS x) <> (rJS rb)
 
 {-
 rn (JSIf c (NT (JSLiteral ";") _ _)) = (text "if") <> (text "(") <> (renderJS c) <> (text ")")
@@ -93,13 +94,14 @@ rn (JSIf c t (NT (JSLiteral ";") _ _)) = (text "if") <> (text "(") <> (renderJS 
 rn (JSIf c t e)        = (text "if") <> (text "(") <> (renderJS c) <> (text ")") <> (renderJS t)
                                    <> (text "else") <> (spaceOrBlock $ fixBlock e)
 -}
-rn (JSIf _i _lb c _rb (NT (JSLiteral ";") _ _) []) = (text "if") <> (text "(") <> (renderJS c) <> (text ")")
-rn (JSIf _i _lb c _rb t                        []) = (text "if") <> (text "(") <> (renderJS c) <> (text ")") <> (renderJS $ fixBlock t)
+rn (JSIf _i _lb c _rb (NT (JSLiteral ";") _ _) [])     = (text "if") <> (text "(") <> (renderJS c) <> (text ")")
+--rn (JSIf _i _lb c _rb t                        [])     = (text "if") <> (text "(") <> (renderJS c) <> (text ")") <> (renderJS $ fixBlock t)
+rn (JSIf _i _lb c _rb t                        [])     = (text "if") <> (text "(") <> (renderJS c) <> (text ")") <> (renderJS t)
 
 rn (JSIf _i _lb c _rb t [_e,(NT (JSLiteral ";") _ _)]) = (text "if") <> (text "(") <> (renderJS c) <> (text ")")  <> (renderJS t)
-                                                      <> (text "else")
-rn (JSIf _i _lb c _rb  t [_e,e])                         = (text "if") <> (text "(") <> (renderJS c) <> (text ")") <> (renderJS t)
-                                                      <> (text "else") <> (spaceOrBlock $ fixBlock e)
+                                                         <> (text "else")
+rn (JSIf _i _lb c _rb t [_e,e])                        = (text "if") <> (text "(") <> (renderJS c) <> (text ")") <> (renderJS t)
+                                                         <> (text "else") <> (spaceOrBlock $ fixBlock e)
 
 
 
@@ -153,6 +155,7 @@ rn (JSForVarIn _f _lb _v e1 _i e2 _rb s) = (text "for") <> (char '(') <> (text "
                                          <+> (renderJS e2) <> (char ')') <> (renderJS $ fixBlock s)
 
 rn (JSLabelled l _c v)           = (renderJS l) <> (text ":") <> (rJS $ fixSourceElements [fixBlock v])
+
 rn (JSObjectLiteral _lb xs _rb)  = (text "{") <> (commaList xs) <> (text "}")
 rn (JSPropertyAccessor s n _lb1 ps _rb1 _lb2 b _rb2) = (renderJS s) <+> (renderJS n) <> (char '(') <> (rJS ps) <> (text ")") <> (renderJS b)
 rn (JSPropertyNameandValue n _c vs) = (renderJS n) <> (text ":") <> (rJS vs)
@@ -163,16 +166,19 @@ rn (JSReturn _r xs _as)                 = (text "return") <> (if (spaceNeeded xs
 
 rn (JSThrow _t e)                 = (text "throw") <+> (renderJS e)
 
-rn (JSStatementBlock _lb x _rb)   = (text "{") <> (renderJS x) <> (text "}")
+rn (JSStatementBlock lb x rb)   = (renderJS lb) <> (renderJS x) <> (renderJS rb)
 
-rn (JSStatementList xs)          = rJS (fixSourceElements $ map fixBlock xs)
+--rn (JSStatementList xs)          = rJS (fixSourceElements $ map fixBlock xs)
+--rn (JSStatementList xs)          = rJS (fixSourceElements xs)
+rn (JSStatementList xs)          = rJS (fixSourceElements xs)
 
-rn (JSSwitch _s _lb e _rb xs)    = (text "switch") <> (char '(') <> (renderJS e) <> (char ')') <>
-                                   (char '{') <> (rJS $ fixSemis xs)  <> (char '}')
+--rn (JSSwitch _s _lb e _rb xs)    = (text "switch") <> (char '(') <> (renderJS e) <> (char ')') <> (rJS $ fixSemis xs)
+rn (JSSwitch _s _lb e _rb xs)    = (text "switch") <> (char '(') <> (renderJS e) <> (char ')') <> (rJS xs)
+
 rn (JSTry _t e xs)               = (text "try") <> (renderJS e) <> (rJS xs)
 
 rn (JSVarDecl i [])              = (renderJS i)
-rn (JSVarDecl i xs)              = (renderJS i) <> (rJS xs)
+rn (JSVarDecl i xs)              = (renderJS i) <> (rJS $ fixNew xs)
 
 rn (JSVariables kw xs _as)       = (renderJS kw) <+> (commaList xs)
 
@@ -187,11 +193,14 @@ rJS xs = hcat $ map renderJS xs
 
 commaList :: [JSNode] -> BB.Builder
 commaList [] = empty
+commaList xs = rJS xs
+{-
 commaList xs = (hcat $ (punctuate comma (toDoc xs') ++ trail))
   where
     -- (xs', trail) = if (last xs == JSLiteral ",") then (init xs, [comma]) else (xs,[])
     (xs', trail) = if (x' == JSLiteral ",") then (init xs, [comma]) else (xs,[])
     x' = extractNode $ last xs
+-}
 
 extractNode :: JSNode -> Node
 extractNode (NT x _ _) = x
@@ -225,6 +234,12 @@ fixTop xs = if (n == (JSLiteral ";")) then (init xs) else (xs)
   where
     n = extractNode $ last xs
 
+-- The "new" literal always need a space after it
+fixNew :: [JSNode] -> [JSNode]
+fixNew []                               = []
+fixNew ((NT (JSLiteral "new") p cs):xs) = (NT (JSLiteral "new ") p cs) : fixNew xs
+fixNew (x                          :xs) = x                            : fixNew xs
+
 -- Fix semicolons in output of sourceelements and statementlist
 
 fixSourceElements :: [JSNode] -> [JSNode]
@@ -232,6 +247,7 @@ fixSourceElements xs = fixSemis $ myFix xs
 
 myFix :: [JSNode] -> [JSNode]
 myFix []      = []
+
 
 -- Sort out empty IF statements
 myFix ((NN (JSIf i lb c rb  (NN (JSStatementBlock _lb (NN (JSStatementList []) ) _rb) ) e)):xs) = (NN (JSIf i lb c rb (NT (JSLiteral "") tokenPosnEmpty []) e) ) : myFix (xs)
