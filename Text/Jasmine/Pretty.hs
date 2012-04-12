@@ -6,8 +6,7 @@ module Text.Jasmine.Pretty
 import Data.Char
 import Data.List
 import Data.Monoid (Monoid, mappend, mempty, mconcat)
--- import Text.Jasmine.Parse
-import Language.JavaScript.Parser (JSNode(..),Node(..),tokenPosnEmpty)
+import Language.JavaScript.Parser (JSNode(..),Node(..),tokenPosnEmpty,readJs,CommentAnnotation(..),TokenPosn(..))
 import qualified Blaze.ByteString.Builder as BB
 import qualified Blaze.ByteString.Builder.Char.Utf8 as BS
 import qualified Data.ByteString.Lazy as LB
@@ -81,9 +80,8 @@ rn (JSFunctionExpression _f s _lb p _rb _lb2 xs _rb2)  = (text "function") <+> (
 --rn (JSArguments xs ) = (text "(") <> (commaListList $ map fixLiterals xs) <> (text ")")
 rn (JSArguments _lb xs _rb) = (text "(") <> (rJS $ fixLiterals xs) <> (text ")")
 
---rn (JSBlock x)             = (text "{") <> (renderJS x) <> (text "}")
---rn (JSBlock _lb x _rb)       = (text "{") <> (renderJS x) <> (text "}")
-rn (JSBlock lb x rb)       = (rJS lb) <> (renderJS x) <> (rJS rb)
+rn (JSBlock lb xs rb)            = (rJS lb) <> (rJS xs) <> (rJS rb)
+
 
 {-
 rn (JSIf c (NT (JSLiteral ";") _ _)) = (text "if") <> (text "(") <> (renderJS c) <> (text ")")
@@ -94,13 +92,13 @@ rn (JSIf c t (NT (JSLiteral ";") _ _)) = (text "if") <> (text "(") <> (renderJS 
 rn (JSIf c t e)        = (text "if") <> (text "(") <> (renderJS c) <> (text ")") <> (renderJS t)
                                    <> (text "else") <> (spaceOrBlock $ fixBlock e)
 -}
-rn (JSIf _i _lb c _rb (NT (JSLiteral ";") _ _) [])     = (text "if") <> (text "(") <> (renderJS c) <> (text ")")
+rn (JSIf _i _lb c _rb [(NT (JSLiteral ";") _ _)] [])     = (text "if") <> (text "(") <> (renderJS c) <> (text ")")
 --rn (JSIf _i _lb c _rb t                        [])     = (text "if") <> (text "(") <> (renderJS c) <> (text ")") <> (renderJS $ fixBlock t)
-rn (JSIf _i _lb c _rb t                        [])     = (text "if") <> (text "(") <> (renderJS c) <> (text ")") <> (renderJS t)
+rn (JSIf _i _lb c _rb t                        [])     = (text "if") <> (text "(") <> (renderJS c) <> (text ")") <> (rJS t)
 
-rn (JSIf _i _lb c _rb t [_e,(NT (JSLiteral ";") _ _)]) = (text "if") <> (text "(") <> (renderJS c) <> (text ")")  <> (renderJS t)
+rn (JSIf _i _lb c _rb t [_e,(NT (JSLiteral ";") _ _)]) = (text "if") <> (text "(") <> (renderJS c) <> (text ")")  <> (rJS t)
                                                          <> (text "else")
-rn (JSIf _i _lb c _rb t [_e,e])                        = (text "if") <> (text "(") <> (renderJS c) <> (text ")") <> (renderJS t)
+rn (JSIf _i _lb c _rb t [_e,e])                        = (text "if") <> (text "(") <> (renderJS c) <> (text ")") <> (rJS t)
                                                          <> (text "else") <> (spaceOrBlock $ fixBlock e)
 
 
@@ -121,8 +119,8 @@ rn (JSCallExpression   t  _os xs _cs) = (char $ head t) <> (rJS xs) <> (if ((len
 -- No space between 'case' and string literal. TODO: what about expression in parentheses?
 --rn (JSCase (JSExpression [JSStringLiteral sepa s]) xs) = (text "case") <> (renderJS (JSStringLiteral sepa s))
 rn (JSCase _ca (NN (JSExpression [(NT (JSStringLiteral sepa s) s1 c1)])) _c xs) = (text "case") <> (renderJS (NT (JSStringLiteral sepa s) s1 c1))
-                                                               <> (char ':') <> (renderJS xs)
-rn (JSCase _ca e _c xs)           = (text "case") <+> (renderJS e) <> (char ':') <> (renderJS xs) -- <> (text ";");
+                                                               <> (char ':') <> (rJS xs)
+rn (JSCase _ca e _c xs)           = (text "case") <+> (renderJS e) <> (char ':') <> (rJS xs) -- <> (text ";");
 
 
 rn (JSCatch _c _lb i [] _rb s)  = (text "catch") <> (char '(') <> (renderJS i) <>  (char ')') <> (renderJS s)
@@ -130,7 +128,7 @@ rn (JSCatch _c _lb i  c _rb s)  = (text "catch") <> (char '(') <> (renderJS i) <
                                   (text " if ") <> (rJS c) <> (char ')') <> (renderJS s)
 
 rn (JSContinue _c is _as)  = (text "continue") <> (rJS is) -- <> (char ';')
-rn (JSDefault _d _c xs)    = (text "default") <> (char ':') <> (renderJS xs)
+rn (JSDefault _d _c xs)    = (text "default") <> (char ':') <> (rJS xs)
 rn (JSDoWhile _d s _w _lb e _rb _ms)     = (text "do") <> (renderJS s) <> (text "while") <> (char '(') <> (renderJS e) <> (char ')') -- <> (renderJS ms)
 
 
@@ -166,14 +164,8 @@ rn (JSReturn _r xs _as)                 = (text "return") <> (if (spaceNeeded xs
 
 rn (JSThrow _t e)                 = (text "throw") <+> (renderJS e)
 
-rn (JSStatementBlock lb x rb)   = (renderJS lb) <> (renderJS x) <> (renderJS rb)
-
---rn (JSStatementList xs)          = rJS (fixSourceElements $ map fixBlock xs)
---rn (JSStatementList xs)          = rJS (fixSourceElements xs)
-rn (JSStatementList xs)          = rJS (fixSourceElements xs)
-
 --rn (JSSwitch _s _lb e _rb xs)    = (text "switch") <> (char '(') <> (renderJS e) <> (char ')') <> (rJS $ fixSemis xs)
-rn (JSSwitch _s _lb e _rb xs)    = (text "switch") <> (char '(') <> (renderJS e) <> (char ')') <> (rJS xs)
+rn (JSSwitch _s _lb e _rb x)     = (text "switch") <> (char '(') <> (renderJS e) <> (char ')') <> (renderJS x)
 
 rn (JSTry _t e xs)               = (text "try") <> (renderJS e) <> (rJS xs)
 
@@ -214,7 +206,7 @@ toDoc xs = map renderJS xs
 
 spaceOrBlock :: JSNode -> BB.Builder
 spaceOrBlock (NN (JSBlock lb xs rb)) = rn (JSBlock lb xs rb)
-spaceOrBlock (NN (JSStatementBlock lb xs rb)) = rn (JSStatementBlock lb xs rb)
+--spaceOrBlock (NN (JSStatementBlock lb xs rb)) = rn (JSStatementBlock lb xs rb)
 spaceOrBlock x            = (text " ") <> (renderJS x)
 
 
@@ -250,7 +242,7 @@ myFix []      = []
 
 
 -- Sort out empty IF statements
-myFix ((NN (JSIf i lb c rb  (NN (JSStatementBlock _lb (NN (JSStatementList []) ) _rb) ) e)):xs) = (NN (JSIf i lb c rb (NT (JSLiteral "") tokenPosnEmpty []) e) ) : myFix (xs)
+--myFix ((NN (JSIf i lb c rb  (NN (JSStatementBlock _lb (NN (JSStatementList []) ) _rb) ) e)):xs) = (NN (JSIf i lb c rb (NT (JSLiteral "") tokenPosnEmpty []) e) ) : myFix (xs)
 
 myFix [x]     = [x]
 
@@ -263,12 +255,12 @@ myFix ((NN (JSExpression x) ):(NN (JSBlock l y r) ):xs)  = (NN (JSExpression x) 
 myFix ((NN (JSBlock x1 x2 x3) )     :(NN (JSBlock y1 y2 y3) ):xs)      = (NN (JSBlock x1 x2 x3) )     :(NT (JSLiteral ";") tokenPosnEmpty []):myFix ((NN (JSBlock y1 y2 y3) ):xs)
 myFix ((NN (JSBlock x1 x2 x3) )     :(NN (JSExpression y) ):xs) = (NN (JSBlock x1 x2 x3) )     :(NT (JSLiteral ";") tokenPosnEmpty []):myFix ((NN (JSExpression y) ):xs)
 
-myFix ((NN (JSExpression x) ):(NN (JSStatementBlock y1 y2 y3) ):xs)      =
-  (NN (JSExpression x) ):(NT (JSLiteral ";") tokenPosnEmpty []):myFix ((NN (JSStatementBlock y1 y2 y3) ):xs)
-myFix ((NN (JSStatementBlock x1 x2 x3) )     :(NN (JSStatementBlock y1 y2 y3) ):xs)      =
-  (NN (JSStatementBlock x1 x2 x3) )     :(NT (JSLiteral ";") tokenPosnEmpty []):myFix ((NN (JSStatementBlock y1 y2 y3) ):xs)
-myFix ((NN (JSStatementBlock x1 x2 x3) )     :(NN (JSExpression y) ):xs) =
-  (NN (JSStatementBlock x1 x2 x3) )     :(NT (JSLiteral ";") tokenPosnEmpty []):myFix ((NN (JSExpression y) ):xs)
+-- myFix ((NN (JSExpression x) ):(NN (JSStatementBlock y1 y2 y3) ):xs)      =
+--   (NN (JSExpression x) ):(NT (JSLiteral ";") tokenPosnEmpty []):myFix ((NN (JSStatementBlock y1 y2 y3) ):xs)
+-- myFix ((NN (JSStatementBlock x1 x2 x3) )     :(NN (JSStatementBlock y1 y2 y3) ):xs)      =
+--   (NN (JSStatementBlock x1 x2 x3) )     :(NT (JSLiteral ";") tokenPosnEmpty []):myFix ((NN (JSStatementBlock y1 y2 y3) ):xs)
+-- myFix ((NN (JSStatementBlock x1 x2 x3) )     :(NN (JSExpression y) ):xs) =
+--   (NN (JSStatementBlock x1 x2 x3) )     :(NT (JSLiteral ";") tokenPosnEmpty []):myFix ((NN (JSExpression y) ):xs)
 
 -- Merge adjacent variable declarations, but only of the same type
 myFix ((NN (JSVariables t1 x1s a1) ):(NT (JSLiteral l) s2 c2):(NN (JSVariables t2 x2s a2) ):xs)
@@ -309,39 +301,34 @@ fixSemis' :: [JSNode] -> [JSNode]
 fixSemis' [] = []
 fixSemis' [(NN (JSContinue c [(NT (JSLiteral ";") _ _)] as) )] = [(NN (JSContinue c [] as) )]
 fixSemis' [x] = [x]
-fixSemis' ((NN (JSIf i lb c rb (NN (JSReturn r [(NT (JSLiteral ";") s1 c1)] as) ) e) ):xs)  =
-           (NN (JSIf i lb c rb (NN (JSReturn r [(NT (JSLiteral ";") s1 c1)] as) ) e) ):(fixSemis' xs)
+fixSemis' ((NN (JSIf i lb c rb [(NN (JSReturn r [(NT (JSLiteral ";") s1 c1)] as) )] e) ):xs)  =
+           (NN (JSIf i lb c rb [(NN (JSReturn r [(NT (JSLiteral ";") s1 c1)] as) )] e) ):(fixSemis' xs)
 
-fixSemis' ((NN (JSIf i lb c rb (NN (JSContinue co [(NT (JSLiteral ";") s1 c1)] as) ) e) ):xs)    =
-           (NN (JSIf i lb c rb (NN (JSContinue co [(NT (JSLiteral ";") s1 c1)] as) ) e) ):(fixSemis' xs)
+fixSemis' ((NN (JSIf i lb c rb [(NN (JSContinue co [(NT (JSLiteral ";") s1 c1)] as) )] e) ):xs)    =
+           (NN (JSIf i lb c rb [(NN (JSContinue co [(NT (JSLiteral ";") s1 c1)] as) )] e) ):(fixSemis' xs)
 
 fixSemis' (x:(NT (JSLiteral "\n") s1 c1):xs) = x:(NT (JSLiteral "\n") s1 c1):(fixSemis' xs) -- TODO: is this needed?
 
-fixSemis' ((NN (JSCase ca1 e1 c1 ((NN (JSStatementList []) ))) ):(NN (JSCase ca2 e2 c2 x) ):xs) =
-           (NN (JSCase ca1 e1 c1 ((NN (JSStatementList []) ))) ):fixSemis' ((NN (JSCase ca2 e2 c2 x) ):xs)
+-- fixSemis' ((NN (JSCase ca1 e1 c1 ((NN (JSStatementList []) ))) ):(NN (JSCase ca2 e2 c2 x) ):xs) =
+--            (NN (JSCase ca1 e1 c1 ((NN (JSStatementList []) ))) ):fixSemis' ((NN (JSCase ca2 e2 c2 x) ):xs)
 fixSemis' (x:xs) = x:(NT (JSLiteral ";") tokenPosnEmpty []):fixSemis' xs
 
 -- Remove extraneous braces around blocks
 fixBlock :: JSNode -> JSNode
 
-fixBlock (NN (JSBlock          _lb (NN (JSStatementList []) ) _rb ) ) = (NT (JSLiteral ";") tokenPosnEmpty [])
-fixBlock (NN (JSStatementBlock _lb (NN (JSStatementList []) ) _rb ) ) = (NT (JSLiteral ";") tokenPosnEmpty [])
+--fixBlock (NN (JSBlock [NT (JSLiteral "{") pl csl] xs [NT (JSLiteral "}") pr csr]) pb csb)
+fixBlock (NN (JSBlock _lb [] _rb)) = (NT (JSLiteral ";") tokenPosnEmpty [])
+fixBlock (NN (JSBlock _lb [x] _rb)) = fixBlock x
 
-fixBlock (NN (JSBlock          _lb (NN (JSStatementList [x]) ) _rb ) ) = fixBlock x
-fixBlock (NN (JSStatementBlock _lb (NN (JSStatementList [x]) ) _rb ) ) = fixBlock x
-
-fixBlock    (NN (JSBlock lb (NN (JSStatementList xs) ) rb ) ) =
-  fixBlock' (NN (JSBlock lb (NN (JSStatementList (fixSourceElements xs)) ) rb) )
-
-fixBlock (NN (JSStatementBlock lb (NN (JSStatementList xs) ) rb ) ) =
-  fixBlock' (NN (JSStatementBlock lb (NN (JSStatementList (fixSourceElements xs)) ) rb) )
+-- fixBlock    (NN (JSBlock lb (NN (JSStatementList xs) ) rb ) ) =
+--   fixBlock' (NN (JSBlock lb (NN (JSStatementList (fixSourceElements xs)) ) rb) )
 
 fixBlock x = x
 
 fixBlock' :: JSNode -> JSNode
-fixBlock' (NN (JSBlock          _lb (NN (JSStatementList [x]) ) _rb) ) = x
-fixBlock' (NN (JSStatementBlock _lb (NN (JSStatementList [x]) ) _rb) ) = x
---fixBlock' (JSBlock (JSStatementList [x,JSLiteral ""])) = x -- TODO: fix parser to not emit this case
+-- fixBlock' (NN (JSBlock          _lb (NN (JSStatementList [x]) ) _rb) ) = x
+-- fixBlock' (NN (JSStatementBlock _lb (NN (JSStatementList [x]) ) _rb) ) = x
+-- fixBlock' (JSBlock (JSStatementList [x,JSLiteral ""])) = x -- TODO: fix parser to not emit this case
 fixBlock' x = x
 
 -- A space is needed if this expression starts with an identifier etc, but not if with a '('
@@ -379,6 +366,8 @@ _case12 = undefined -- (NN (JSIf (NN (JSExpression [NS (JSIdentifier "x") (SpanP
 -- readJs "bob:if(x){}\n{a}"
 _case2 :: JSNode
 _case2 = undefined -- NS (JSSourceElementsTop [NS (JSLabelled (NS (JSIdentifier "bob") (SpanPoint {span_filename = "", span_row = 1, span_column = 1})) (NN (JSIf (NN (JSExpression [NS (JSIdentifier "x") (SpanPoint {span_filename = "", span_row = 1, span_column = 8})]) (SpanPoint {span_filename = "", span_row = 1, span_column = 8})) (NN (JSStatementBlock (NN (JSStatementList []) (SpanPoint {span_filename = "", span_row = 1, span_column = 10}))) (SpanPoint {span_filename = "", span_row = 1, span_column = 10}))) (SpanPoint {span_filename = "", span_row = 1, span_column = 5}))) (SpanPoint {span_filename = "", span_row = 1, span_column = 1}),NN (JSStatementBlock (NN (JSStatementList [NS (JSExpression [NS (JSIdentifier "a") (SpanPoint {span_filename = "", span_row = 2, span_column = 2})]) (SpanPoint {span_filename = "", span_row = 2, span_column = 2})]) (SpanPoint {span_filename = "", span_row = 2, span_column = 2}))) (SpanPoint {span_filename = "", span_row = 2, span_column = 1})]) (SpanPoint {span_filename = "", span_row = 1, span_column = 1})
+
+-- readJs "switch(i){case 1:1;case 2:2}"
 
 -- EOF
 
