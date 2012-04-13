@@ -94,11 +94,11 @@ rn (JSIf c t e)        = (text "if") <> (text "(") <> (renderJS c) <> (text ")")
 -}
 rn (JSIf _i _lb c _rb [(NT (JSLiteral ";") _ _)] [])     = (text "if") <> (text "(") <> (renderJS c) <> (text ")")
 --rn (JSIf _i _lb c _rb t                        [])     = (text "if") <> (text "(") <> (renderJS c) <> (text ")") <> (renderJS $ fixBlock t)
-rn (JSIf _i _lb c _rb t                        [])     = (text "if") <> (text "(") <> (renderJS c) <> (text ")") <> (rJS t)
+rn (JSIf _i _lb c _rb t                        [])     = (text "if") <> (text "(") <> (renderJS c) <> (text ")") <> (rJS $ fixSemis t)
 
-rn (JSIf _i _lb c _rb t [_e,(NT (JSLiteral ";") _ _)]) = (text "if") <> (text "(") <> (renderJS c) <> (text ")")  <> (rJS t)
+rn (JSIf _i _lb c _rb t [_e,(NT (JSLiteral ";") _ _)]) = (text "if") <> (text "(") <> (renderJS c) <> (text ")") <> (rJS $ fixSemis t)
                                                          <> (text "else")
-rn (JSIf _i _lb c _rb t [_e,e])                        = (text "if") <> (text "(") <> (renderJS c) <> (text ")") <> (rJS t)
+rn (JSIf _i _lb c _rb t [_e,e])                        = (text "if") <> (text "(") <> (renderJS c) <> (text ")") <> (rJS $ fixSemis t)
                                                          <> (text "else") <> (spaceOrBlock $ fixBlock e)
 
 
