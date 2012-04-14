@@ -60,22 +60,21 @@ rn (JSOperator x)          = renderJS x
 rn (JSExpression xs)       = rJS $ fixNew xs
 
 
---rn (JSSourceElements xs)   = rJS (map fixBlock $ fixSourceElements xs)
-rn (JSSourceElements xs)   = rJS (fixSourceElements $ map fixBlock xs)
+--rn (JSSourceElements xs)   = rJS (fixSourceElements $ map fixBlock xs)
 
 --rn (JSSourceElementsTop xs)= rJS (fixTop $ map fixBlock $ fixSourceElements xs)
 rn (JSSourceElementsTop xs)= rJS (fixTop $ fixSourceElements $ map fixBlock xs)
 
 
 --rn (JSFunction s p xs)     = (text "function") <+> (renderJS s) <> (text "(") <> (commaList p) <> (text ")") <> (renderJS xs)
-rn (JSFunction _f s _lb p _rb _lb2 xs _rb2) = (text "function") <+> (renderJS s) <> (text "(") <> (commaList p) <> (text ")") <> (renderJS xs)
+rn (JSFunction _f s _lb p _rb x) = (text "function") <+> (renderJS s) <> (text "(") <> (commaList p) <> (text ")") <> (renderJS $ fixFnBlock x)
 
-rn (JSFunctionBody xs)     = (text "{") <> (rJS xs) <> (text "}")
+-- rn (JSFunctionBody xs)     = (text "{") <> (rJS xs) <> (text "}")
 
 --rn (JSFunctionExpression [] p xs) = (text "function")             <> (text "(") <> (commaList p) <> (text ")") <> (renderJS xs)
 --rn (JSFunctionExpression  s p xs) = (text "function") <+> (rJS s) <> (text "(") <> (commaList p) <> (text ")") <> (renderJS xs)
-rn (JSFunctionExpression _f [] _lb p _rb _lb2 xs _rb2) = (text "function")             <> (text "(") <> (commaList p) <> (text ")") <> (renderJS xs)
-rn (JSFunctionExpression _f s _lb p _rb _lb2 xs _rb2)  = (text "function") <+> (rJS s) <> (text "(") <> (commaList p) <> (text ")") <> (renderJS xs)
+rn (JSFunctionExpression _f [] _lb p _rb x) = (text "function")             <> (text "(") <> (commaList p) <> (text ")") <> (renderJS $ fixFnBlock x)
+rn (JSFunctionExpression _f s  _lb p _rb x) = (text "function") <+> (rJS s) <> (text "(") <> (commaList p) <> (text ")") <> (renderJS $ fixFnBlock x)
 
 --rn (JSArguments xs ) = (text "(") <> (commaListList $ map fixLiterals xs) <> (text ")")
 rn (JSArguments _lb xs _rb) = (text "(") <> (rJS $ fixLiterals xs) <> (text ")")
@@ -94,11 +93,11 @@ rn (JSIf c t e)        = (text "if") <> (text "(") <> (renderJS c) <> (text ")")
 -}
 rn (JSIf _i _lb c _rb [(NT (JSLiteral ";") _ _)] [])     = (text "if") <> (text "(") <> (renderJS c) <> (text ")")
 --rn (JSIf _i _lb c _rb t                        [])     = (text "if") <> (text "(") <> (renderJS c) <> (text ")") <> (renderJS $ fixBlock t)
-rn (JSIf _i _lb c _rb t                        [])     = (text "if") <> (text "(") <> (renderJS c) <> (text ")") <> (rJS $ fixSemis t)
+rn (JSIf _i _lb c _rb t                        [])     = (text "if") <> (text "(") <> (renderJS c) <> (text ")") <> (rJS $ fixSourceElements $ map fixBlock t)
 
-rn (JSIf _i _lb c _rb t [_e,(NT (JSLiteral ";") _ _)]) = (text "if") <> (text "(") <> (renderJS c) <> (text ")") <> (rJS $ fixSemis t)
+rn (JSIf _i _lb c _rb t [_e,(NT (JSLiteral ";") _ _)]) = (text "if") <> (text "(") <> (renderJS c) <> (text ")") <> (rJS $ fixSourceElements $ map fixBlock t)
                                                          <> (text "else")
-rn (JSIf _i _lb c _rb t [_e,e])                        = (text "if") <> (text "(") <> (renderJS c) <> (text ")") <> (rJS $ fixSemis t)
+rn (JSIf _i _lb c _rb t [_e,e])                        = (text "if") <> (text "(") <> (renderJS c) <> (text ")") <> (rJS $ fixSourceElements $ map fixBlock t)
                                                          <> (text "else") <> (spaceOrBlock $ fixBlock e)
 
 
@@ -108,9 +107,8 @@ rn (JSMemberSquare xs _lb x _rb)  = (rJS xs) <> (text "[") <> (renderJS x) <> (t
 rn (JSUnary l _s )                = text l
 rn (JSArrayLiteral _lb xs _rb)    = (text "[") <> (rJS xs) <> (text "]")
 
---rn (JSBreak _b [] _as)            = (text "break")
-rn (JSBreak _b [] _as)           = (text "break") -- <> (rJS xs) -- <> (text ";")
-rn (JSBreak _b is _as)           = (text "break") <+> (rJS is) -- <> (rJS xs)
+rn (JSBreak _b [] as)           = (text "break") <> (renderJS as)
+rn (JSBreak _b is as)           = (text "break") <+> (rJS is) <> (renderJS as)
 
 rn (JSCallExpression "()" _os xs _cs) = (rJS xs)
 rn (JSCallExpression   t  _os xs _cs) = (char $ head t) <> (rJS xs) <> (if ((length t) > 1) then (char $ last t) else empty)
@@ -129,7 +127,8 @@ rn (JSCatch _c _lb i  c _rb s)  = (text "catch") <> (char '(') <> (renderJS i) <
 
 rn (JSContinue _c is _as)  = (text "continue") <> (rJS is) -- <> (char ';')
 rn (JSDefault _d _c xs)    = (text "default") <> (char ':') <> (rJS xs)
-rn (JSDoWhile _d s _w _lb e _rb _ms)     = (text "do") <> (renderJS s) <> (text "while") <> (char '(') <> (renderJS e) <> (char ')') -- <> (renderJS ms)
+
+rn (JSDoWhile _d s _w _lb e _rb as)     = (text "do") <> (renderJS s) <> (text "while") <> (char '(') <> (renderJS e) <> (char ')') -- <> (renderJS as)
 
 
 --rn (JSElementList xs)      = rJS xs
@@ -155,12 +154,12 @@ rn (JSForVarIn _f _lb _v e1 _i e2 _rb s) = (text "for") <> (char '(') <> (text "
 rn (JSLabelled l _c v)           = (renderJS l) <> (text ":") <> (rJS $ fixSourceElements [fixBlock v])
 
 rn (JSObjectLiteral _lb xs _rb)  = (text "{") <> (commaList xs) <> (text "}")
-rn (JSPropertyAccessor s n _lb1 ps _rb1 _lb2 b _rb2) = (renderJS s) <+> (renderJS n) <> (char '(') <> (rJS ps) <> (text ")") <> (renderJS b)
+rn (JSPropertyAccessor s n _lb1 ps _rb1 b) = (renderJS s) <+> (renderJS n) <> (char '(') <> (rJS ps) <> (text ")") <> (renderJS $ fixFnBlock b)
 rn (JSPropertyNameandValue n _c vs) = (renderJS n) <> (text ":") <> (rJS vs)
 
-rn (JSReturn _r [] _as)                 = (text "return")
-rn (JSReturn _r [(NT (JSLiteral ";") _ _)] _as) = (text "return;")
-rn (JSReturn _r xs _as)                 = (text "return") <> (if (spaceNeeded xs) then (text " ") else (empty)) <> (rJS $ fixSourceElements xs)
+rn (JSReturn _r []                         _as) = (text "return")
+rn (JSReturn _r [(NT (JSLiteral ";") _ _)] _as) = (text "return;++foobar+will_never_happen++") -- ++AZ++ get rid of this
+rn (JSReturn _r xs                          as) = (text "return") <> (if (spaceNeeded xs) then (text " ") else (empty)) <> (rJS $ fixSourceElements xs) <> (renderJS as)
 
 rn (JSThrow _t e)                 = (text "throw") <+> (renderJS e)
 
@@ -246,7 +245,7 @@ myFix []      = []
 
 myFix [x]     = [x]
 
-myFix (x:(NN (JSFunction v1 v2 v3 v4 v5 v6 v7 v8) ):xs)  = x : (NT (JSLiteral "\n") tokenPosnEmpty []) : myFix ((NN (JSFunction v1 v2 v3 v4 v5 v6 v7 v8) ) : xs)
+myFix (x:(NN (JSFunction v1 v2 v3 v4 v5 v6) ):xs)  = x : (NT (JSLiteral "\n") tokenPosnEmpty []) : myFix ((NN (JSFunction v1 v2 v3 v4 v5 v6) ) : xs)
 
 -- Messy way, but it works, until the 3rd element arrives ..
 -- TODO: JSStatementBlock.  Damn.
@@ -313,17 +312,21 @@ fixSemis' (x:(NT (JSLiteral "\n") s1 c1):xs) = x:(NT (JSLiteral "\n") s1 c1):(fi
 --            (NN (JSCase ca1 e1 c1 ((NN (JSStatementList []) ))) ):fixSemis' ((NN (JSCase ca2 e2 c2 x) ):xs)
 fixSemis' (x:xs) = x:(NT (JSLiteral ";") tokenPosnEmpty []):fixSemis' xs
 
+fixFnBlock :: JSNode -> JSNode
+fixFnBlock (NN (JSBlock lb xs rb)) = (NN (JSBlock lb (fixSourceElements xs) rb))
+
 -- Remove extraneous braces around blocks
 fixBlock :: JSNode -> JSNode
 
 --fixBlock (NN (JSBlock [NT (JSLiteral "{") pl csl] xs [NT (JSLiteral "}") pr csr]) pb csb)
 fixBlock (NN (JSBlock _lb [] _rb)) = (NT (JSLiteral ";") tokenPosnEmpty [])
 fixBlock (NN (JSBlock _lb [x] _rb)) = fixBlock x
+fixBlock (NN (JSBlock _lb xs _rb)) = (NN (JSBlock _lb (fixSourceElements xs) _rb))
 
 -- fixBlock    (NN (JSBlock lb (NN (JSStatementList xs) ) rb ) ) =
 --   fixBlock' (NN (JSBlock lb (NN (JSStatementList (fixSourceElements xs)) ) rb) )
 
-fixBlock x = x
+fixBlock x    = x
 
 fixBlock' :: JSNode -> JSNode
 -- fixBlock' (NN (JSBlock          _lb (NN (JSStatementList [x]) ) _rb) ) = x
@@ -348,14 +351,11 @@ _r js = map (\x -> chr (fromIntegral x)) $ LB.unpack $ BB.toLazyByteString $ ren
 
 --readJs "{{{}}}"
 _case0 :: JSNode
-_case0 = undefined -- NS (JSSourceElementsTop [NN (JSStatementBlock (NN (JSStatementList [NN (JSStatementBlock (NN (JSStatementList [NN (JSStatementBlock (NN (JSStatementList []) (SpanPoint {span_filename = "", span_row = 1, span_column = 3}))) (SpanPoint {span_filename = "", span_row = 1, span_column = 3})]) (SpanPoint {span_filename = "", span_row = 1, span_column = 3}))) (SpanPoint {span_filename = "", span_row = 1, span_column = 2})]) (SpanPoint {span_filename = "", span_row = 1, span_column = 2}))) (SpanPoint {span_filename = "", span_row = 1, span_column = 1})]) (SpanPoint {span_filename = "", span_row = 1, span_column = 1})
-
-_case01 :: [JSNode]
-_case01 = undefined  -- [NN (JSStatementBlock (NN (JSStatementList [NN (JSStatementBlock (NN (JSStatementList [NN (JSStatementBlock (NN (JSStatementList []) (SpanPoint {span_filename = "", span_row = 1, span_column = 3}))) (SpanPoint {span_filename = "", span_row = 1, span_column = 3})]) (SpanPoint {span_filename = "", span_row = 1, span_column = 3}))) (SpanPoint {span_filename = "", span_row = 1, span_column = 2})]) (SpanPoint {span_filename = "", span_row = 1, span_column = 2}))) (SpanPoint {span_filename = "", span_row = 1, span_column = 1})]
+_case0 = undefined --
 
 -- readJs "if(x){}{a=2}"
 _case1 :: JSNode
-_case1 = undefined -- NS (JSSourceElementsTop [NN (JSIf (NN (JSExpression [NS (JSIdentifier "x") (SpanPoint {span_filename = "", span_row = 1, span_column = 4})]) (SpanPoint {span_filename = "", span_row = 1, span_column = 4})) (NN (JSStatementBlock (NN (JSStatementList []) (SpanPoint {span_filename = "", span_row = 1, span_column = 6}))) (SpanPoint {span_filename = "", span_row = 1, span_column = 6}))) (SpanPoint {span_filename = "", span_row = 1, span_column = 1}),NN (JSStatementBlock (NN (JSStatementList [NS (JSExpression [NS (JSIdentifier "a") (SpanPoint {span_filename = "", span_row = 1, span_column = 9}),NS (JSOperator "=") (SpanPoint {span_filename = "", span_row = 1, span_column = 10}),NS (JSDecimal "2") (SpanPoint {span_filename = "", span_row = 1, span_column = 11})]) (SpanPoint {span_filename = "", span_row = 1, span_column = 9})]) (SpanPoint {span_filename = "", span_row = 1, span_column = 9}))) (SpanPoint {span_filename = "", span_row = 1, span_column = 8})]) (SpanPoint {span_filename = "", span_row = 1, span_column = 1})
+_case1 = undefined --
 
 _case11 :: [JSNode]
 _case11 = undefined -- [NN (JSIf (NN (JSExpression [NS (JSIdentifier "x") (SpanPoint {span_filename = "", span_row = 1, span_column = 4})]) (SpanPoint {span_filename = "", span_row = 1, span_column = 4})) (NN (JSStatementBlock (NN (JSStatementList []) (SpanPoint {span_filename = "", span_row = 1, span_column = 6}))) (SpanPoint {span_filename = "", span_row = 1, span_column = 6}))) (SpanPoint {span_filename = "", span_row = 1, span_column = 1}),NN (JSStatementBlock (NN (JSStatementList [NS (JSExpression [NS (JSIdentifier "a") (SpanPoint {span_filename = "", span_row = 1, span_column = 9}),NS (JSOperator "=") (SpanPoint {span_filename = "", span_row = 1, span_column = 10}),NS (JSDecimal "2") (SpanPoint {span_filename = "", span_row = 1, span_column = 11})]) (SpanPoint {span_filename = "", span_row = 1, span_column = 9})]) (SpanPoint {span_filename = "", span_row = 1, span_column = 9}))) (SpanPoint {span_filename = "", span_row = 1, span_column = 8})]

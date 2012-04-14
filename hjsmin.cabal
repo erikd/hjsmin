@@ -19,9 +19,9 @@ Extra-source-files:
   TODO.txt, README.markdown, buildall.sh
 
 
-flag buildtests
-  description: Build the executable to run unit tests
-  default: False
+-- flag buildtests
+--   description: Build the executable to run unit tests
+--   default: False
 
 library
     build-depends:   base                >= 4       && < 5
@@ -34,18 +34,33 @@ library
     other-modules:   Text.Jasmine.Pretty
     ghc-options:     -Wall
 
-executable             runtests
-    if flag(buildtests)
-        Buildable: True
-        cpp-options:   -DTEST
-        build-depends: QuickCheck >= 2 && < 3,
-                       HUnit,
-                       test-framework-hunit,
-                       test-framework
+-- executable             runtests
+--     if flag(buildtests)
+--         Buildable: True
+--         cpp-options:   -DTEST
+--         build-depends: QuickCheck >= 2 && < 3,
+--                        HUnit,
+--                        test-framework-hunit,
+--                        test-framework
 
-    else
-        Buildable: False
-    main-is:         runtests.hs
+--     else
+--         Buildable: False
+--     main-is:         runtests.hs
+
+Test-Suite test-hjsmin
+  Type: exitcode-stdio-1.0
+  Main-is: runtests.hs
+  build-depends: Cabal >= 1.9.2
+                 , QuickCheck >= 2 && < 3
+                 , HUnit
+                 , test-framework
+                 , test-framework-hunit
+                 , base                >= 4       && < 5
+                 , bytestring          >= 0.9     && < 0.10
+                 , blaze-builder       >= 0.2     && < 1
+                 , text                >= 0.8     && < 1
+                 , containers          >= 0.2     && < 0.5
+                 , language-javascript >= 0.5.1   && < 0.6
 
 source-repository head
   type:     git

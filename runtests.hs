@@ -1,3 +1,4 @@
+module Main where
 
 import Test.Framework (defaultMain, testGroup, Test)
 import Test.Framework.Providers.HUnit
@@ -35,6 +36,7 @@ testSuite = testGroup "Text.Jasmine.Parse"
     , testCase "Issue3"           caseIssue3
     , testCase "Issue4"           caseIssue4
     , testCase "Switch1"          caseSwitch1
+    , testCase "If1"              caseIf1
     ]
 
 testSuiteMin :: Test
@@ -57,6 +59,7 @@ testSuiteMin = testGroup "Text.Jasmine.Pretty Min"
     , testCase "MinIssue3"        caseMinIssue3
     , testCase "MinIssue4"        caseMinIssue4
     , testCase "MinSwitch1"       caseMinSwitch1
+    , testCase "MinIf1"           caseMinIf1
     ]
 
 testSuiteFiles :: Test
@@ -125,7 +128,7 @@ testSuiteFilesUnminified = testGroup "Text.Jasmine.Pretty filesUnminified"
 
 srcHelloWorld = "function Hello(a) {}"
 caseHelloWorld =
-  "Right (JSSourceElementsTop [JSFunction (JSIdentifier \"Hello\") [JSIdentifier \"a\"] (JSFunctionBody []),JSLiteral \"\"])"
+  "Right (JSSourceElementsTop [JSFunction (JSIdentifier \"Hello\") [JSIdentifier \"a\"] (JSBlock ([])),JSLiteral \"\"])"
   @=? (showStrippedMaybe $ parseProgram srcHelloWorld)
 caseMinHelloWorld =
   -- "function Hello(a){}" @=? (minify (U.fromString srcHelloWorld))
@@ -133,7 +136,7 @@ caseMinHelloWorld =
 
 srcHelloWorld2 = "function Hello(a) {b=1}"
 caseHelloWorld2 =
-  "Right (JSSourceElementsTop [JSFunction (JSIdentifier \"Hello\") [JSIdentifier \"a\"] (JSFunctionBody [JSSourceElements [JSExpression [JSIdentifier \"b\",JSOperator JSLiteral \"=\",JSDecimal \"1\"]]]),JSLiteral \"\"])"
+  "Right (JSSourceElementsTop [JSFunction (JSIdentifier \"Hello\") [JSIdentifier \"a\"] (JSBlock ([JSExpression [JSIdentifier \"b\",JSOperator JSLiteral \"=\",JSDecimal \"1\"]])),JSLiteral \"\"])"
   @=? (showStrippedMaybe $ parseProgram srcHelloWorld2)
 caseMinHelloWorld2 =
   -- "function Hello(a){b=1}" @=? (minify (U.fromString srcHelloWorld2))
@@ -176,8 +179,7 @@ caseMinIfElse2 =
 
 src0_f = "function Hello(a) {ExprArray(1,1);}"
 case0_f =
-  -- "Right (JSSourceElementsTop [JSFunction (JSIdentifier \"Hello\") [JSIdentifier \"a\"] (JSFunctionBody [JSSourceElements [JSExpression [JSIdentifier \"ExprArray\",JSArguments [[JSDecimal 1],[JSDecimal 1]]],JSLiteral \"\"]])]"
-   "Right (JSSourceElementsTop [JSFunction (JSIdentifier \"Hello\") [JSIdentifier \"a\"] (JSFunctionBody [JSSourceElements [JSExpression [JSIdentifier \"ExprArray\",JSArguments [JSDecimal \"1\",JSLiteral \",\",JSDecimal \"1\"]],JSLiteral \";\"]]),JSLiteral \"\"])"
+   "Right (JSSourceElementsTop [JSFunction (JSIdentifier \"Hello\") [JSIdentifier \"a\"] (JSBlock ([JSExpression [JSIdentifier \"ExprArray\",JSArguments [JSDecimal \"1\",JSLiteral \",\",JSDecimal \"1\"]],JSLiteral \";\"])),JSLiteral \"\"])"
   -- @=? (show $ parseString program src0_f)
   @=? (showStrippedMaybe $ parseProgram src0_f)
 caseMin0_f =
@@ -198,7 +200,7 @@ caseMin01_semi1 =
 
 src_min_100_animals = "function Animal(name){if(!name)throw new Error('Must specify an animal name');this.name=name};Animal.prototype.toString=function(){return this.name};o=new Animal(\"bob\");o.toString()==\"bob\""
 case_min_100_animals =
-  "Right (JSSourceElementsTop [JSFunction (JSIdentifier \"Animal\") [JSIdentifier \"name\"] (JSFunctionBody [JSSourceElements [JSIf (JSExpression [JSUnary \"!\",JSIdentifier \"name\"]) ([JSThrow (JSExpression [JSLiteral \"new\",JSIdentifier \"Error\",JSArguments [JSStringLiteral '\\'' \"Must specify an animal name\"]]),JSLiteral \";\"]) ([]),JSExpression [JSMemberDot [JSLiteral \"this\"] (JSIdentifier \"name\"),JSOperator JSLiteral \"=\",JSIdentifier \"name\"]]]),JSLiteral \";\",JSExpression [JSMemberDot [JSMemberDot [JSIdentifier \"Animal\"] (JSIdentifier \"prototype\")] (JSIdentifier \"toString\"),JSOperator JSLiteral \"=\",JSFunctionExpression [] [] (JSFunctionBody [JSSourceElements [JSReturn [JSExpression [JSMemberDot [JSLiteral \"this\"] (JSIdentifier \"name\")]] JSLiteral \"\"]])],JSLiteral \";\",JSExpression [JSIdentifier \"o\",JSOperator JSLiteral \"=\",JSLiteral \"new\",JSIdentifier \"Animal\",JSArguments [JSStringLiteral '\"' \"bob\"]],JSLiteral \";\",JSExpression [JSExpressionBinary \"==\" [JSMemberDot [JSIdentifier \"o\"] (JSIdentifier \"toString\"),JSArguments []] [JSStringLiteral '\"' \"bob\"]],JSLiteral \"\"])"
+  "Right (JSSourceElementsTop [JSFunction (JSIdentifier \"Animal\") [JSIdentifier \"name\"] (JSBlock ([JSIf (JSExpression [JSUnary \"!\",JSIdentifier \"name\"]) ([JSThrow (JSExpression [JSLiteral \"new\",JSIdentifier \"Error\",JSArguments [JSStringLiteral '\\'' \"Must specify an animal name\"]]),JSLiteral \";\"]) ([]),JSExpression [JSMemberDot [JSLiteral \"this\"] (JSIdentifier \"name\"),JSOperator JSLiteral \"=\",JSIdentifier \"name\"]])),JSLiteral \";\",JSExpression [JSMemberDot [JSMemberDot [JSIdentifier \"Animal\"] (JSIdentifier \"prototype\")] (JSIdentifier \"toString\"),JSOperator JSLiteral \"=\",JSFunctionExpression [] [] (JSBlock ([JSReturn [JSExpression [JSMemberDot [JSLiteral \"this\"] (JSIdentifier \"name\")]] JSLiteral \"\"]))],JSLiteral \";\",JSExpression [JSIdentifier \"o\",JSOperator JSLiteral \"=\",JSLiteral \"new\",JSIdentifier \"Animal\",JSArguments [JSStringLiteral '\"' \"bob\"]],JSLiteral \";\",JSExpression [JSExpressionBinary \"==\" [JSMemberDot [JSIdentifier \"o\"] (JSIdentifier \"toString\"),JSArguments []] [JSStringLiteral '\"' \"bob\"]],JSLiteral \"\"])"
   @=? (showStrippedMaybe $ parseProgram src_min_100_animals)
 caseMin_min_100_animals =
   testMinify src_min_100_animals src_min_100_animals
@@ -234,7 +236,7 @@ caseMinTrailingCommas =
 
 srcGetSet = "x={get foo() {return 1},set foo(a) {x=a}}"
 caseGetSet =
-  "Right (JSSourceElementsTop [JSExpression [JSIdentifier \"x\",JSOperator JSLiteral \"=\",JSObjectLiteral [JSPropertyAccessor NT (JSLiteral \"get\") (TokenPn 3 1 4) [NoComment] (JSIdentifier \"foo\") [] (JSFunctionBody [JSSourceElements [JSReturn [JSExpression [JSDecimal \"1\"]] JSLiteral \"\"]]),JSLiteral \",\",JSPropertyAccessor NT (JSLiteral \"set\") (TokenPn 24 1 25) [NoComment] (JSIdentifier \"foo\") [JSIdentifier \"a\"] (JSFunctionBody [JSSourceElements [JSExpression [JSIdentifier \"x\",JSOperator JSLiteral \"=\",JSIdentifier \"a\"]]])]],JSLiteral \"\"])"
+  "Right (JSSourceElementsTop [JSExpression [JSIdentifier \"x\",JSOperator JSLiteral \"=\",JSObjectLiteral [JSPropertyAccessor NT (JSLiteral \"get\") (TokenPn 3 1 4) [NoComment] (JSIdentifier \"foo\") [] (JSBlock ([JSReturn [JSExpression [JSDecimal \"1\"]] JSLiteral \"\"])),JSLiteral \",\",JSPropertyAccessor NT (JSLiteral \"set\") (TokenPn 24 1 25) [NoComment] (JSIdentifier \"foo\") [JSIdentifier \"a\"] (JSBlock ([JSExpression [JSIdentifier \"x\",JSOperator JSLiteral \"=\",JSIdentifier \"a\"]]))]],JSLiteral \"\"])"
   @=? (showStrippedMaybe $ parseProgram srcGetSet)
 caseMinGetSet =
   testMinify "x={get foo(){return 1},set foo(a){x=a}}" srcGetSet
@@ -266,6 +268,13 @@ caseSwitch1 =
   @=? (showStrippedMaybe $ parseProgram srcSwitch1)
 caseMinSwitch1 =
   testMinify "switch(i){case 1:1;case 2:2}" srcSwitch1
+
+srcIf1="if(i>0)consts+=\", \";var t=tokens[i];"
+caseIf1 =
+  "Right (JSSourceElementsTop [JSIf (JSExpression [JSExpressionBinary \">\" [JSIdentifier \"i\"] [JSDecimal \"0\"]]) ([JSExpression [JSIdentifier \"consts\",JSOperator JSLiteral \"+=\",JSStringLiteral '\"' \", \"],JSLiteral \";\"]) ([]),JSVariables JSLiteral \"var\" [JSVarDecl (JSIdentifier \"t\") [JSLiteral \"=\",JSMemberSquare [JSIdentifier \"tokens\"] (JSExpression [JSIdentifier \"i\"])]],JSLiteral \"\"])"
+  @=? (showStrippedMaybe $ parseProgram srcIf1)
+caseMinIf1 =
+  testMinify "if(i>0)consts+=\", \";var t=tokens[i]" srcIf1
 
 -- ---------------------------------------------------------------------
 -- utilities
