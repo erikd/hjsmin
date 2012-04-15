@@ -93,11 +93,11 @@ rn (JSIf c t e)        = (text "if") <> (text "(") <> (renderJS c) <> (text ")")
 -}
 rn (JSIf _i _lb c _rb [(NT (JSLiteral ";") _ _)] [])     = (text "if") <> (text "(") <> (renderJS c) <> (text ")")
 --rn (JSIf _i _lb c _rb t                        [])     = (text "if") <> (text "(") <> (renderJS c) <> (text ")") <> (renderJS $ fixBlock t)
-rn (JSIf _i _lb c _rb t                        [])     = (text "if") <> (text "(") <> (renderJS c) <> (text ")") <> (rJS $ fixSourceElements $ map fixFnBlock t)
+rn (JSIf _i _lb c _rb t                        [])     = (text "if") <> (text "(") <> (renderJS c) <> (text ")") <> (rJS $ fixSourceElements $ map fixBlock t)
 
-rn (JSIf _i _lb c _rb t [_e,(NT (JSLiteral ";") _ _)]) = (text "if") <> (text "(") <> (renderJS c) <> (text ")") <> (rJS $ fixSourceElements $ map fixFnBlock t)
+rn (JSIf _i _lb c _rb t [_e,(NT (JSLiteral ";") _ _)]) = (text "if") <> (text "(") <> (renderJS c) <> (text ")") <> (rJS $ fixSourceElements $ map fixBlock t)
                                                          <> (text "else")
-rn (JSIf _i _lb c _rb t [_e,e])                        = (text "if") <> (text "(") <> (renderJS c) <> (text ")") <> (rJS $ fixSourceElements $ map fixFnBlock t)
+rn (JSIf _i _lb c _rb t [_e,e])                        = (text "if") <> (text "(") <> (renderJS c) <> (text ")") <> (rJS $ fixSourceElements $ map fixBlock t)
                                                          <> (text "else") <> (spaceOrBlock $ fixBlock e)
 
 
@@ -129,7 +129,7 @@ rn (JSCatch _c _lb i  c _rb s)  = (text "catch") <> (char '(') <> (renderJS i) <
 rn (JSContinue _c is _as)  = (text "continue") <> (rJS is) -- <> (char ';')
 rn (JSDefault _d _c xs)    = (text "default") <> (char ':') <> (rJS xs)
 
-rn (JSDoWhile _d s _w _lb e _rb as)     = (text "do") <> (renderJS s) <> (text "while") <> (char '(') <> (renderJS e) <> (char ')') -- <> (renderJS as)
+rn (JSDoWhile _d s _w _lb e _rb as)     = (text "do") <> (renderJS $ fixFnBlock s) <> (text "while") <> (char '(') <> (renderJS e) <> (char ')') -- <> (renderJS as)
 
 
 --rn (JSElementList xs)      = rJS xs
@@ -264,11 +264,11 @@ myFix ((NN (JSBlock x1 x2 x3) )     :(NN (JSExpression y) ):xs) = (NN (JSBlock x
 
 -- Merge adjacent variable declarations, but only of the same type
 myFix ((NN (JSVariables t1 x1s a1) ):(NT (JSLiteral l) s2 c2):(NN (JSVariables t2 x2s a2) ):xs)
-  | t1 == t2 = myFix ((NN (JSVariables t1 (x1s++x2s) a2) ):xs)
+  | extractNode t1 == extractNode t2 = myFix ((NN (JSVariables t1 (x1s++[(NT (JSLiteral ",") tokenPosnEmpty [])]++x2s) a2) ):xs)
   | otherwise = (NN (JSVariables t1 x1s a1) ):myFix ((NT (JSLiteral l) s2 c2):(NN (JSVariables t2 x2s a2) ):xs)
 
 myFix ((NN (JSVariables t1 x1s a1) ):(NN (JSVariables t2 x2s a2) ):xs)
-  | t1 == t2 = myFix ((NN (JSVariables t1 (x1s++x2s) a2) ):xs)
+  | extractNode t1 == extractNode t2 = myFix ((NN (JSVariables t1 (x1s++[(NT (JSLiteral ",") tokenPosnEmpty [])]++x2s) a2) ):xs)
   | otherwise = (NN (JSVariables t1 x1s a1) ):myFix ((NN (JSVariables t2 x2s a2) ):xs)
 
 -- Merge adjacent semi colons
@@ -295,7 +295,10 @@ fixLiterals (x:xs) = x:fixLiterals xs
 -- Sort out Semicolons
 fixSemis :: [JSNode] -> [JSNode]
 --fixSemis xs = fixSemis' $ filter (\x -> x /= JSLiteral ";" && x /= JSLiteral "") xs
-fixSemis xs = fixSemis' $ filter (\x -> (extractNode x) /= JSLiteral ";" && (extractNode x) /= JSLiteral "") xs
+fixSemis xs = fixSemis' $ stripSemis xs
+
+stripSemis :: [JSNode] -> [JSNode]
+stripSemis xs = filter (\x -> (extractNode x) /= JSLiteral ";" && (extractNode x) /= JSLiteral "") xs
 
 fixSemis' :: [JSNode] -> [JSNode]
 fixSemis' [] = []
@@ -315,28 +318,23 @@ fixSemis' ((NN (JSCase ca1 e1 c1 [] ) ):(NN (JSCase ca2 e2 c2 x) ):xs) =
 fixSemis' (x:xs) = x:(NT (JSLiteral ";") tokenPosnEmpty []):fixSemis' xs
 
 fixFnBlock :: JSNode -> JSNode
+-- fixFnBlock (NN (JSBlock lb [] rb)) = (NT (JSLiteral ";") tokenPosnEmpty [])
 fixFnBlock (NN (JSBlock lb xs rb)) = (NN (JSBlock lb (fixSourceElements xs) rb))
 fixFnBlock x = fixBlock x
 
 -- Remove extraneous braces around blocks
 fixBlock :: JSNode -> JSNode
 
---fixBlock (NN (JSBlock [NT (JSLiteral "{") pl csl] xs [NT (JSLiteral "}") pr csr]) pb csb)
-fixBlock (NN (JSBlock _lb [] _rb)) = (NT (JSLiteral ";") tokenPosnEmpty [])
-fixBlock (NN (JSBlock _lb [x] _rb)) = fixBlock x
-fixBlock (NN (JSBlock _lb [x,(NT (JSLiteral ";") _ _)] _rb)) = fixBlock x
-fixBlock (NN (JSBlock _lb xs _rb)) = (NN (JSBlock _lb (fixSourceElements xs) _rb))
+fixBlock (NN (JSBlock lb xs rb)) =
+  case xs' of
+    []  -> (NT (JSLiteral ";") tokenPosnEmpty [])
+    -- [(NN (JSExpression [y]))] -> fixBlock (NN (JSExpression [y]))
+    -- [(NN (JSExpression xs))]  -> (NN (JSBlock lb (fixSourceElements $ map fixBlock xs') rb))
+    [x] -> fixBlock x
+    _   -> (NN (JSBlock lb (fixSourceElements $ map fixBlock xs') rb))
+  where xs' = stripSemis xs
 
--- fixBlock    (NN (JSBlock lb (NN (JSStatementList xs) ) rb ) ) =
---   fixBlock' (NN (JSBlock lb (NN (JSStatementList (fixSourceElements xs)) ) rb) )
-
-fixBlock x    = x
-
-fixBlock' :: JSNode -> JSNode
--- fixBlock' (NN (JSBlock          _lb (NN (JSStatementList [x]) ) _rb) ) = x
--- fixBlock' (NN (JSStatementBlock _lb (NN (JSStatementList [x]) ) _rb) ) = x
--- fixBlock' (JSBlock (JSStatementList [x,JSLiteral ""])) = x -- TODO: fix parser to not emit this case
-fixBlock' x = x
+fixBlock x = x
 
 -- A space is needed if this expression starts with an identifier etc, but not if with a '('
 spaceNeeded :: [JSNode] -> Bool
