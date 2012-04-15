@@ -116,14 +116,15 @@ rn (JSCallExpression   t  _os xs _cs) = (char $ head t) <> (rJS xs) <> (if ((len
 
 -- No space between 'case' and string literal. TODO: what about expression in parentheses?
 --rn (JSCase (JSExpression [JSStringLiteral sepa s]) xs) = (text "case") <> (renderJS (JSStringLiteral sepa s))
-rn (JSCase _ca (NN (JSExpression [(NT (JSStringLiteral sepa s) s1 c1)])) _c xs) = (text "case") <> (renderJS (NT (JSStringLiteral sepa s) s1 c1))
-                                                               <> (char ':') <> (rJS xs)
+rn (JSCase _ca (NN (JSExpression [(NT (JSStringLiteral sepa s) s1 c1)])) _c xs) =
+  (text "case") <> (renderJS (NT (JSStringLiteral sepa s) s1 c1)) <> (char ':') <> (rJS $ fixSourceElements $ map fixFnBlock xs)
+
 rn (JSCase _ca e _c xs)           = (text "case") <+> (renderJS e) <> (char ':') <> (rJS $ fixSourceElements $ map fixFnBlock xs) -- <> (text ";");
 
 
 rn (JSCatch _c _lb i [] _rb s)  = (text "catch") <> (char '(') <> (renderJS i) <>  (char ')') <> (renderJS s)
 rn (JSCatch _c _lb i  c _rb s)  = (text "catch") <> (char '(') <> (renderJS i) <>
-                                  (text " if ") <> (rJS c) <> (char ')') <> (renderJS s)
+                                  (text " if ") <> (rJS $ tail c) <> (char ')') <> (renderJS s)
 
 rn (JSContinue _c is _as)  = (text "continue") <> (rJS is) -- <> (char ';')
 rn (JSDefault _d _c xs)    = (text "default") <> (char ':') <> (rJS xs)
@@ -173,8 +174,8 @@ rn (JSVarDecl i xs)              = (renderJS i) <> (rJS $ fixNew xs)
 
 rn (JSVariables kw xs _as)       = (renderJS kw) <+> (commaList xs)
 
-rn (JSWhile _w _lb e _rb (NT (JSLiteral ";") _ _))   = (text "while") <> (char '(') <> (renderJS e) <> (char ')') -- <> (renderJS s)
-rn (JSWhile _w _lb e _rb s)                 = (text "while") <> (char '(') <> (renderJS e) <> (char ')') <> (renderJS s)
+rn (JSWhile _w _lb e _rb (NT (JSLiteral ";") _ _)) = (text "while") <> (char '(') <> (renderJS e) <> (char ')') -- <> (renderJS s)
+rn (JSWhile _w _lb e _rb s)                        = (text "while") <> (char '(') <> (renderJS e) <> (char ')') <> (renderJS $ fixFnBlock s)
 
 rn (JSWith _w _lb e _rb s)                  = (text "with") <> (char '(') <> (renderJS e) <> (char ')') <> (rJS s)
 
@@ -308,8 +309,9 @@ fixSemis' ((NN (JSIf i lb c rb [(NN (JSContinue co [(NT (JSLiteral ";") s1 c1)] 
 
 fixSemis' (x:(NT (JSLiteral "\n") s1 c1):xs) = x:(NT (JSLiteral "\n") s1 c1):(fixSemis' xs) -- TODO: is this needed?
 
--- fixSemis' ((NN (JSCase ca1 e1 c1 ((NN (JSStatementList []) ))) ):(NN (JSCase ca2 e2 c2 x) ):xs) =
---            (NN (JSCase ca1 e1 c1 ((NN (JSStatementList []) ))) ):fixSemis' ((NN (JSCase ca2 e2 c2 x) ):xs)
+fixSemis' ((NN (JSCase ca1 e1 c1 [] ) ):(NN (JSCase ca2 e2 c2 x) ):xs) =
+           (NN (JSCase ca1 e1 c1 [] ) ):fixSemis' ((NN (JSCase ca2 e2 c2 x) ):xs)
+
 fixSemis' (x:xs) = x:(NT (JSLiteral ";") tokenPosnEmpty []):fixSemis' xs
 
 fixFnBlock :: JSNode -> JSNode
@@ -322,6 +324,7 @@ fixBlock :: JSNode -> JSNode
 --fixBlock (NN (JSBlock [NT (JSLiteral "{") pl csl] xs [NT (JSLiteral "}") pr csr]) pb csb)
 fixBlock (NN (JSBlock _lb [] _rb)) = (NT (JSLiteral ";") tokenPosnEmpty [])
 fixBlock (NN (JSBlock _lb [x] _rb)) = fixBlock x
+fixBlock (NN (JSBlock _lb [x,(NT (JSLiteral ";") _ _)] _rb)) = fixBlock x
 fixBlock (NN (JSBlock _lb xs _rb)) = (NN (JSBlock _lb (fixSourceElements xs) _rb))
 
 -- fixBlock    (NN (JSBlock lb (NN (JSStatementList xs) ) rb ) ) =
