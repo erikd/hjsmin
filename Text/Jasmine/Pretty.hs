@@ -83,7 +83,8 @@ rn (JSBlock lb xs rb)            = (rJS lb) <> (rJS xs) <> (rJS rb)
 
 rn (JSIf _i _lb c _rb [(NT (JSLiteral ";") _ _)] [])     = (text "if") <> (text "(") <> (renderJS c) <> (text ")")
 --rn (JSIf _i _lb c _rb t                        [])     = (text "if") <> (text "(") <> (renderJS c) <> (text ")") <> (renderJS $ fixBlock t)
-rn (JSIf _i _lb c _rb t                        [])     = (text "if") <> (text "(") <> (renderJS c) <> (text ")") <> (rJS $ fixIfBlock t)
+
+rn (JSIf _i _lb c _rb t                        [])     = (text "if") <> (text "(") <> (renderJS c) <> (text ")") <> (rJS $ fixSourceElements $ map fixBlock t)
 
 rn (JSIf _i _lb c _rb t [_e,(NT (JSLiteral ";") _ _)]) = (text "if") <> (text "(") <> (renderJS c) <> (text ")") <> (rJS $ fixIfBlock t)
                                                          <> (text "else")
@@ -112,9 +113,9 @@ rn (JSCase _ca (NN (JSExpression [(NT (JSStringLiteral sepa s) s1 c1)])) _c xs) 
 rn (JSCase _ca e _c xs)           = (text "case") <+> (renderJS e) <> (char ':') <> (rJS $ fixSourceElements $ map fixFnBlock xs) -- <> (text ";");
 
 
-rn (JSCatch _c _lb i [] _rb s)  = (text "catch") <> (char '(') <> (renderJS i) <>  (char ')') <> (renderJS s)
+rn (JSCatch _c _lb i [] _rb s)  = (text "catch") <> (char '(') <> (renderJS i) <>  (char ')') <> (renderJS $ fixFnBlock s)
 rn (JSCatch _c _lb i  c _rb s)  = (text "catch") <> (char '(') <> (renderJS i) <>
-                                  (text " if ") <> (rJS $ tail c) <> (char ')') <> (renderJS s)
+                                  (text " if ") <> (rJS $ tail c) <> (char ')') <> (renderJS $ fixFnBlock s)
 
 rn (JSContinue _c is _as)  = (text "continue") <> (rJS is) -- <> (char ';')
 rn (JSDefault _d _c xs)    = (text "default") <> (char ':') <> (rJS xs)
@@ -130,7 +131,7 @@ rn (JSExpressionBinary o e1 _op e2) = (rJS e1) <> (text o) <> (rJS e2)
 rn (JSExpressionParen _lp e _rp)    = (char '(') <> (renderJS e) <> (char ')')
 rn (JSExpressionPostfix o e _op)    = (rJS e) <> (text o)
 rn (JSExpressionTernary c _q v1 _c v2) = (rJS c) <> (char '?') <> (rJS v1) <> (char ':') <> (rJS v2)
-rn (JSFinally _f b)                 = (text "finally") <> (renderJS b)
+rn (JSFinally _f b)                 = (text "finally") <> (renderJS $ fixFnBlock b)
 
 rn (JSFor _f _lb e1 _s1 e2 _s2 e3 _rb s) = (text "for") <> (char '(') <> (commaList e1) <> (char ';')
                                          <> (rJS e2) <> (char ';') <> (rJS e3) <> (char ')') <> (renderJS $ fixBlock s)
@@ -157,7 +158,7 @@ rn (JSThrow _t e)                 = (text "throw") <+> (renderJS e)
 --rn (JSSwitch _s _lb e _rb xs)    = (text "switch") <> (char '(') <> (renderJS e) <> (char ')') <> (rJS $ fixSemis xs)
 rn (JSSwitch _s _lb e _rb x)     = (text "switch") <> (char '(') <> (renderJS e) <> (char ')') <> (renderJS $ fixFnBlock x)
 
-rn (JSTry _t e xs)               = (text "try") <> (renderJS e) <> (rJS xs)
+rn (JSTry _t e xs)               = (text "try") <> (renderJS $ fixFnBlock e) <> (rJS xs)
 
 rn (JSVarDecl i [])              = (renderJS i)
 rn (JSVarDecl i xs)              = (renderJS i) <> (rJS $ fixNew xs)
@@ -322,8 +323,9 @@ fixFnBlock x = fixBlock x
 fixIfBlock :: [JSNode] -> [JSNode]
 fixIfBlock xs =
   case xs' of
-    [(NT (JSLiteral ";") p cs)]   -> [(NT (JSLiteral ";") p cs)]
-    [(NN (JSBlock lb [] rb))]     -> [(NT (JSLiteral ";") tokenPosnEmpty [])]
+    [(NT (JSLiteral ";") p cs)]   -> [] -- rely on fixSemis to add this again [(NT (JSLiteral ";") p cs)]
+    [(NN (JSBlock lb [] rb))]     -> [] -- rely on fixSemis to add this again [(NT (JSLiteral ";") tokenPosnEmpty [])]
+    -- [(NN (JSBlock lb [y] rb))]    -> [fixBlock y]
     [(NN (JSBlock lb x2s rb))]    -> [(NN (JSBlock lb ((fixSourceElements $ map fixBlock x2s)) rb))]
     [x]                           -> fixSourceElements [x]
   where xs' = stripSemis xs

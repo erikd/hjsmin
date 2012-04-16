@@ -37,6 +37,7 @@ testSuite = testGroup "Text.Jasmine.Parse"
     , testCase "Issue4"           caseIssue4
     , testCase "Switch1"          caseSwitch1
     , testCase "If1"              caseIf1
+    , testCase "If2"              caseIf2
     , testCase "BootstrapDropdown" caseBootstrapDropdown
     ]
 
@@ -61,6 +62,7 @@ testSuiteMin = testGroup "Text.Jasmine.Pretty Min"
     , testCase "MinIssue4"        caseMinIssue4
     , testCase "MinSwitch1"       caseMinSwitch1
     , testCase "MinIf1"           caseMinIf1
+    , testCase "MinIf2"           caseMinIf2
     , testCase "MinBootstrapDropdown" caseMinBootstrapDropdown
     ]
 
@@ -277,6 +279,13 @@ caseIf1 =
   @=? (showStrippedMaybe $ parseProgram srcIf1)
 caseMinIf1 =
   testMinify "if(i>0)consts+=\", \";var t=tokens[i]" srcIf1
+
+srcIf2 = "if (getValue)\n   execute;\nelse {\n   execute;\n}"
+caseIf2 =
+  "Right (JSSourceElementsTop [JSIf (JSExpression [JSIdentifier \"getValue\"]) ([JSExpression [JSIdentifier \"execute\"],JSLiteral \";\"]) ([JSLiteral \"else\",JSBlock ([JSExpression [JSIdentifier \"execute\"],JSLiteral \";\"])]),JSLiteral \"\"])"
+  @=? (showStrippedMaybe $ parseProgram srcIf2)
+caseMinIf2 =
+  testMinify "if(getValue){execute}else execute" srcIf2
 
 srcBootstrapDropdown = "clearMenus()\n!isActive && $parent.toggleClass('open')"
 caseBootstrapDropdown =
