@@ -37,6 +37,7 @@ testSuite = testGroup "Text.Jasmine.Parse"
     , testCase "Issue4"           caseIssue4
     , testCase "Switch1"          caseSwitch1
     , testCase "If1"              caseIf1
+    , testCase "BootstrapDropdown" caseBootstrapDropdown
     ]
 
 testSuiteMin :: Test
@@ -60,6 +61,7 @@ testSuiteMin = testGroup "Text.Jasmine.Pretty Min"
     , testCase "MinIssue4"        caseMinIssue4
     , testCase "MinSwitch1"       caseMinSwitch1
     , testCase "MinIf1"           caseMinIf1
+    , testCase "MinBootstrapDropdown" caseMinBootstrapDropdown
     ]
 
 testSuiteFiles :: Test
@@ -275,6 +277,14 @@ caseIf1 =
   @=? (showStrippedMaybe $ parseProgram srcIf1)
 caseMinIf1 =
   testMinify "if(i>0)consts+=\", \";var t=tokens[i]" srcIf1
+
+srcBootstrapDropdown = "clearMenus()\n!isActive && $parent.toggleClass('open')"
+caseBootstrapDropdown =
+  "Right (JSSourceElementsTop [JSExpression [JSIdentifier \"clearMenus\",JSArguments []],JSExpression [JSExpressionBinary \"&&\" [JSUnary \"!\",JSIdentifier \"isActive\"] [JSMemberDot [JSIdentifier \"$parent\"] (JSIdentifier \"toggleClass\"),JSArguments [JSStringLiteral '\\'' \"open\"]]],JSLiteral \"\"])"
+  @=? (showStrippedMaybe $ parseProgram srcBootstrapDropdown)
+caseMinBootstrapDropdown =
+  -- Note: jsmin preserves the \n, rather than the semi. A matter of taste, it is the same number of chars.
+  testMinify "clearMenus();!isActive&&$parent.toggleClass('open')" srcBootstrapDropdown
 
 -- ---------------------------------------------------------------------
 -- utilities

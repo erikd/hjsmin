@@ -81,23 +81,13 @@ rn (JSArguments _lb xs _rb) = (text "(") <> (rJS $ fixLiterals xs) <> (text ")")
 
 rn (JSBlock lb xs rb)            = (rJS lb) <> (rJS xs) <> (rJS rb)
 
-
-{-
-rn (JSIf c (NT (JSLiteral ";") _ _)) = (text "if") <> (text "(") <> (renderJS c) <> (text ")")
-rn (JSIf c t)                        = (text "if") <> (text "(") <> (renderJS c) <> (text ")") <> (renderJS $ fixBlock t)
-
-rn (JSIf c t (NT (JSLiteral ";") _ _)) = (text "if") <> (text "(") <> (renderJS c) <> (text ")")  <> (renderJS t)
-                                   <> (text "else")
-rn (JSIf c t e)        = (text "if") <> (text "(") <> (renderJS c) <> (text ")") <> (renderJS t)
-                                   <> (text "else") <> (spaceOrBlock $ fixBlock e)
--}
 rn (JSIf _i _lb c _rb [(NT (JSLiteral ";") _ _)] [])     = (text "if") <> (text "(") <> (renderJS c) <> (text ")")
 --rn (JSIf _i _lb c _rb t                        [])     = (text "if") <> (text "(") <> (renderJS c) <> (text ")") <> (renderJS $ fixBlock t)
-rn (JSIf _i _lb c _rb t                        [])     = (text "if") <> (text "(") <> (renderJS c) <> (text ")") <> (rJS $ fixSourceElements $ map fixBlock t)
+rn (JSIf _i _lb c _rb t                        [])     = (text "if") <> (text "(") <> (renderJS c) <> (text ")") <> (rJS $ fixIfBlock t)
 
-rn (JSIf _i _lb c _rb t [_e,(NT (JSLiteral ";") _ _)]) = (text "if") <> (text "(") <> (renderJS c) <> (text ")") <> (rJS $ fixSourceElements $ map fixBlock t)
+rn (JSIf _i _lb c _rb t [_e,(NT (JSLiteral ";") _ _)]) = (text "if") <> (text "(") <> (renderJS c) <> (text ")") <> (rJS $ fixIfBlock t)
                                                          <> (text "else")
-rn (JSIf _i _lb c _rb t [_e,e])                        = (text "if") <> (text "(") <> (renderJS c) <> (text ")") <> (rJS $ fixSourceElements $ map fixBlock t)
+rn (JSIf _i _lb c _rb t [_e,e])                        = (text "if") <> (text "(") <> (renderJS c) <> (text ")") <> (rJS $ fixIfBlock t)
                                                          <> (text "else") <> (spaceOrBlock $ fixBlock e)
 
 
@@ -304,6 +294,13 @@ fixSemis' :: [JSNode] -> [JSNode]
 fixSemis' [] = []
 fixSemis' [(NN (JSContinue c [(NT (JSLiteral ";") _ _)] as) )] = [(NN (JSContinue c [] as) )]
 fixSemis' [x] = [x]
+
+fixSemis' ((NN (JSIf i lb c rb [NN (JSBlock [NT (JSLiteral "{") p1 cs1] [] [NT (JSLiteral "}") p2 cs2])] []) ):xs)  =
+           (NN (JSIf i lb c rb [NN (JSBlock [NT (JSLiteral "{") p1 cs1] [] [NT (JSLiteral "}") p2 cs2])] []) ):(fixSemis' xs)
+
+fixSemis' ((NN (JSIf i lb c rb [(NT (JSLiteral ";") s1 c1)] []) ):xs)  =
+           (NN (JSIf i lb c rb [(NT (JSLiteral ";") s1 c1)] []) ):(fixSemis' xs)
+
 fixSemis' ((NN (JSIf i lb c rb [(NN (JSReturn r [(NT (JSLiteral ";") s1 c1)] as) )] e) ):xs)  =
            (NN (JSIf i lb c rb [(NN (JSReturn r [(NT (JSLiteral ";") s1 c1)] as) )] e) ):(fixSemis' xs)
 
@@ -321,6 +318,15 @@ fixFnBlock :: JSNode -> JSNode
 -- fixFnBlock (NN (JSBlock lb [] rb)) = (NT (JSLiteral ";") tokenPosnEmpty [])
 fixFnBlock (NN (JSBlock lb xs rb)) = (NN (JSBlock lb (fixSourceElements xs) rb))
 fixFnBlock x = fixBlock x
+
+fixIfBlock :: [JSNode] -> [JSNode]
+fixIfBlock xs =
+  case xs' of
+    [(NT (JSLiteral ";") p cs)]   -> [(NT (JSLiteral ";") p cs)]
+    [(NN (JSBlock lb [] rb))]     -> [(NT (JSLiteral ";") tokenPosnEmpty [])]
+    [(NN (JSBlock lb x2s rb))]    -> [(NN (JSBlock lb ((fixSourceElements $ map fixBlock x2s)) rb))]
+    [x]                           -> fixSourceElements [x]
+  where xs' = stripSemis xs
 
 -- Remove extraneous braces around blocks
 fixBlock :: JSNode -> JSNode
