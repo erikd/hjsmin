@@ -10,7 +10,7 @@ description:
    other syntactic elements, without changing the semantics.
 category:        Web
 stability:       unstable
-cabal-version:   >= 1.6
+cabal-version:   >= 1.9.2
 build-type:      Simple
 homepage:        http://github.com/alanz/hjsmin
 bug-reports:     http://github.com/alanz/hjsmin/issues
@@ -18,10 +18,6 @@ bug-reports:     http://github.com/alanz/hjsmin/issues
 Extra-source-files:
   TODO.txt, README.markdown, buildall.sh
 
-
--- flag buildtests
---   description: Build the executable to run unit tests
---   default: False
 
 library
     build-depends:   base                >= 4       && < 5
@@ -34,18 +30,6 @@ library
     other-modules:   Text.Jasmine.Pretty
     ghc-options:     -Wall
 
--- executable             runtests
---     if flag(buildtests)
---         Buildable: True
---         cpp-options:   -DTEST
---         build-depends: QuickCheck >= 2 && < 3,
---                        HUnit,
---                        test-framework-hunit,
---                        test-framework
-
---     else
---         Buildable: False
---     main-is:         runtests.hs
 
 Test-Suite test-hjsmin
   Type: exitcode-stdio-1.0

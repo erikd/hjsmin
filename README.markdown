@@ -28,6 +28,9 @@ Running the tests
 Changes
 -------
 
+0.1.0 - Major update to work with language-javascript 0.5.1. All changes should be internal.
+        Update of build process to make use of Cabal testing support, and Travis CI.
+
 0.0.15 - Fix GHC 7.4.1 compile compatibility. Patch accepted from github.com/luite
 
 0.0.14 - Allow unicode characters in comments
