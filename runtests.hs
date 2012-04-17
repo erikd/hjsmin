@@ -226,8 +226,9 @@ caseMinNestedSquare =
   testMinify "this.cursor+=match[0].length" srcNestedSquare
 
 caseEitherLeft  =
-  Left "UnexpectedToken (MulToken {token_span = (AlexPn 2 1 3,'=',\"*SYNTAX*ERROR*\")})"
+  -- Left "UnexpectedToken (MulToken {token_span = (AlexPn 2 1 3,'=',\"*SYNTAX*ERROR*\")})"
   -- Left "\"MulToken {token_span = TokenPn 2 1 3, token_comment = [NoComment]}\""
+  Left "\"MulToken {token_span = TokenPn 2 1 3, token_comment = [NoComment]}\""
   @=? minifym (LB.fromChunks [(E.encodeUtf8 $ T.pack "a=*SYNTAX*ERROR*")])
 
 caseEitherRight  =
