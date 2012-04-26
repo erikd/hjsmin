@@ -40,6 +40,7 @@ testSuite = testGroup "Text.Jasmine.Parse"
     , testCase "If2"              caseIf2
     , testCase "If3"              caseIf3
     , testCase "BootstrapDropdown" caseBootstrapDropdown
+    , testCase "Issue8"           caseIssue8
     ]
 
 testSuiteMin :: Test
@@ -66,6 +67,8 @@ testSuiteMin = testGroup "Text.Jasmine.Pretty Min"
     , testCase "MinIf2"           caseMinIf2
     , testCase "MinIf3"           caseMinIf3
     , testCase "MinBootstrapDropdown" caseMinBootstrapDropdown
+    , testCase "MinIssue8"        caseMinIssue8
+
     ]
 
 testSuiteFiles :: Test
@@ -304,6 +307,15 @@ caseBootstrapDropdown =
 caseMinBootstrapDropdown =
   -- Note: jsmin preserves the \n, rather than the semi. A matter of taste, it is the same number of chars.
   testMinify "clearMenus();!isActive&&$parent.toggleClass('open')" srcBootstrapDropdown
+
+
+srcIssue8 = "(function(){new nicEditor({fullPanel:true}).panelInstance('h4')})();"
+caseIssue8 =
+  "Right (JSSourceElementsTop [JSExpression [JSExpressionParen (JSExpression [JSFunctionExpression [] [] (JSBlock ([JSExpression [JSMemberDot [JSLiteral \"new\",JSIdentifier \"nicEditor\",JSArguments [JSObjectLiteral [JSPropertyNameandValue (JSIdentifier \"fullPanel\") [JSLiteral \"true\"]]]] (JSIdentifier \"panelInstance\"),JSArguments [JSStringLiteral '\\'' \"h4\"]]]))]),JSArguments []],JSLiteral \";\",JSLiteral \"\"])"
+  @=? (showStrippedMaybe $ parseProgram srcIssue8)
+caseMinIssue8 =
+  -- Note: jsmin preserves the \n, rather than the semi. A matter of taste, it is the same number of chars.
+  testMinify "(function(){new nicEditor({fullPanel:true}).panelInstance('h4')})()" srcIssue8
 
 -- ---------------------------------------------------------------------
 -- utilities

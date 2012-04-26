@@ -93,8 +93,8 @@ rn (JSIf _i _lb c _rb t [_e,e])                        = (text "if") <> (text "(
 
 
 
-rn (JSMemberDot xs _d y)          = (rJS xs) <> (text ".") <> (renderJS y)
-rn (JSMemberSquare xs _lb x _rb)  = (rJS xs) <> (text "[") <> (renderJS x) <> (text "]")
+rn (JSMemberDot xs _d y)          = (rJS $ fixLiterals $ fixNew xs) <> (text ".") <> (renderJS y)
+rn (JSMemberSquare xs _lb x _rb)  = (rJS $ fixLiterals $ fixNew xs) <> (text "[") <> (renderJS x) <> (text "]")
 rn (JSUnary l _s )                = text l
 rn (JSArrayLiteral _lb xs _rb)    = (text "[") <> (rJS xs) <> (text "]")
 

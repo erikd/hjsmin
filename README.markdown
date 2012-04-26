@@ -28,6 +28,8 @@ Running the tests
 Changes
 -------
 
+0.1.1 - Fixed problem with missing space after 'new' keyword, in issue #8.
+
 0.1.0 - Major update to work with language-javascript 0.5.1. All changes should be internal.
         Update of build process to make use of Cabal testing support, and Travis CI.
 
