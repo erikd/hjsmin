@@ -14,7 +14,7 @@ import qualified Blaze.ByteString.Builder.Char.Utf8 as BS
 import qualified Data.ByteString.Lazy as LB
 import qualified Language.JavaScript.Parser as LJ
 
-renderJS :: LJ.JSNode -> BB.Builder
+renderJS :: LJ.JSAST -> BB.Builder
 renderJS n = LJ.renderJS (transformJS n)
 
 {-
@@ -323,7 +323,7 @@ spaceNeeded xs =
 -- ---------------------------------------------------------------------
 -- Test stuff
 
-_r :: LJ.JSNode -> [Char]
+_r :: LJ.JSAST -> [Char]
 _r js = map (\x -> chr (fromIntegral x)) $ LB.unpack $ BB.toLazyByteString $ renderJS js
 
 
