@@ -20,8 +20,7 @@ transformJS jsnode = tf jsnode
 
 
 instance TransformJS JSAST where
-  tf (JSSourceElementsTop xs) = JSSourceElementsTop (tf xs)
-
+  tf (JSSourceElementsTop xs) = JSSourceElementsTop (tf $ fixTop $ fixSourceElements $ map fixStatementBlock xs)
 
 instance TransformJS JSStatement where
     tf (JSStatementBlock blk)                       = (JSStatementBlock (tf blk))
@@ -115,7 +114,7 @@ instance TransformJS JSNode where
     tf (JSCallExpressionDot    os xs)                  = (JSCallExpressionDot    (tf os) (tf xs))
     tf (JSCallExpressionSquare als xs ars)             = (JSCallExpressionSquare (tf als) (tf xs) (tf ars))
     tf (JSElision              c)                      = (JSElision              (tf c))
-    tf (JSExpression           xs)                     = (JSExpression           (tf xs))
+    tf (JSExpression           xs)                     = (JSExpression           (tf $ fixNew xs))
     tf (JSExpressionBinary     lhs op rhs)             = (JSExpressionBinary     (tf lhs) (tf op) (tf rhs))
     tf (JSExpressionParen      alp e arp)              = (JSExpressionParen      (tf alp) (tf e) (tf arp))
     tf (JSExpressionPostfix    xs op)                  = (JSExpressionPostfix    (tf xs) (tf op))
@@ -194,13 +193,13 @@ instance TransformJS Char where
 literal :: String -> JSNode
 literal s = JSLiteral JSNoAnnot s
 
-isLiteralVal :: String -> JSNode -> Bool
-isLiteralVal stest (JSLiteral _annot s) = s == stest
+isLiteralVal :: String -> JSStatement -> Bool
+isLiteralVal stest (JSNodeStmt (JSLiteral _annot s)) = s == stest
 isLiteralVal _ _ = False
 
 -- ---------------------------------------------------------------------
 
-fixTop :: [JSNode] -> [JSNode]
+fixTop :: [JSStatement] -> [JSStatement]
 fixTop [] = []
 fixTop xs = if (isLiteralVal ";" n) then (init xs) else (xs)
   where
@@ -208,27 +207,26 @@ fixTop xs = if (isLiteralVal ";" n) then (init xs) else (xs)
 
 -- ---------------------------------------------------------------------
 -- Remove extraneous braces around blocks
-{-
-fixBlock :: JSNode -> JSNode
 
-fixBlock (JSBlock lb xs rb) =
+fixStatementBlock :: JSStatement -> JSStatement
+fixStatementBlock (JSStatementBlock (JSBlock lb xs rb)) =
   case xs' of
-    []  -> (JSLiteral JSNoAnnot ";")
-    [x] -> fixBlock x
-    _   -> (JSBlock lb (fixSourceElements $ map fixBlock xs') rb)
+    []  -> (JSNodeStmt (JSLiteral JSNoAnnot ";"))
+    [x] -> fixStatementBlock x
+    _   -> (JSStatementBlock (JSBlock lb (fixSourceElements $ map fixStatementBlock xs') rb))
   where xs' = stripSemis xs
 
-fixBlock x = x
--}
+fixStatementBlock x = x
+
 
 -- ---------------------------------------------------------------------
 
-fixSourceElements :: [JSNode] -> [JSNode]
-fixSourceElements xs = fixSemis $ myFix $ fixNew xs
+fixSourceElements :: [JSStatement] -> [JSStatement]
+fixSourceElements xs = fixSemis $ myFix xs
 
 -- ---------------------------------------------------------------------
 
-myFix :: [JSNode] -> [JSNode]
+myFix :: [JSStatement] -> [JSStatement]
 -- TODO: implement this
 myFix xs = xs
 
@@ -236,21 +234,23 @@ myFix xs = xs
 -- ---------------------------------------------------------------------
 -- The "new" literal always need a space after it
 fixNew :: [JSNode] -> [JSNode]
-fixNew []                               = []
+fixNew []                        = []
 fixNew ((JSLiteral a1 "new"):xs) = (JSLiteral a1 "new ") : fixNew xs
 fixNew (x                   :xs) = x                     : fixNew xs
 
 
 -- ---------------------------------------------------------------------
 -- Sort out Semicolons
-fixSemis :: [JSNode] -> [JSNode]
+fixSemis :: [JSStatement] -> [JSStatement]
 fixSemis xs = fixSemis' $ stripSemis xs
 
-stripSemis :: [JSNode] -> [JSNode]
+stripSemis :: [JSStatement] -> [JSStatement]
 stripSemis xs = filter (\x -> not (isLiteralVal ";" x) && not (isLiteralVal "" x)) xs
 
-fixSemis' :: [JSNode] -> [JSNode]
+fixSemis' :: [JSStatement] -> [JSStatement]
 fixSemis' [] = []
+fixSemis' xs = xs
+
 {-
 fixSemis' [(JSContinue a1 [(JSLiteral a2 ";")] as)] = [(JSContinue a1 [] as)]
 fixSemis' [x] = [x]

@@ -140,7 +140,7 @@ testSuiteFilesUnminified = testGroup "Text.Jasmine.Pretty filesUnminified"
 
 srcHelloWorld = "function Hello(a) {}"
 caseHelloWorld =
-  "Right (JSSourceElementsTop [JSFunction (JSIdentifier \"Hello\") [JSIdentifier \"a\"] (JSBlock ([])),JSLiteral \"\"])"
+  "Right (JSSourceElementsTop [JSFunction (JSIdentifier \"Hello\") [JSIdentifier \"a\"] (JSStatementBlock ([])),JSLiteral \"\"])"
   @=? (showStrippedMaybe $ parseProgram srcHelloWorld)
 caseMinHelloWorld =
   -- "function Hello(a){}" @=? (minify (U.fromString srcHelloWorld))
@@ -148,7 +148,7 @@ caseMinHelloWorld =
 
 srcHelloWorld2 = "function Hello(a) {b=1}"
 caseHelloWorld2 =
-  "Right (JSSourceElementsTop [JSFunction (JSIdentifier \"Hello\") [JSIdentifier \"a\"] (JSBlock ([JSExpression JSIdentifier \"b\" = JSDecimal \"1\"])),JSLiteral \"\"])"
+  "Right (JSSourceElementsTop [JSFunction (JSIdentifier \"Hello\") [JSIdentifier \"a\"] (JSStatementBlock ([JSExpression JSIdentifier \"b\" = JSDecimal \"1\"])),JSLiteral \"\"])"
   @=? (showStrippedMaybe $ parseProgram srcHelloWorld2)
 caseMinHelloWorld2 =
   -- "function Hello(a){b=1}" @=? (minify (U.fromString srcHelloWorld2))
@@ -163,42 +163,42 @@ caseMinSimpleAssignment =
 
 srcEmptyFor = "for (i = 0;;){}"
 caseEmptyFor =
-  "Right (JSSourceElementsTop [JSFor [JSExpression JSIdentifier \"i\" = JSDecimal \"0\"] [] [] (JSBlock ([])),JSLiteral \"\"])"
+  "Right (JSSourceElementsTop [JSFor [JSExpression JSIdentifier \"i\" = JSDecimal \"0\"] [] [] (JSStatementBlock (JSStatementBlock ([]))),JSLiteral \"\"])"
   @=? (showStrippedMaybe $ parseProgram srcEmptyFor)
 caseMinEmptyFor =
   testMinify "for(i=0;;){}" srcEmptyFor
 
 srcFullFor = "for (i = 0;i<10;i++){}"
 caseFullFor =
-  "Right (JSSourceElementsTop [JSFor [JSExpression JSIdentifier \"i\" = JSDecimal \"0\"] [JSExpressionBinary \"<\" JSIdentifier \"i\" JSDecimal \"10\"] [JSExpressionPostfix \"++\" JSIdentifier \"i\"] (JSBlock ([])),JSLiteral \"\"])"
+  "Right (JSSourceElementsTop [JSFor [JSExpression JSIdentifier \"i\" = JSDecimal \"0\"] [JSExpressionBinary \"<\" JSIdentifier \"i\" JSDecimal \"10\"] [JSExpressionPostfix \"++\" JSIdentifier \"i\"] (JSStatementBlock (JSStatementBlock ([]))),JSLiteral \"\"])"
   @=? (showStrippedMaybe $ parseProgram srcFullFor)
 caseMinFullFor =
   testMinify "for(i=0;i<10;i++);" srcFullFor
 
 srcForVarFull = "for(var i=0,j=tokens.length;i<j;i++){}"
 caseForVarFull =
-  "Right (JSSourceElementsTop [JSForVar [JSVarDecl (JSIdentifier \"i\") [JSLiteral \"=\",JSDecimal \"0\"],JSLiteral \",\",JSVarDecl (JSIdentifier \"j\") [JSLiteral \"=\",JSMemberDot JSIdentifier \"tokens\" (JSIdentifier \"length\")]] [JSExpressionBinary \"<\" JSIdentifier \"i\" JSIdentifier \"j\"] [JSExpressionPostfix \"++\" JSIdentifier \"i\"] (JSBlock ([])),JSLiteral \"\"])"
+  "Right (JSSourceElementsTop [JSForVar [JSVarDecl (JSIdentifier \"i\") [JSLiteral \"=\",JSDecimal \"0\"],JSLiteral \",\",JSVarDecl (JSIdentifier \"j\") [JSLiteral \"=\",JSMemberDot JSIdentifier \"tokens\" (JSIdentifier \"length\")]] [JSExpressionBinary \"<\" JSIdentifier \"i\" JSIdentifier \"j\"] [JSExpressionPostfix \"++\" JSIdentifier \"i\"] (JSStatementBlock (JSStatementBlock ([]))),JSLiteral \"\"])"
   @=? (showStrippedMaybe $ parseProgram srcForVarFull)
 caseMinForVarFull =
   testMinify "for(var i=0,j=tokens.length;i<j;i++){}" srcForVarFull
 
 srcIfElse1 = "if(a){b=1}else c=2";
 caseIfElse1 =
-  "Right (JSSourceElementsTop [JSIf (JSIdentifier \"a\") ([JSBlock ([JSExpression JSIdentifier \"b\" = JSDecimal \"1\"])]) ([JSLiteral \"else\",JSExpression JSIdentifier \"c\" = JSDecimal \"2\"]),JSLiteral \"\"])"
+  "Right (JSSourceElementsTop [JSIf (JSIdentifier \"a\") ([JSStatementBlock (JSStatementBlock ([JSExpression JSIdentifier \"b\" = JSDecimal \"1\"]))]) ([JSLiteral \"else\",JSExpression JSIdentifier \"c\" = JSDecimal \"2\"]),JSLiteral \"\"])"
   @=? (showStrippedMaybe $ parseProgram srcIfElse1)
 caseMinIfElse1 =
   testMinify "if(a){b=1}else c=2" srcIfElse1
 
 srcIfElse2 = "if(a){b=1}else {c=2;d=4}";
 caseIfElse2 =
-  "Right (JSSourceElementsTop [JSIf (JSIdentifier \"a\") ([JSBlock ([JSExpression JSIdentifier \"b\" = JSDecimal \"1\"])]) ([JSLiteral \"else\",JSBlock ([JSExpression JSIdentifier \"c\" = JSDecimal \"2\",JSLiteral \";\",JSExpression JSIdentifier \"d\" = JSDecimal \"4\"])]),JSLiteral \"\"])"
+  "Right (JSSourceElementsTop [JSIf (JSIdentifier \"a\") ([JSStatementBlock (JSStatementBlock ([JSExpression JSIdentifier \"b\" = JSDecimal \"1\"]))]) ([JSLiteral \"else\",JSStatementBlock (JSStatementBlock ([JSExpression JSIdentifier \"c\" = JSDecimal \"2\",JSLiteral \";\",JSExpression JSIdentifier \"d\" = JSDecimal \"4\"]))]),JSLiteral \"\"])"
   @=? (showStrippedMaybe $ parseProgram srcIfElse2)
 caseMinIfElse2 =
   testMinify "if(a){b=1}else{c=2;d=4}" srcIfElse2
 
 src0_f = "function Hello(a) {ExprArray(1,1);}"
 case0_f =
-   "Right (JSSourceElementsTop [JSFunction (JSIdentifier \"Hello\") [JSIdentifier \"a\"] (JSBlock ([JSExpression [JSIdentifier \"ExprArray\",JSArguments [JSDecimal \"1\",JSLiteral \",\",JSDecimal \"1\"]],JSLiteral \";\"])),JSLiteral \"\"])"
+  "Right (JSSourceElementsTop [JSFunction (JSIdentifier \"Hello\") [JSIdentifier \"a\"] (JSStatementBlock ([JSExpression [JSIdentifier \"ExprArray\",JSArguments [JSDecimal \"1\",JSLiteral \",\",JSDecimal \"1\"]],JSLiteral \";\"])),JSLiteral \"\"])"
   -- @=? (show $ parseString program src0_f)
   @=? (showStrippedMaybe $ parseProgram src0_f)
 caseMin0_f =
@@ -212,14 +212,14 @@ src01_semi1 = (
     "// five\n"++
     "five")
 case01_semi1 =
-  "Right (JSSourceElementsTop [JSBlock ([JSMemberDot JSIdentifier \"zero\" (JSIdentifier \"one1\"),JSLiteral \";\",JSIdentifier \"zero\"]),JSIdentifier \"one1\",JSIdentifier \"two\",JSLiteral \";\",JSIdentifier \"three\",JSBlock ([JSBlock ([])]),JSIdentifier \"four\",JSLiteral \";\",JSIdentifier \"five\",JSLiteral \"\"])"
+  "Right (JSSourceElementsTop [JSStatementBlock (JSStatementBlock ([JSMemberDot JSIdentifier \"zero\" (JSIdentifier \"one1\"),JSLiteral \";\",JSIdentifier \"zero\"])),JSIdentifier \"one1\",JSIdentifier \"two\",JSLiteral \";\",JSIdentifier \"three\",JSStatementBlock (JSStatementBlock ([JSStatementBlock (JSStatementBlock ([]))])),JSIdentifier \"four\",JSLiteral \";\",JSIdentifier \"five\",JSLiteral \"\"])"
   @=? (showStrippedMaybe $ parseProgram src01_semi1)
 caseMin01_semi1 =
   testMinify "{zero.one1;zero};one1;two;three;four;five" src01_semi1
 
 src_min_100_animals = "function Animal(name){if(!name)throw new Error('Must specify an animal name');this.name=name};Animal.prototype.toString=function(){return this.name};o=new Animal(\"bob\");o.toString()==\"bob\""
 case_min_100_animals =
-  "Right (JSSourceElementsTop [JSFunction (JSIdentifier \"Animal\") [JSIdentifier \"name\"] (JSBlock ([JSIf (JSUnaryExpression \"!\"JSIdentifier \"name\") ([JSThrow (JSExpression [JSLiteral \"new\",JSIdentifier \"Error\",JSArguments [JSStringLiteral '\\'' \"Must specify an animal name\"]]),JSLiteral \";\"]) ([]),JSExpression JSMemberDot JSLiteral \"this\" (JSIdentifier \"name\") = JSIdentifier \"name\"])),JSLiteral \";\",JSExpression JSMemberDot JSMemberDot JSIdentifier \"Animal\" (JSIdentifier \"prototype\") (JSIdentifier \"toString\") = JSFunctionExpression [] [] (JSBlock ([JSReturn [JSMemberDot JSLiteral \"this\" (JSIdentifier \"name\")] ])),JSLiteral \";\",JSExpression JSIdentifier \"o\" = JSExpression [JSLiteral \"new\",JSIdentifier \"Animal\",JSArguments [JSStringLiteral '\"' \"bob\"]],JSLiteral \";\",JSExpressionBinary \"==\" JSExpression [JSMemberDot JSIdentifier \"o\" (JSIdentifier \"toString\"),JSArguments []] JSStringLiteral '\"' \"bob\",JSLiteral \"\"])"
+  "Right (JSSourceElementsTop [JSFunction (JSIdentifier \"Animal\") [JSIdentifier \"name\"] (JSStatementBlock ([JSIf (JSUnaryExpression \"!\"JSIdentifier \"name\") ([JSThrow (JSExpression [JSLiteral \"new\",JSIdentifier \"Error\",JSArguments [JSStringLiteral '\\'' \"Must specify an animal name\"]]),JSLiteral \";\"]) ([]),JSExpression JSMemberDot JSLiteral \"this\" (JSIdentifier \"name\") = JSIdentifier \"name\"])),JSLiteral \";\",JSExpression JSMemberDot JSMemberDot JSIdentifier \"Animal\" (JSIdentifier \"prototype\") (JSIdentifier \"toString\") = JSFunctionExpression [] [] (JSStatementBlock ([JSReturn [JSMemberDot JSLiteral \"this\" (JSIdentifier \"name\")] ])),JSLiteral \";\",JSExpression JSIdentifier \"o\" = JSExpression [JSLiteral \"new\",JSIdentifier \"Animal\",JSArguments [JSStringLiteral '\"' \"bob\"]],JSLiteral \";\",JSExpressionBinary \"==\" JSExpression [JSMemberDot JSIdentifier \"o\" (JSIdentifier \"toString\"),JSArguments []] JSStringLiteral '\"' \"bob\",JSLiteral \"\"])"
   @=? (showStrippedMaybe $ parseProgram src_min_100_animals)
 caseMin_min_100_animals =
   testMinify src_min_100_animals src_min_100_animals
@@ -256,21 +256,21 @@ caseMinTrailingCommas =
 
 srcGetSet = "x={get foo() {return 1},set foo(a) {x=a}}"
 caseGetSet =
-  "Right (JSSourceElementsTop [JSExpression JSIdentifier \"x\" = JSObjectLiteral [JSPropertyAccessor JSLiteral Annot (TokenPn 3 1 4) [NoComment] \"get\" (JSIdentifier \"foo\") [] (JSBlock ([JSReturn [JSDecimal \"1\"] ])),JSLiteral \",\",JSPropertyAccessor JSLiteral Annot (TokenPn 24 1 25) [NoComment] \"set\" (JSIdentifier \"foo\") [JSIdentifier \"a\"] (JSBlock ([JSExpression JSIdentifier \"x\" = JSIdentifier \"a\"]))],JSLiteral \"\"])"
+  "Right (JSSourceElementsTop [JSExpression JSIdentifier \"x\" = JSObjectLiteral [JSPropertyAccessor JSLiteral Annot (TokenPn 3 1 4) [NoComment] \"get\" (JSIdentifier \"foo\") [] (JSStatementBlock ([JSReturn [JSDecimal \"1\"] ])),JSLiteral \",\",JSPropertyAccessor JSLiteral Annot (TokenPn 24 1 25) [NoComment] \"set\" (JSIdentifier \"foo\") [JSIdentifier \"a\"] (JSStatementBlock ([JSExpression JSIdentifier \"x\" = JSIdentifier \"a\"]))],JSLiteral \"\"])"
   @=? (showStrippedMaybe $ parseProgram srcGetSet)
 caseMinGetSet =
   testMinify "x={get foo(){return 1},set foo(a){x=a}}" srcGetSet
 
 srcUnicode = "var x = \"שלום\";"
 caseUnicode =
-  "Right (JSSourceElementsTop [JSVariables JSLiteral \"var\" [JSVarDecl (JSIdentifier \"x\") [JSLiteral \"=\",JSStringLiteral '\"' \"\\1513\\1500\\1493\\1501\"]],JSLiteral \"\"])"
+  "Right (JSSourceElementsTop [JSVariable var [JSVarDecl (JSIdentifier \"x\") [JSLiteral \"=\",JSStringLiteral '\"' \"\\1513\\1500\\1493\\1501\"]],JSLiteral \"\"])"
   @=? (showStrippedMaybe $ parseProgram srcUnicode)
 caseMinUnicode =
   testMinify "var x=\"שלום\"" srcUnicode
 
 srcIssue3 = "var myLatlng = new google.maps.LatLng(56.8379100, 60.5806664);"
 caseIssue3 =
-  "Right (JSSourceElementsTop [JSVariables JSLiteral \"var\" [JSVarDecl (JSIdentifier \"myLatlng\") [JSLiteral \"=\",JSExpression [JSLiteral \"new\",JSMemberDot JSMemberDot JSIdentifier \"google\" (JSIdentifier \"maps\") (JSIdentifier \"LatLng\"),JSArguments [JSDecimal \"56.8379100\",JSLiteral \",\",JSDecimal \"60.5806664\"]]]],JSLiteral \"\"])"
+  "Right (JSSourceElementsTop [JSVariable var [JSVarDecl (JSIdentifier \"myLatlng\") [JSLiteral \"=\",JSExpression [JSLiteral \"new\",JSMemberDot JSMemberDot JSIdentifier \"google\" (JSIdentifier \"maps\") (JSIdentifier \"LatLng\"),JSArguments [JSDecimal \"56.8379100\",JSLiteral \",\",JSDecimal \"60.5806664\"]]]],JSLiteral \"\"])"
   @=? (showStrippedMaybe $ parseProgram srcIssue3)
 caseMinIssue3 =
   testMinify "var myLatlng=new google.maps.LatLng(56.8379100,60.5806664)" srcIssue3
@@ -284,28 +284,28 @@ caseMinIssue4 =
 
 srcSwitch1 = "switch(i){case 1:1;case 2:2}"
 caseSwitch1 =
-  "Right (JSSourceElementsTop [JSSwitch (JSIdentifier \"i\") JSBlock ([JSCase (JSDecimal \"1\") ([JSDecimal \"1\",JSLiteral \";\"]),JSCase (JSDecimal \"2\") ([JSDecimal \"2\"])]),JSLiteral \"\"])"
+  "Right (JSSourceElementsTop [JSSwitch (JSIdentifier \"i\") [JSCase (JSDecimal \"1\") ([JSDecimal \"1\",JSLiteral \";\"]),JSCase (JSDecimal \"2\") ([JSDecimal \"2\"])],JSLiteral \"\"])"
   @=? (showStrippedMaybe $ parseProgram srcSwitch1)
 caseMinSwitch1 =
   testMinify "switch(i){case 1:1;case 2:2}" srcSwitch1
 
 srcIf1="if(i>0)consts+=\", \";var t=tokens[i];"
 caseIf1 =
-  "Right (JSSourceElementsTop [JSIf (JSExpressionBinary \">\" JSIdentifier \"i\" JSDecimal \"0\") ([JSExpression JSIdentifier \"consts\" += JSStringLiteral '\"' \", \",JSLiteral \";\"]) ([]),JSVariables JSLiteral \"var\" [JSVarDecl (JSIdentifier \"t\") [JSLiteral \"=\",JSMemberSquare JSIdentifier \"tokens\" (JSIdentifier \"i\")]],JSLiteral \"\"])"
+  "Right (JSSourceElementsTop [JSIf (JSExpressionBinary \">\" JSIdentifier \"i\" JSDecimal \"0\") ([JSExpression JSIdentifier \"consts\" += JSStringLiteral '\"' \", \",JSLiteral \";\"]) ([]),JSVariable var [JSVarDecl (JSIdentifier \"t\") [JSLiteral \"=\",JSMemberSquare JSIdentifier \"tokens\" (JSIdentifier \"i\")]],JSLiteral \"\"])"
   @=? (showStrippedMaybe $ parseProgram srcIf1)
 caseMinIf1 =
   testMinify "if(i>0)consts+=\", \";var t=tokens[i]" srcIf1
 
 srcIf2 = "if (getValue)\n   execute;\nelse {\n   execute;\n}"
 caseIf2 =
-  "Right (JSSourceElementsTop [JSIf (JSIdentifier \"getValue\") ([JSIdentifier \"execute\",JSLiteral \";\"]) ([JSLiteral \"else\",JSBlock ([JSIdentifier \"execute\",JSLiteral \";\"])]),JSLiteral \"\"])"
+  "Right (JSSourceElementsTop [JSIf (JSIdentifier \"getValue\") ([JSIdentifier \"execute\",JSLiteral \";\"]) ([JSLiteral \"else\",JSStatementBlock (JSStatementBlock ([JSIdentifier \"execute\",JSLiteral \";\"]))]),JSLiteral \"\"])"
   @=? (showStrippedMaybe $ parseProgram srcIf2)
 caseMinIf2 =
   testMinify "if(getValue){execute}else execute" srcIf2
 
 srcIf3 = "if(getValue){execute}else execute"
 caseIf3 =
-  "Right (JSSourceElementsTop [JSIf (JSIdentifier \"getValue\") ([JSIdentifier \"execute\",JSLiteral \";\"]) ([JSLiteral \"else\",JSBlock ([JSIdentifier \"execute\",JSLiteral \";\"])]),JSLiteral \"\"])"
+  "Right (JSSourceElementsTop [JSIf (JSIdentifier \"getValue\") ([JSIdentifier \"execute\",JSLiteral \";\"]) ([JSLiteral \"else\",JSStatementBlock (JSStatementBlock ([JSIdentifier \"execute\",JSLiteral \";\"]))]),JSLiteral \"\"])"
   @=? (showStrippedMaybe $ parseProgram srcIf2)
 caseMinIf3 =
   testMinify "if(getValue){execute}else execute" srcIf3
@@ -321,7 +321,7 @@ caseMinBootstrapDropdown =
 
 srcIssue8 = "(function(){new nicEditor({fullPanel:true}).panelInstance('h4')})();"
 caseIssue8 =
-  "Right (JSSourceElementsTop [JSExpression [JSExpressionParen (JSFunctionExpression [] [] (JSBlock ([JSExpression [JSMemberDot JSExpression [JSLiteral \"new\",JSIdentifier \"nicEditor\",JSArguments [JSObjectLiteral [JSPropertyNameandValue (JSIdentifier \"fullPanel\") [JSLiteral \"true\"]]]] (JSIdentifier \"panelInstance\"),JSArguments [JSStringLiteral '\\'' \"h4\"]]]))),JSArguments []],JSLiteral \";\",JSLiteral \"\"])"
+  "Right (JSSourceElementsTop [JSExpression [JSExpressionParen (JSFunctionExpression [] [] (JSStatementBlock ([JSExpression [JSMemberDot JSExpression [JSLiteral \"new\",JSIdentifier \"nicEditor\",JSArguments [JSObjectLiteral [JSPropertyNameandValue (JSIdentifier \"fullPanel\") [JSLiteral \"true\"]]]] (JSIdentifier \"panelInstance\"),JSArguments [JSStringLiteral '\\'' \"h4\"]]]))),JSArguments []],JSLiteral \";\",JSLiteral \"\"])"
   @=? (showStrippedMaybe $ parseProgram srcIssue8)
 caseMinIssue8 =
   -- Note: jsmin preserves the \n, rather than the semi. A matter of taste, it is the same number of chars.
