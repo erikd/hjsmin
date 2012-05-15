@@ -28,12 +28,20 @@ instance TransformJS JSStatement where
     tf (JSContinue annot xs s)                      = (JSContinue (tf annot) (tf xs) (tf s))
     tf (JSConstant annot xs s)                      = (JSConstant (tf annot) (tf xs) (tf s))
     tf (JSDoWhile ad x1 aw alb x2 arb x3)           = (JSDoWhile (tf ad) (tf x1) (tf aw) (tf alb) (tf x2) (tf arb) (tf x3))
-    tf (JSFor af alb x1s s1 x2s s2 x3s arb x4)      = (JSFor (tf af) (tf alb) (tf x1s) (tf s1) (tf x2s) (tf s2) (tf x3s) (tf arb) (tf x4))
-    tf (JSForIn af alb x1s i x2 arb x3)             = (JSForIn (tf af) (tf alb) (tf x1s) (tf i) (tf x2) (tf arb) (tf x3))
-    tf (JSForVar af alb v x1s s1 x2s s2 x3s arb x4) = (JSForVar (tf af) (tf alb) (tf v) (tf x1s) (tf s1) (tf x2s) (tf s2) (tf x3s) (tf arb) (tf x4))
-    tf (JSForVarIn af alb v x1 i x2 arb x3)         = (JSForVarIn (tf af) (tf alb) (tf v) (tf x1) (tf i) (tf x2) (tf arb) (tf x3))
-    tf (JSFunction af n alb x2s arb x3)             = (JSFunction (tf af) (tf n) (tf alb) (tf x2s) (tf arb) (tf x3))
+
+    tf (JSFor af alb x1s s1 x2s s2 x3s arb x4)      = (JSFor (tf af) (tf alb) (tf x1s) (tf s1) (tf x2s) (tf s2) (tf x3s) (tf arb) (tf $ fixStatementBlock x4))
+
+    tf (JSForIn af alb x1s i x2 arb x3)             = (JSForIn (tf af) (tf alb) (tf x1s) (tf i) (tf x2) (tf arb) (tf $ fixStatementBlock x3))
+    tf (JSForVar af alb v x1s s1 x2s s2 x3s arb x4) = (JSForVar (tf af) (tf alb) (addSpace v) (tf x1s) (tf s1) (tf x2s) (tf s2) (tf x3s) (tf arb) (tf $ fixStatementBlock x4))
+    tf (JSForVarIn af alb v x1 i x2 arb x3)         = (JSForVarIn (tf af) (tf alb) (addSpace v) (tf x1) (tf i) (tf x2) (tf arb) (tf $ fixStatementBlock x3))
+    tf (JSFunction af n alb x2s arb x3)             = (JSFunction (tf af) (addSpace n) (tf alb) (tf $ fixNew x2s) (tf arb) (tf $ fixFnBlock x3))
+
+    tf (JSIf annot alb x1 arb x2s [JSNodeStmt (JSLiteral _ ";")]) = (JSIf (tf annot) (tf alb) (tf x1) (tf arb) (tf x2s) [])
+    tf (JSIf annot alb x1 arb x2s [])              = (JSIf (tf annot) (tf alb) (tf x1) (tf arb) (tf x2s) [])
+
     tf (JSIf annot alb x1 arb x2s x3s)              = (JSIf (tf annot) (tf alb) (tf x1) (tf arb) (tf x2s) (tf x3s))
+
+
     tf (JSLabelled l c v)                           = (JSLabelled (tf l) (tf c) (tf v))
     tf (JSNodeStmt l)                               = (JSNodeStmt (tf l))
     tf (JSReturn annot xs s)                        = (JSReturn (tf annot) (tf xs) (tf s))
@@ -107,7 +115,7 @@ instance TransformJS JSNode where
     tf (JSRegEx         annot s  ) = (JSRegEx         (tf annot) (tf s)  )
 
     -- Non-Terminals
-    tf (JSArguments            alp xs arp)             = (JSArguments            (tf alp) (tf xs) (tf arp))
+    tf (JSArguments            alp xs arp)             = (JSArguments            (tf alp) (tf $ fixNew xs) (tf arp))
     tf (JSArrayLiteral         als xs ars)             = (JSArrayLiteral         (tf als) (tf xs) (tf ars))
     tf (JSAssignExpression     lhs op rhs)             = (JSAssignExpression     (tf lhs) (tf op) (tf rhs))
     tf (JSCallExpression       os xs cs)               = (JSCallExpression       (tf os) (tf xs) (tf cs))
@@ -119,7 +127,7 @@ instance TransformJS JSNode where
     tf (JSExpressionParen      alp e arp)              = (JSExpressionParen      (tf alp) (tf e) (tf arp))
     tf (JSExpressionPostfix    xs op)                  = (JSExpressionPostfix    (tf xs) (tf op))
     tf (JSExpressionTernary    cond h v1 c v2)         = (JSExpressionTernary    (tf cond) (tf h) (tf v1) (tf c) (tf v2))
-    tf (JSFunctionExpression   annot x1s lb x2s rb x3) = (JSFunctionExpression   (tf annot) (tf x1s) (tf lb) (tf x2s) (tf rb) (tf x3))
+    tf (JSFunctionExpression   annot x1s lb x2s rb x3) = (JSFunctionExpression   (tf annot) (tf x1s) (tf lb) (tf $ fixNew x2s) (tf rb) (tf $ fixFnBlock x3))
     tf (JSMemberDot            xs dot n)               = (JSMemberDot            (tf xs) (tf dot) (tf n))
     tf (JSMemberSquare         xs als e ars)           = (JSMemberSquare         (tf xs) (tf als) (tf e) (tf ars))
     tf (JSObjectLiteral        alb xs arb)             = (JSObjectLiteral        (tf alb) (tf xs) (tf arb))
@@ -133,7 +141,7 @@ instance TransformJS [JSNode] where
     tf xs = map tf xs
 
 instance TransformJS JSAnnot where
-    tf (JSAnnot p cs) = (JSAnnot (tf p) (tf cs))
+    tf (JSAnnot p cs) = JSNoAnnot
     tf JSNoAnnot      = JSNoAnnot
 
 instance TransformJS JSSemi where
@@ -177,8 +185,8 @@ instance TransformJS [CommentAnnotation] where
 
 instance TransformJS CommentAnnotation where
     tf  NoComment = NoComment
-    tf (CommentA   p s) = (CommentA   (tf p) (tf s))
-    tf (WhiteSpace p s) = (WhiteSpace (tf p) (tf s))
+    tf (CommentA   p s) = NoComment
+    tf (WhiteSpace p s) = NoComment
 
 
 instance TransformJS String where
@@ -231,6 +239,10 @@ myFix :: [JSStatement] -> [JSStatement]
 myFix xs = xs
 
 
+addSpace :: JSNode -> JSNode
+addSpace (JSIdentifier _ s) = (JSIdentifier (JSAnnot tokenPosnEmpty [(WhiteSpace tokenPosnEmpty " ")]) s)
+addSpace (JSLiteral _ "var") = (JSLiteral JSNoAnnot "var ")
+
 -- ---------------------------------------------------------------------
 -- The "new" literal always need a space after it
 fixNew :: [JSNode] -> [JSNode]
@@ -277,11 +289,11 @@ fixSemis' (x:xs) = x:(JSLiteral JSNoAnnot ";"):fixSemis' xs
 -}
 
 -- ---------------------------------------------------------------------
-{-
-fixFnBlock :: JSNode -> JSNode
+
+fixFnBlock :: JSBlock -> JSBlock
 fixFnBlock (JSBlock lb xs rb) = (JSBlock lb (fixSourceElements xs) rb)
-fixFnBlock x = fixBlock x
--}
+-- fixFnBlock x = fixBlock x
+
 -- ---------------------------------------------------------------------
 -- Merge strings split over lines and using "+"
 fixLiterals :: [JSNode] -> [JSNode]

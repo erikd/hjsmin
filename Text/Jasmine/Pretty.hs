@@ -80,6 +80,7 @@ rn (JSArguments _lb xs _rb) = (text "(") <> (rJS $ fixLiterals $ fixNew xs) <> (
 
 rn (JSBlock lb xs rb)            = (rJS lb) <> (rJS xs) <> (rJS rb)
 
+
 rn (JSIf _i _lb c _rb [(NT (JSLiteral ";") _ _)] [])     = (text "if") <> (text "(") <> (renderJS c) <> (text ")")
 
 rn (JSIf _i _lb c _rb t                        [])     = (text "if") <> (text "(") <> (renderJS c) <> (text ")") <> (rJS $ fixSourceElements $ map fixBlock t)

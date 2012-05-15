@@ -166,7 +166,7 @@ caseEmptyFor =
   "Right (JSSourceElementsTop [JSFor [JSExpression JSIdentifier \"i\" = JSDecimal \"0\"] [] [] (JSStatementBlock (JSStatementBlock ([]))),JSLiteral \"\"])"
   @=? (showStrippedMaybe $ parseProgram srcEmptyFor)
 caseMinEmptyFor =
-  testMinify "for(i=0;;){}" srcEmptyFor
+  testMinify "for(i=0;;);" srcEmptyFor
 
 srcFullFor = "for (i = 0;i<10;i++){}"
 caseFullFor =
@@ -180,7 +180,7 @@ caseForVarFull =
   "Right (JSSourceElementsTop [JSForVar [JSVarDecl (JSIdentifier \"i\") [JSLiteral \"=\",JSDecimal \"0\"],JSLiteral \",\",JSVarDecl (JSIdentifier \"j\") [JSLiteral \"=\",JSMemberDot JSIdentifier \"tokens\" (JSIdentifier \"length\")]] [JSExpressionBinary \"<\" JSIdentifier \"i\" JSIdentifier \"j\"] [JSExpressionPostfix \"++\" JSIdentifier \"i\"] (JSStatementBlock (JSStatementBlock ([]))),JSLiteral \"\"])"
   @=? (showStrippedMaybe $ parseProgram srcForVarFull)
 caseMinForVarFull =
-  testMinify "for(var i=0,j=tokens.length;i<j;i++){}" srcForVarFull
+  testMinify "for(var i=0,j=tokens.length;i<j;i++);" srcForVarFull
 
 srcIfElse1 = "if(a){b=1}else c=2";
 caseIfElse1 =
