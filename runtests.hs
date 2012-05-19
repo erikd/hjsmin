@@ -41,101 +41,105 @@ testSuite = testGroup "Text.Jasmine.Parse"
     , testCase "If3"              caseIf3
     , testCase "BootstrapDropdown" caseBootstrapDropdown
     , testCase "Issue8"           caseIssue8
+    , testCase "DoWhile"          caseDowWhile
+    , testCase "DoWhile2"         caseDowWhile2
     ]
 
 testSuiteMin :: Test
 testSuiteMin = testGroup "Text.Jasmine.Pretty Min"
-    [ testCase "helloWorld"       caseMinHelloWorld
-    , testCase "helloWorld2"      caseMinHelloWorld2
-    , testCase "simpleAssignment" caseMinSimpleAssignment
-    , testCase "emptyFor"         caseMinEmptyFor
-    , testCase "fullFor"          caseMinFullFor
-    , testCase "forVarFull"       caseMinForVarFull
-    , testCase "ifelse1"          caseMinIfElse1
-    , testCase "ifelse2"          caseMinIfElse2
-    , testCase "0_f.js"           caseMin0_f
-    , testCase "01_semi1.js"      caseMin01_semi1
-    , testCase "min_100_animals"  caseMin_min_100_animals
-    , testCase "minNestedSquare"  caseMinNestedSquare
-    , testCase "minMergeStrings"  caseMinMergeStrings
-    , testCase "EitherLeft"       caseEitherLeft
-    , testCase "EitherRight"      caseEitherRight
-    , testCase "TrailingCommas"   caseMinTrailingCommas
-    , testCase "GetSet"           caseMinGetSet
-    , testCase "Unicode"          caseMinUnicode
-    , testCase "MinIssue3"        caseMinIssue3
-    , testCase "MinIssue4"        caseMinIssue4
-    , testCase "MinSwitch1"       caseMinSwitch1
-    , testCase "MinIf1"           caseMinIf1
-    , testCase "MinIf2"           caseMinIf2
-    , testCase "MinIf3"           caseMinIf3
+    [ testCase "MinHelloWorld"       caseMinHelloWorld
+    , testCase "MinHelloWorld2"      caseMinHelloWorld2
+    , testCase "MinSimpleAssignment" caseMinSimpleAssignment
+    , testCase "MinEmptyFor"       caseMinEmptyFor
+    , testCase "MinFullFor"        caseMinFullFor
+    , testCase "MinForVarFull"     caseMinForVarFull
+    , testCase "MinIfelse1"        caseMinIfElse1
+    , testCase "MinIfelse2"        caseMinIfElse2
+    , testCase "Min0_f.js"         caseMin0_f
+    , testCase "Min01_semi1.js"    caseMin01_semi1
+    , testCase "min_100_animals"   caseMin_min_100_animals
+    , testCase "minNestedSquare"   caseMinNestedSquare
+    , testCase "minMergeStrings"   caseMinMergeStrings
+    , testCase "MinEitherLeft"     caseEitherLeft
+    , testCase "MinEitherRight"    caseEitherRight
+    , testCase "MinTrailingCommas" caseMinTrailingCommas
+    , testCase "MinGetSet"         caseMinGetSet
+    , testCase "MinUnicode"        caseMinUnicode
+    , testCase "MinIssue3"         caseMinIssue3
+    , testCase "MinIssue4"         caseMinIssue4
+    , testCase "MinSwitch1"        caseMinSwitch1
+    , testCase "MinIf1"            caseMinIf1
+    , testCase "MinIf2"            caseMinIf2
+    , testCase "MinIf3"            caseMinIf3
     , testCase "MinBootstrapDropdown" caseMinBootstrapDropdown
-    , testCase "MinIssue8"        caseMinIssue8
+    , testCase "MinIssue8"         caseMinIssue8
+    , testCase "MinDoWhile"        caseMinDoWhile
+    , testCase "MinDoWhile2"       caseMinDoWhile2
 
     ]
 
 testSuiteFiles :: Test
 testSuiteFiles = testGroup "Text.Jasmine.Pretty files"
-  [ testCase "00_f.js"          (testFile "./test/pminified/00_f.js")
-  , testCase "01_semi1.js"      (testFile "./test/pminified/01_semi1.js")
-  , testCase "02_sm.js"         (testFile "./test/pminified/02_sm.js")
-  , testCase "03_sm.js"         (testFile "./test/pminified/03_sm.js")
-  , testCase "04_if.js"         (testFile "./test/pminified/04_if.js")
-  , testCase "05_comments_simple.js" (testFile "./test/pminified/05_comments_simple.js")
-  , testCase "05_regex.js"      (testFile "./test/pminified/05_regex.js")
-  , testCase "06_callexpr.js"   (testFile "./test/pminified/06_callexpr.js")
-  , testCase "06_newexpr.js"    (testFile "./test/pminified/06_newexpr.js")
-  , testCase "06_var.js"        (testFile "./test/pminified/06_var.js")
-  , testCase "07_expr.js"       (testFile "./test/pminified/07_expr.js")
-  , testCase "10_switch.js"     (testFile "./test/pminified/10_switch.js")
-  , testCase "14_labelled_stmts.js" (testFile "./test/pminified/14_labelled_stmts.js")
-  , testCase "15_literals.js"   (testFile "./test/pminified/15_literals.js")
-  , testCase "16_literals.js"   (testFile "./test/pminified/16_literals.js")
-  , testCase "20_statements.js" (testFile "./test/pminified/20_statements.js")
-  , testCase "25_trycatch.js"   (testFile "./test/pminified/25_trycatch.js")
-  , testCase "40_functions.js"  (testFile "./test/pminified/40_functions.js")
-  , testCase "67_bob.js"        (testFile "./test/pminified/67_bob.js")
-  , testCase "110_perfect.js"   (testFile "./test/pminified/110_perfect.js")
-  , testCase "120_js.js"        (testFile "./test/pminified/120_js.js")
-  , testCase "121_jsdefs.js"    (testFile "./test/pminified/121_jsdefs.js")
-  , testCase "122_jsexec.js"    (testFile "./test/pminified/122_jsexec.js")
-  , testCase "122_jsexec2.js"   (testFile "./test/pminified/122_jsexec2.js")
-  , testCase "122_jsexec3.js"   (testFile "./test/pminified/122_jsexec3.js")
-  -- , testCase "123_jsparse.js"   (testFile "./test/pminified/123_jsparse.js")
+  [ testCase "f.00_f.js"          (testFile "./test/pminified/00_f.js")
+  , testCase "f.01_semi1.js"      (testFile "./test/pminified/01_semi1.js")
+  , testCase "f.02_sm.js"         (testFile "./test/pminified/02_sm.js")
+  , testCase "f.03_sm.js"         (testFile "./test/pminified/03_sm.js")
+  , testCase "f.04_if.js"         (testFile "./test/pminified/04_if.js")
+  , testCase "f.05_comments_simple.js" (testFile "./test/pminified/05_comments_simple.js")
+  , testCase "f.05_regex.js"      (testFile "./test/pminified/05_regex.js")
+  , testCase "f.06_callexpr.js"   (testFile "./test/pminified/06_callexpr.js")
+  , testCase "f.06_newexpr.js"    (testFile "./test/pminified/06_newexpr.js")
+  , testCase "f.06_var.js"        (testFile "./test/pminified/06_var.js")
+  , testCase "f.07_expr.js"       (testFile "./test/pminified/07_expr.js")
+  , testCase "f.10_switch.js"     (testFile "./test/pminified/10_switch.js")
+  , testCase "f.14_labelled_stmts.js" (testFile "./test/pminified/14_labelled_stmts.js")
+  , testCase "f.15_literals.js"   (testFile "./test/pminified/15_literals.js")
+  , testCase "f.16_literals.js"   (testFile "./test/pminified/16_literals.js")
+  , testCase "f.20_statements.js" (testFile "./test/pminified/20_statements.js")
+  , testCase "f.25_trycatch.js"   (testFile "./test/pminified/25_trycatch.js")
+  , testCase "f.40_functions.js"  (testFile "./test/pminified/40_functions.js")
+  , testCase "f.67_bob.js"        (testFile "./test/pminified/67_bob.js")
+  , testCase "f.110_perfect.js"   (testFile "./test/pminified/110_perfect.js")
+  , testCase "f.120_js.js"        (testFile "./test/pminified/120_js.js")
+  , testCase "f.121_jsdefs.js"    (testFile "./test/pminified/121_jsdefs.js")
+  , testCase "f.122_jsexec.js"    (testFile "./test/pminified/122_jsexec.js")
+  , testCase "f.122_jsexec2.js"   (testFile "./test/pminified/122_jsexec2.js")
+  , testCase "f.122_jsexec3.js"   (testFile "./test/pminified/122_jsexec3.js")
+  -- , testCase "f.123_jsparse.js"   (testFile "./test/pminified/123_jsparse.js")
        -- TODO: something strange here, assigning code block to variable?
        -- See http://msdn.microsoft.com/en-us/library/77kz8hy0.aspx, get/set keywords for object accessors
 
-  --, testCase "130_htojs2.js"     (testFile "./test/parsingonly/130_htojs2.js")
-  --, testCase ""     (testFile "./test/pminified/")
+  --, testCase "f.130_htojs2.js"     (testFile "./test/parsingonly/130_htojs2.js")
+  --, testCase "f."     (testFile "./test/pminified/")
   ]
 
 testSuiteFilesUnminified :: Test
 testSuiteFilesUnminified = testGroup "Text.Jasmine.Pretty filesUnminified"
-  [ testCase "00_f.js"          (testFileUnminified "00_f.js")
-  , testCase "01_semi1.js"      (testFileUnminified "01_semi1.js")
-  , testCase "02_sm.js"         (testFileUnminified "02_sm.js")
-  , testCase "03_sm.js"         (testFileUnminified "03_sm.js")
-  , testCase "04_if.js"         (testFileUnminified "04_if.js")
-  , testCase "05_comments_simple.js" (testFileUnminified "05_comments_simple.js")
-  , testCase "05_regex.js"      (testFileUnminified "05_regex.js")
-  , testCase "06_callexpr.js"   (testFileUnminified "06_callexpr.js")
-  , testCase "06_newexpr.js"    (testFileUnminified "06_newexpr.js")
-  , testCase "06_var.js"        (testFileUnminified "06_var.js")
-  , testCase "07_expr.js"       (testFileUnminified "07_expr.js")
-  , testCase "10_switch.js"     (testFileUnminified "10_switch.js")
-  , testCase "14_labelled_stmts.js" (testFileUnminified "14_labelled_stmts.js")
-  , testCase "15_literals.js"   (testFileUnminified "15_literals.js")
-  , testCase "16_literals.js"   (testFileUnminified "16_literals.js")
-  , testCase "20_statements.js" (testFileUnminified "20_statements.js")
-  , testCase "25_trycatch.js"   (testFileUnminified "25_trycatch.js")
-  , testCase "40_functions.js"  (testFileUnminified "40_functions.js")
-  , testCase "67_bob.js"        (testFileUnminified "67_bob.js")
-  , testCase "110_perfect.js"   (testFileUnminified "110_perfect.js")
-  , testCase "120_js.js"        (testFileUnminified "120_js.js")
-  , testCase "121_jsdefs.js"    (testFileUnminified "121_jsdefs.js")
-  , testCase "122_jsexec.js"    (testFileUnminified "122_jsexec.js")
+  [ testCase "fu.00_f.js"          (testFileUnminified "00_f.js")
+  , testCase "fu.01_semi1.js"      (testFileUnminified "01_semi1.js")
+  , testCase "fu.02_sm.js"         (testFileUnminified "02_sm.js")
+  , testCase "fu.03_sm.js"         (testFileUnminified "03_sm.js")
+  , testCase "fu.04_if.js"         (testFileUnminified "04_if.js")
+  , testCase "fu.05_comments_simple.js" (testFileUnminified "05_comments_simple.js")
+  , testCase "fu.05_regex.js"      (testFileUnminified "05_regex.js")
+  , testCase "fu.06_callexpr.js"   (testFileUnminified "06_callexpr.js")
+  , testCase "fu.06_newexpr.js"    (testFileUnminified "06_newexpr.js")
+  , testCase "fu.06_var.js"        (testFileUnminified "06_var.js")
+  , testCase "fu.07_expr.js"       (testFileUnminified "07_expr.js")
+  , testCase "fu.10_switch.js"     (testFileUnminified "10_switch.js")
+  , testCase "fu.14_labelled_stmts.js" (testFileUnminified "14_labelled_stmts.js")
+  , testCase "fu.15_literals.js"   (testFileUnminified "15_literals.js")
+  , testCase "fu.16_literals.js"   (testFileUnminified "16_literals.js")
+  , testCase "fu.20_statements.js" (testFileUnminified "20_statements.js")
+  , testCase "fu.25_trycatch.js"   (testFileUnminified "25_trycatch.js")
+  , testCase "fu.40_functions.js"  (testFileUnminified "40_functions.js")
+  , testCase "fu.67_bob.js"        (testFileUnminified "67_bob.js")
+  , testCase "fu.110_perfect.js"   (testFileUnminified "110_perfect.js")
+  , testCase "fu.120_js.js"        (testFileUnminified "120_js.js")
+  , testCase "fu.121_jsdefs.js"    (testFileUnminified "121_jsdefs.js")
+  , testCase "fu.122_jsexec.js"    (testFileUnminified "122_jsexec.js")
 
-  --, testCase "122_jsexec2.js"   (testFileUnminified "122_jsexec2.js")
+  --, testCase "fu.122_jsexec2.js"   (testFileUnminified "122_jsexec2.js")
   ]
 
 srcHelloWorld = "function Hello(a) {}"
@@ -326,6 +330,20 @@ caseIssue8 =
 caseMinIssue8 =
   -- Note: jsmin preserves the \n, rather than the semi. A matter of taste, it is the same number of chars.
   testMinify "(function(){new nicEditor({fullPanel:true}).panelInstance('h4')})()" srcIssue8
+
+srcDoWhile = "\t\tdo { \n\t\t\t t;\n\t\t} while(t);"
+caseDowWhile =
+  "Right (JSSourceElementsTop [JSDoWhile (JSStatementBlock (JSStatementBlock ([JSIdentifier \"t\",JSLiteral \";\"]))) (JSIdentifier \"t\") (JSLiteral \";\"),JSLiteral \"\"])"
+  @=? (showStrippedMaybe $ parseProgram srcDoWhile)
+caseMinDoWhile =
+  testMinify "do{t}while(t)" srcDoWhile
+
+srcDoWhile2 = "do t while(t)"
+caseDowWhile2 =
+  "Right (JSSourceElementsTop [JSDoWhile (JSIdentifier \"t\") (JSIdentifier \"t\") (),JSLiteral \"\"])"
+  @=? (showStrippedMaybe $ parseProgram srcDoWhile2)
+caseMinDoWhile2 =
+  testMinify "do{t}while(t)" srcDoWhile2
 
 -- ---------------------------------------------------------------------
 -- utilities
