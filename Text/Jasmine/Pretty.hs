@@ -1,6 +1,7 @@
 module Text.Jasmine.Pretty
     (
     renderJS
+    , transformJS
     ) where
 
 
