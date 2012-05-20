@@ -29,7 +29,7 @@ instance TransformJS JSStatement where
     tf (JSBreak annot [x] s)                        = (JSBreak (tf annot) [addSpace $ tf x] JSSemiAuto) -- (tf s))
 
     tf (JSContinue annot xs s)                      = (JSContinue (tf annot) (tf xs) JSSemiAuto) -- (tf s))
-    tf (JSConstant annot xs s)                      = (JSConstant (tf annot) ((JSNodeStmt (literal " ")):(tf xs)) (JSSemiAuto))
+    tf (JSConstant annot xs s)                      = (JSConstant (tf annot) ((JSExpressionStatement (literal " ")):(tf xs)) (JSSemiAuto))
     tf (JSDoWhile ad x1 aw alb x2 arb x3)           = (JSDoWhile (tf ad) (tf $ fixDoStatement x1) (tf aw) (tf alb) (tf x2) (tf arb) (JSSemiAuto))
 
     tf (JSFor af alb x1s s1 x2s s2 x3s arb x4)      = (JSFor (tf af) (tf alb) (tf x1s) (tf s1) (tf x2s) (tf s2) (tf x3s) (tf arb) (tf $ fixStatementBlock x4))
@@ -39,16 +39,16 @@ instance TransformJS JSStatement where
     tf (JSForVarIn af alb v x1 i x2 arb x3)         = (JSForVarIn (tf af) (tf alb) (addSpace $ tf v) (tf x1) (tf i) (tf x2) (tf arb) (tf $ fixStatementBlock x3))
     tf (JSFunction af n alb x2s arb x3)             = (JSFunction (tf af) (addSpace $ tf n) (tf alb) (tf $ fixNew x2s) (tf arb) (tf $ fixFnBlock x3))
 
-    tf (JSIf annot alb x1 arb x2s [JSNodeStmt (JSLiteral _ ";")])    = (JSIf (tf annot) (tf alb) (tf x1) (tf arb) (tf x2s) [])
+    tf (JSIf annot alb x1 arb x2s [JSExpressionStatement (JSLiteral _ ";")])    = (JSIf (tf annot) (tf alb) (tf x1) (tf arb) (tf x2s) [])
     tf (JSIf annot alb x1 arb x2s [])                                = (JSIf (tf annot) (tf alb) (tf x1) (tf arb) (tf $ fixSourceElements $ map fixStatementBlock x2s) [])
-    tf (JSIf annot alb x1 arb x2s [_e,JSNodeStmt (JSLiteral _ ";")]) = (JSIf (tf annot) (tf alb) (tf x1) (tf arb) (tf $ fixIfBlock x2s) ([JSNodeStmt (literal "else ")]))
+    tf (JSIf annot alb x1 arb x2s [_e,JSExpressionStatement (JSLiteral _ ";")]) = (JSIf (tf annot) (tf alb) (tf x1) (tf arb) (tf $ fixIfBlock x2s) ([JSExpressionStatement (literal "else ")]))
     tf (JSIf annot alb x1 arb x2s [els,e                          ]) = (JSIf (tf annot) (tf alb) (tf x1) (tf arb) (tf $ fixIfElse $ fixSourceElements x2s)
                                                                         ((tf els):(tf $ spaceOrBlock $ fixStatementBlock e)))
     -- tf (JSIf annot alb x1 arb x2s x3s)              = (JSIf (tf annot) (tf alb) (tf x1) (tf arb) (tf x2s) (tf x3s))
 
 
     tf (JSLabelled l c v)                           = (JSLabelled (tf l) (tf c) (tf v))
-    tf (JSNodeStmt l)                               = (JSNodeStmt (tf l))
+    tf (JSExpressionStatement l)                               = (JSExpressionStatement (tf l))
 
     tf (JSReturn annot [] s)                        = (JSReturn (tf annot) [] JSSemiAuto) --  (tf s))
     tf (JSReturn annot xs s)                        = (JSReturn (tf annot) ((spaceIfNeeded xs)++(tf xs)) JSSemiAuto) -- (tf s))
@@ -58,7 +58,7 @@ instance TransformJS JSStatement where
     tf (JSThrow annot x)                            = (JSThrow (tf annot) (addSpace $ tf x))
     tf (JSTry annot tb tcs tfi)                     = (JSTry (tf annot) (tf tb) (tf tcs) (tf tfi))
     tf (JSVarDecl x1 x2s)                           = (JSVarDecl (tf x1) (tf x2s))
-    tf (JSVariable annot xs s)                      = (JSVariable (tf annot) ((JSNodeStmt (literal " ")):(tf xs)) (JSSemiAuto))
+    tf (JSVariable annot xs s)                      = (JSVariable (tf annot) ((JSExpressionStatement (literal " ")):(tf xs)) (JSSemiAuto))
     tf (JSWhile annot alp x1 arp x2)                = (JSWhile (tf annot) (tf alp) (tf x1) (tf arp) (tf $ head $ fixSourceElements [x2]))
     tf (JSWith annot alp x1 arp x s)                = (JSWith (tf annot) (tf alp) (tf x1) (tf arp) (tf x) (tf s))
 
@@ -134,6 +134,7 @@ instance TransformJS JSNode where
     tf (JSExpression           xs)                     = (JSExpression           (tf $ fixNew xs))
 
     tf (JSExpressionBinary     lhs (JSBinOpInstanceOf a) rhs) = (JSExpressionBinary     (tf lhs) ((JSBinOpInstanceOf (literalAnnotation " "))) (addSpace $ tf rhs))
+    tf (JSExpressionBinary     lhs (JSBinOpIn         a) rhs) = (JSExpressionBinary     (tf lhs) ((JSBinOpIn         (literalAnnotation " "))) (addSpace $ tf rhs))
     tf (JSExpressionBinary     lhs op rhs)             = (JSExpressionBinary     (tf lhs) (tf op) (tf rhs))
 
     tf (JSExpressionParen      alp e arp)              = (JSExpressionParen      (tf alp) (tf e) (tf arp))
@@ -151,6 +152,7 @@ instance TransformJS JSNode where
     tf (JSPropertyNameandValue n colon vs)             = (JSPropertyNameandValue (tf n) (tf colon) (tf vs))
 
     tf (JSUnaryExpression      (JSUnaryOpTypeof _) x)  = (JSUnaryExpression      (JSUnaryOpTypeof JSNoAnnot) (addSpace $ tf x))
+    tf (JSUnaryExpression      (JSUnaryOpDelete _) x)  = (JSUnaryExpression      (JSUnaryOpDelete JSNoAnnot) (addSpace $ tf x))
     tf (JSUnaryExpression      op x)                   = (JSUnaryExpression      (tf op) (tf x))
 
 
@@ -227,7 +229,7 @@ fixTop xs = if (isLiteralVal ";" n) then (init xs) else (xs)
 fixStatementBlock :: JSStatement -> JSStatement
 fixStatementBlock (JSStatementBlock (JSBlock lb xs rb)) =
   case xs' of
-    []  -> (JSNodeStmt (JSLiteral JSNoAnnot ";"))
+    []  -> (JSExpressionStatement (JSLiteral JSNoAnnot ";"))
     [x] -> fixStatementBlock x
     _   -> (JSStatementBlock (JSBlock lb (fixSourceElements $ map fixStatementBlock xs') rb))
   where xs' = stripSemis xs
@@ -248,7 +250,7 @@ myFix []      = []
 
 myFix [x]     = [x]
 
-myFix (x:(JSFunction v1 v2 v3 v4 v5 v6):xs)  = x : (JSNodeStmt (literal "\n")) : myFix ((JSFunction v1 v2 v3 v4 v5 v6) : xs)
+myFix (x:(JSFunction v1 v2 v3 v4 v5 v6):xs)  = x : (JSExpressionStatement (literal "\n")) : myFix ((JSFunction v1 v2 v3 v4 v5 v6) : xs)
 
 {-
 -- Messy way, but it works, until the 3rd element arrives ..
@@ -260,8 +262,8 @@ myFix ((NN (JSBlock x1 x2 x3) )     :(NN (JSExpression y) ):xs) = (NN (JSBlock x
 -}
 
 -- Merge adjacent variable declarations, but only of the same type
-myFix ((JSVariable a1 x1s s1):(JSVariable a2 x2s s2):xs) = myFix ((JSVariable a1 (x1s++[(JSNodeStmt (JSLiteral a1 ","))]++x2s) s1):xs)
-myFix ((JSConstant a1 x1s s1):(JSConstant a2 x2s s2):xs) = myFix ((JSConstant a1 (x1s++[(JSNodeStmt (JSLiteral a1 ","))]++x2s) s1):xs)
+myFix ((JSVariable a1 x1s s1):(JSVariable a2 x2s s2):xs) = myFix ((JSVariable a1 (x1s++[(JSExpressionStatement (JSLiteral a1 ","))]++x2s) s1):xs)
+myFix ((JSConstant a1 x1s s1):(JSConstant a2 x2s s2):xs) = myFix ((JSConstant a1 (x1s++[(JSExpressionStatement (JSLiteral a1 ","))]++x2s) s1):xs)
 
 {-
 -- Merge adjacent semi colons
@@ -298,8 +300,8 @@ fixSemis' ((JSIf i lb c rb [JSStatementBlock (JSBlock a1 [] a2)] []):xs) =
            (JSIf i lb c rb [JSStatementBlock (JSBlock a1 [] a2)] []):(fixSemis' xs)
 
 
-fixSemis' ((JSIf i lb c rb [JSNodeStmt (JSLiteral a1 ";")] []):xs)  =
-           (JSIf i lb c rb [JSNodeStmt (JSLiteral a1 ";")] []):(fixSemis' xs)
+fixSemis' ((JSIf i lb c rb [JSExpressionStatement (JSLiteral a1 ";")] []):xs)  =
+           (JSIf i lb c rb [JSExpressionStatement (JSLiteral a1 ";")] []):(fixSemis' xs)
 
 fixSemis' ((JSIf i lb c rb [(JSReturn a1 [(JSLiteral a2 ";")] as)] e):xs)  =
            (JSIf i lb c rb [(JSReturn a1 [(JSLiteral a2 ";")] as)] e):(fixSemis' xs)
@@ -307,7 +309,7 @@ fixSemis' ((JSIf i lb c rb [(JSReturn a1 [(JSLiteral a2 ";")] as)] e):xs)  =
 fixSemis' ((JSIf i lb c rb [(JSContinue a1 [(JSLiteral a2 ";")] as)] e):xs)    =
            (JSIf i lb c rb [(JSContinue a1 [(JSLiteral a2 ";")] as)] e):(fixSemis' xs)
 
-fixSemis' (x:(JSNodeStmt (JSLiteral a1 "\n")):xs) = x:(JSNodeStmt (JSLiteral a1 "\n")):(fixSemis' xs) -- TODO: is this needed?
+fixSemis' (x:(JSExpressionStatement (JSLiteral a1 "\n")):xs) = x:(JSExpressionStatement (JSLiteral a1 "\n")):(fixSemis' xs) -- TODO: is this needed?
 
 {-
 TODO: apply this to a JSSwitchParts fix
@@ -315,7 +317,7 @@ fixSemis' ((JSCase a1 e1 c1 []):(JSCase a2 e2 c2 x):xs) =
            (JSCase a1 e1 c1 []):fixSemis' ((JSCase a2 e2 c2 x):xs)
 -}
 
-fixSemis' (x:xs) = x:(JSNodeStmt (JSLiteral JSNoAnnot ";")):fixSemis' xs
+fixSemis' (x:xs) = x:(JSExpressionStatement (JSLiteral JSNoAnnot ";")):fixSemis' xs
 
 -- ---------------------------------------------------------------------
 
@@ -323,8 +325,8 @@ fixSwitchSemis :: [JSSwitchParts] -> [JSSwitchParts]
 fixSwitchSemis [] = []
 fixSwitchSemis [x] = [x]
 fixSwitchSemis ((JSCase a1 x1 c1 []):(JSCase a2 x2 c2 x2s):xs) = ((JSCase a1 x1 c1 []): fixSwitchSemis ((JSCase a2 x2 c2 x2s):xs))
-fixSwitchSemis ((JSCase a x1 c x2s):xs) = ((JSCase a x1 c (x2s++[JSNodeStmt (JSLiteral a ";")])): (fixSwitchSemis xs))
-fixSwitchSemis ((JSDefault a c x1s):xs) = ((JSDefault a c (x1s++[JSNodeStmt (JSLiteral a ";")])): (fixSwitchSemis xs))
+fixSwitchSemis ((JSCase a x1 c x2s):xs) = ((JSCase a x1 c (x2s++[JSExpressionStatement (JSLiteral a ";")])): (fixSwitchSemis xs))
+fixSwitchSemis ((JSDefault a c x1s):xs) = ((JSDefault a c (x1s++[JSExpressionStatement (JSLiteral a ";")])): (fixSwitchSemis xs))
 
 
 -- ---------------------------------------------------------------------
@@ -363,7 +365,7 @@ fixDoStatement x = (JSStatementBlock (JSBlock JSNoAnnot (fixSourceElements [x]) 
 fixIfBlock :: [JSStatement] -> [JSStatement]
 fixIfBlock xs =
   case xs' of
-    [JSNodeStmt (JSLiteral a ";")]         -> [] -- rely on fixSemis to add this again [(NT (JSLiteral ";") p cs)]
+    [JSExpressionStatement (JSLiteral a ";")]         -> [] -- rely on fixSemis to add this again [(NT (JSLiteral ";") p cs)]
     [JSStatementBlock (JSBlock lb [] rb)]  -> [] -- rely on fixSemis to add this again [(NT (JSLiteral ";") tokenPosnEmpty [])]
     [JSStatementBlock (JSBlock lb x2s rb)] -> [JSStatementBlock (JSBlock lb ((fixSourceElements $ map fixStatementBlock x2s)) rb)]
     [x]                   -> fixSourceElements [x]
@@ -386,45 +388,11 @@ fixCatchIf [i,c] = [literal " if ",c]
 
 spaceOrBlock :: JSStatement -> [JSStatement]
 spaceOrBlock (JSStatementBlock x) = [(JSStatementBlock x)]
-spaceOrBlock x                    = [JSNodeStmt (literal " "),x]
+spaceOrBlock x                    = [JSExpressionStatement (literal " "),x]
 
 --fixExpression :: JSNode -> JSNode
---JSNodeStmt (JSLiteral Annot (TokenPn 13 2 27) [NoComment] ";")
+--JSExpressionStatement (JSLiteral Annot (TokenPn 13 2 27) [NoComment] ";")
 -- ---------------------------------------------------------------------
-
-{-
-addSpaceToNode
-    -- Terminals
-addSpaceToNode (JSIdentifier    annot s  ) = (JSIdentifier    (tf annot) (tf s)  )
-addSpaceToNode (JSDecimal       annot i  ) = (JSDecimal       (tf annot) (tf i)  )
-addSpaceToNode (JSLiteral       annot l  ) = (JSLiteral       (tf annot) (tf l)  )
-addSpaceToNode (JSHexInteger    annot i  ) = (JSHexInteger    (tf annot) (tf i)  )
-addSpaceToNode (JSOctal         annot i  ) = (JSOctal         (tf annot) (tf i)  )
-addSpaceToNode (JSStringLiteral annot s l) = (JSStringLiteral (tf annot) (tf s) (tf l))
-addSpaceToNode (JSRegEx         annot s  ) = (JSRegEx         (tf annot) (tf s)  )
-
-    -- Non-Terminals
-addSpaceToNode (JSArguments            alp xs arp)             = (JSArguments            (tf alp) (tf $ fixNew xs) (tf arp))
-addSpaceToNode (JSArrayLiteral         als xs ars)             = (JSArrayLiteral         (tf als) (tf xs) (tf ars))
-addSpaceToNode (JSAssignExpression     lhs op rhs)             = (JSAssignExpression     (tf lhs) (tf op) (tf rhs))
-addSpaceToNode (JSCallExpression       os xs cs)               = (JSCallExpression       (tf os) (tf xs) (tf cs))
-addSpaceToNode (JSCallExpressionDot    os xs)                  = (JSCallExpressionDot    (tf os) (tf xs))
-addSpaceToNode (JSCallExpressionSquare als xs ars)             = (JSCallExpressionSquare (tf als) (tf xs) (tf ars))
-addSpaceToNode (JSElision              c)                      = (JSElision              (tf c))
-addSpaceToNode (JSExpression           xs)                     = (JSExpression           (tf $ fixNew xs))
-addSpaceToNode (JSExpressionBinary     lhs op rhs)             = (JSExpressionBinary     (tf lhs) (tf op) (tf rhs))
-addSpaceToNode (JSExpressionParen      alp e arp)              = (JSExpressionParen      (tf alp) (tf e) (tf arp))
-addSpaceToNode (JSExpressionPostfix    xs op)                  = (JSExpressionPostfix    (tf xs) (tf op))
-addSpaceToNode (JSExpressionTernary    cond h v1 c v2)         = (JSExpressionTernary    (tf cond) (tf h) (tf v1) (tf c) (tf v2))
-addSpaceToNode (JSFunctionExpression   annot x1s lb x2s rb x3) = (JSFunctionExpression   (tf annot) (tf x1s) (tf lb) (tf $ fixNew x2s) (tf rb) (tf $ fixFnBlock x3))
-addSpaceToNode (JSMemberDot            xs dot n)               = (JSMemberDot            (tf xs) (tf dot) (tf n))
-addSpaceToNode (JSMemberSquare         xs als e ars)           = (JSMemberSquare         (tf xs) (tf als) (tf e) (tf ars))
-addSpaceToNode (JSObjectLiteral        alb xs arb)             = (JSObjectLiteral        (tf alb) (tf xs) (tf arb))
-addSpaceToNode (JSOpAssign             n)                      = (JSOpAssign             (tf n))
-addSpaceToNode (JSPropertyAccessor     s n alp ps arp b)       = (JSPropertyAccessor     (tf s) (tf n) (tf alp) (tf ps) (tf arp) (tf b))
-addSpaceToNode (JSPropertyNameandValue n colon vs)             = (JSPropertyNameandValue (tf n) (tf colon) (tf vs))
-addSpaceToNode (JSUnaryExpression      op x)                   = (JSUnaryExpression      (tf op) (tf x))
--}
 
 addSpace :: JSNode -> JSNode
 
@@ -442,8 +410,50 @@ addSpace (JSStringLiteral _ s l) = (JSStringLiteral JSNoAnnot s l)
 
 addSpace (JSRegEx         _ s  ) = (JSRegEx         (literalAnnotation " ") s  )
 
-addSpace (JSExpression  xs)  = (JSExpression ((literal " "):xs))
 addSpace (JSExpressionBinary lhs op rhs)  = (JSExpressionBinary (addSpace lhs) op rhs)
+
+addSpace (JSArguments            alp xs arp)             = (JSArguments            (literalAnnotation " ") xs arp)
+addSpace (JSArrayLiteral         als xs ars)             = (JSArrayLiteral         (literalAnnotation " ") xs ars)
+addSpace (JSAssignExpression     lhs op rhs)             = (JSAssignExpression     (addSpace lhs) op rhs)
+addSpace (JSCallExpressionDot    os xs)                  = (JSCallExpressionDot    (tf os) (tf xs))
+addSpace (JSCallExpressionSquare als xs ars)             = (JSCallExpressionSquare (literalAnnotation " ") xs ars)
+addSpace (JSElision              c)                      = (JSElision              (addSpace c))
+addSpace (JSExpression           xs)                     = (JSExpression           ((literal " "):xs))
+addSpace (JSExpressionParen      alp e arp)              = (JSExpressionParen      (literalAnnotation " ") e arp)
+addSpace (JSExpressionPostfix    xs op)                  = (JSExpressionPostfix    (addSpace xs) op)
+addSpace (JSExpressionTernary    cond h v1 c v2)         = (JSExpressionTernary    (addSpace cond) h v1 c v2)
+addSpace (JSFunctionExpression   annot x1s lb x2s rb x3) = (JSFunctionExpression   (literalAnnotation " ") x1s lb x2s rb x3)
+addSpace (JSMemberDot            xs dot n)               = (JSMemberDot            (addSpace xs) dot n)
+addSpace (JSMemberSquare         xs als e ars)           = (JSMemberSquare         (addSpace xs) als e ars)
+addSpace (JSObjectLiteral        alb xs arb)             = (JSObjectLiteral        (literalAnnotation " ") xs arb)
+
+addSpace (JSOpAssign             (JSAssign _))           = (JSOpAssign        (JSAssign (literalAnnotation " ")))
+addSpace (JSOpAssign             (JSTimesAssign _))      = (JSOpAssign        (JSTimesAssign (literalAnnotation " ")))
+addSpace (JSOpAssign             (JSDivideAssign _))     = (JSOpAssign        (JSDivideAssign (literalAnnotation " ")))
+addSpace (JSOpAssign             (JSModAssign _))        = (JSOpAssign        (JSModAssign (literalAnnotation " ")))
+addSpace (JSOpAssign             (JSPlusAssign _))       = (JSOpAssign        (JSPlusAssign (literalAnnotation " ")))
+addSpace (JSOpAssign             (JSMinusAssign _))      = (JSOpAssign        (JSMinusAssign (literalAnnotation " ")))
+addSpace (JSOpAssign             (JSLshAssign _))        = (JSOpAssign        (JSLshAssign (literalAnnotation " ")))
+addSpace (JSOpAssign             (JSRshAssign _))        = (JSOpAssign        (JSRshAssign (literalAnnotation " ")))
+addSpace (JSOpAssign             (JSUrshAssign _))       = (JSOpAssign        (JSUrshAssign (literalAnnotation " ")))
+addSpace (JSOpAssign             (JSBwAndAssign _))      = (JSOpAssign        (JSBwAndAssign (literalAnnotation " ")))
+addSpace (JSOpAssign             (JSBwXorAssign _))      = (JSOpAssign        (JSBwXorAssign (literalAnnotation " ")))
+addSpace (JSOpAssign             (JSBwOrAssign _))       = (JSOpAssign        (JSBwOrAssign (literalAnnotation " ")))
+
+
+addSpace (JSPropertyAccessor     s n alp ps arp b)       = (JSPropertyAccessor     (addSpace s) n alp ps arp b)
+addSpace (JSPropertyNameandValue n colon vs)             = (JSPropertyNameandValue (addSpace n) colon vs)
+
+addSpace (JSUnaryExpression      (JSUnaryOpDecr _) n)    = (JSUnaryExpression      (JSUnaryOpDecr (literalAnnotation " ")) n)
+addSpace (JSUnaryExpression      (JSUnaryOpDelete _) n)  = (JSUnaryExpression      (JSUnaryOpDelete (literalAnnotation " ")) n)
+addSpace (JSUnaryExpression      (JSUnaryOpIncr _) n)    = (JSUnaryExpression      (JSUnaryOpIncr (literalAnnotation " ")) n)
+addSpace (JSUnaryExpression      (JSUnaryOpMinus _) n)   = (JSUnaryExpression      (JSUnaryOpMinus (literalAnnotation " ")) n)
+addSpace (JSUnaryExpression      (JSUnaryOpNot _) n)     = (JSUnaryExpression      (JSUnaryOpNot (literalAnnotation " ")) n)
+addSpace (JSUnaryExpression      (JSUnaryOpPlus _) n)    = (JSUnaryExpression      (JSUnaryOpPlus (literalAnnotation " ")) n)
+addSpace (JSUnaryExpression      (JSUnaryOpTilde _) n)   = (JSUnaryExpression      (JSUnaryOpTilde (literalAnnotation " ")) n)
+addSpace (JSUnaryExpression      (JSUnaryOpTypeof _) n)  = (JSUnaryExpression      (JSUnaryOpTypeof (literalAnnotation " ")) n)
+addSpace (JSUnaryExpression      (JSUnaryOpVoid _) n)    = (JSUnaryExpression      (JSUnaryOpVoid (literalAnnotation " ")) n)
+
 
 -- Debug
 addSpace x = (JSLiteral JSNoAnnot ("UNK|"++(show x)++"|"))
@@ -457,7 +467,7 @@ literal :: String -> JSNode
 literal s = JSLiteral JSNoAnnot s
 
 isLiteralVal :: String -> JSStatement -> Bool
-isLiteralVal stest (JSNodeStmt (JSLiteral _annot s)) = s == stest
+isLiteralVal stest (JSExpressionStatement (JSLiteral _annot s)) = s == stest
 isLiteralVal _ _ = False
 
 -- ---------------------------------------------------------------------
@@ -465,8 +475,37 @@ isLiteralVal _ _ = False
 spaceIfNeeded :: [JSNode] -> [JSNode]
 spaceIfNeeded ((JSArguments _lb _xs _rb):xs)      = []
 spaceIfNeeded ((JSExpressionParen _lp _x _rp):xs) = []
+spaceIfNeeded ((JSExpressionTernary (JSExpressionParen _lp _x _rp) _ _ _ _):xs) = []
+spaceIfNeeded ((JSMemberSquare      (JSExpressionParen _lp _x _rp) _ _ _)  :xs) = []
+spaceIfNeeded ((JSMemberDot         (JSExpressionParen _lp _x _rp) _ _)    :xs) = []
 spaceIfNeeded _                                   = [(JSIdentifier JSNoAnnot " ")]
 
+{-
+Expression
+  -> AssignmentExpression
+     -> ConditionalExpression
+        -> LogicalOrExpression
+           -> LogicalAndExpression
+              -> BitwiseOrExpression
+                 -> BitwiseXOrExpression
+                    -> BitwiseAndExpression
+                       -> EqualityExpression
+                          -> RelationalExpression
+                             -> ShiftExpression
+                                -> AdditiveExpression
+                                   -> MultiplicativeExpression
+                                      -> UnaryExpression
+                                         -> PostfixExpression
+                                            -> LeftHandSideExpression
+                                               -> NewExpression
+                                                  -> MemberExpression
+                                                     -> PrimaryExpression
+                                                        -> AST.JSExpressionParen***
+                                               -> CallExpression
+                                                  -> MemberExpression seen
+     -> LeftHandSideExpression
+
+-}
 
 -- EOF
 

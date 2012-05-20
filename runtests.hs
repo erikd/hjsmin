@@ -15,6 +15,15 @@ import qualified Data.Text.Encoding as E
 main :: IO ()
 main = defaultMain [testSuite,testSuiteMin,testSuiteFiles,testSuiteFilesUnminified]
 
+one :: IO ()
+one = defaultMain [oneSuite]
+
+oneSuite :: Test
+oneSuite = testGroup "one"
+           [
+             testCase "f.122_jsexec4.js"   (testFile "./test/pminified/122_jsexec4.js")
+           ]
+
 testSuite :: Test
 testSuite = testGroup "Text.Jasmine.Parse"
     [
@@ -43,6 +52,7 @@ testSuite = testGroup "Text.Jasmine.Parse"
     , testCase "Issue8"           caseIssue8
     , testCase "DoWhile"          caseDowWhile
     , testCase "DoWhile2"         caseDowWhile2
+    , testCase "SpaceNeeded"      caseSpaceNeeded
     ]
 
 testSuiteMin :: Test
@@ -75,7 +85,7 @@ testSuiteMin = testGroup "Text.Jasmine.Pretty Min"
     , testCase "MinIssue8"         caseMinIssue8
     , testCase "MinDoWhile"        caseMinDoWhile
     , testCase "MinDoWhile2"       caseMinDoWhile2
-
+    , testCase "MinSpaceNeeded"    caseMinSpaceNeeded
     ]
 
 testSuiteFiles :: Test
@@ -105,6 +115,7 @@ testSuiteFiles = testGroup "Text.Jasmine.Pretty files"
   , testCase "f.122_jsexec.js"    (testFile "./test/pminified/122_jsexec.js")
   , testCase "f.122_jsexec2.js"   (testFile "./test/pminified/122_jsexec2.js")
   , testCase "f.122_jsexec3.js"   (testFile "./test/pminified/122_jsexec3.js")
+  , testCase "f.122_jsexec4.js"   (testFile "./test/pminified/122_jsexec4.js")
   -- , testCase "f.123_jsparse.js"   (testFile "./test/pminified/123_jsparse.js")
        -- TODO: something strange here, assigning code block to variable?
        -- See http://msdn.microsoft.com/en-us/library/77kz8hy0.aspx, get/set keywords for object accessors
@@ -344,6 +355,13 @@ caseDowWhile2 =
   @=? (showStrippedMaybe $ parseProgram srcDoWhile2)
 caseMinDoWhile2 =
   testMinify "do{t}while(t)" srcDoWhile2
+
+srcSpaceNeeded = "function isObject(v){var t=typeof v;return(t==\"object\")?v!==null:t==\"function\"}"
+caseSpaceNeeded =
+  "Right (JSSourceElementsTop [JSFunction (JSIdentifier \"isObject\") [JSIdentifier \"v\"] (JSStatementBlock ([JSVariable var [JSVarDecl (JSIdentifier \"t\") [JSLiteral \"=\",JSUnaryExpression \"typeof \"JSIdentifier \"v\"]],JSReturn [JSExpressionTernary JSExpressionParen (JSExpressionBinary \"==\" JSIdentifier \"t\" JSStringLiteral '\"' \"object\") JSExpressionBinary \"!==\" JSIdentifier \"v\" JSLiteral \"null\" JSExpressionBinary \"==\" JSIdentifier \"t\" JSStringLiteral '\"' \"function\"] ])),JSLiteral \"\"])"
+  @=? (showStrippedMaybe $ parseProgram srcSpaceNeeded)
+caseMinSpaceNeeded =
+  testMinify srcSpaceNeeded srcSpaceNeeded
 
 -- ---------------------------------------------------------------------
 -- utilities
