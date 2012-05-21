@@ -478,6 +478,7 @@ spaceIfNeeded ((JSExpressionParen _lp _x _rp):xs) = []
 spaceIfNeeded ((JSExpressionTernary (JSExpressionParen _lp _x _rp) _ _ _ _):xs) = []
 spaceIfNeeded ((JSMemberSquare      (JSExpressionParen _lp _x _rp) _ _ _)  :xs) = []
 spaceIfNeeded ((JSMemberDot         (JSExpressionParen _lp _x _rp) _ _)    :xs) = []
+spaceIfNeeded ((JSAssignExpression (JSMemberSquare (JSExpressionParen _lp _x _rp) _ _ _) _ _):xs) = []
 spaceIfNeeded _                                   = [(JSIdentifier JSNoAnnot " ")]
 
 {-
