@@ -50,14 +50,17 @@ rn :: Node -> BB.Builder
 -- Terminals
 rn (JSIdentifier s)        = text s
 rn (JSDecimal i)           = text i
+
+rn (JSLiteral "new")       = (text "new ")
 rn (JSLiteral l)           = (text l)
+
 rn (JSHexInteger i)        = (text $ show i) -- TODO: need to tweak this
 rn (JSStringLiteral s l)   = empty <> (char s) <> (text l) <> (char s)
 rn (JSRegEx s)             = (text s)
 
 -- Non Terminals
 rn (JSOperator x)          = renderJS x
-rn (JSExpression xs)       = rJS $ fixNew xs
+rn (JSExpression xs)       = rJS xs
 
 
 --rn (JSSourceElements xs)   = rJS (fixSourceElements $ map fixBlock xs)
@@ -67,17 +70,17 @@ rn (JSSourceElementsTop xs)= rJS (fixTop $ fixSourceElements $ map fixBlock xs)
 
 
 --rn (JSFunction s p xs)     = (text "function") <+> (renderJS s) <> (text "(") <> (rJS p) <> (text ")") <> (renderJS xs)
-rn (JSFunction _f s _lb p _rb x) = (text "function") <+> (renderJS s) <> (text "(") <> (rJS $ fixNew p) <> (text ")") <> (renderJS $ fixFnBlock x)
+rn (JSFunction _f s _lb p _rb x) = (text "function") <+> (renderJS s) <> (text "(") <> (rJS p) <> (text ")") <> (renderJS $ fixFnBlock x)
 
 -- rn (JSFunctionBody xs)     = (text "{") <> (rJS xs) <> (text "}")
 
 --rn (JSFunctionExpression [] p xs) = (text "function")             <> (text "(") <> (rJS p) <> (text ")") <> (renderJS xs)
 --rn (JSFunctionExpression  s p xs) = (text "function") <+> (rJS s) <> (text "(") <> (rJS p) <> (text ")") <> (renderJS xs)
-rn (JSFunctionExpression _f [] _lb p _rb x) = (text "function")             <> (text "(") <> (rJS $ fixNew p) <> (text ")") <> (renderJS $ fixFnBlock x)
-rn (JSFunctionExpression _f s  _lb p _rb x) = (text "function") <+> (rJS s) <> (text "(") <> (rJS $ fixNew p) <> (text ")") <> (renderJS $ fixFnBlock x)
+rn (JSFunctionExpression _f [] _lb p _rb x) = (text "function")             <> (text "(") <> (rJS p) <> (text ")") <> (renderJS $ fixFnBlock x)
+rn (JSFunctionExpression _f s  _lb p _rb x) = (text "function") <+> (rJS s) <> (text "(") <> (rJS p) <> (text ")") <> (renderJS $ fixFnBlock x)
 
 --rn (JSArguments xs ) = (text "(") <> (rJSList $ map fixLiterals xs) <> (text ")")
-rn (JSArguments _lb xs _rb) = (text "(") <> (rJS $ fixLiterals $ fixNew xs) <> (text ")")
+rn (JSArguments _lb xs _rb) = (text "(") <> (rJS $ fixLiterals xs) <> (text ")")
 
 rn (JSBlock lb xs rb)            = (rJS lb) <> (rJS xs) <> (rJS rb)
 
@@ -93,8 +96,8 @@ rn (JSIf _i _lb c _rb t [_e,e])                        = (text "if") <> (text "(
 
 
 
-rn (JSMemberDot xs _d y)          = (rJS $ fixLiterals $ fixNew xs) <> (text ".") <> (renderJS y)
-rn (JSMemberSquare xs _lb x _rb)  = (rJS $ fixLiterals $ fixNew xs) <> (text "[") <> (renderJS x) <> (text "]")
+rn (JSMemberDot xs _d y)          = (rJS $ fixLiterals xs) <> (text ".") <> (renderJS y)
+rn (JSMemberSquare xs _lb x _rb)  = (rJS $ fixLiterals xs) <> (text "[") <> (renderJS x) <> (text "]")
 rn (JSUnary l _s )                = text l
 rn (JSArrayLiteral _lb xs _rb)    = (text "[") <> (rJS xs) <> (text "]")
 
@@ -130,7 +133,7 @@ rn (JSElision x)          = renderJS x
 rn (JSExpressionBinary o e1 _op e2) = (rJS e1) <> (text o) <> (rJS e2)
 rn (JSExpressionParen _lp e _rp)    = (char '(') <> (renderJS e) <> (char ')')
 rn (JSExpressionPostfix o e _op)    = (rJS e) <> (text o)
-rn (JSExpressionTernary c _q v1 _c v2) = (rJS $ fixNew c) <> (char '?') <> (rJS $ fixNew v1) <> (char ':') <> (rJS $ fixNew v2)
+rn (JSExpressionTernary c _q v1 _c v2) = (rJS c) <> (char '?') <> (rJS v1) <> (char ':') <> (rJS v2)
 rn (JSFinally _f b)                    = (text "finally") <> (renderJS $ fixFnBlock b)
 
 rn (JSFor _f _lb e1 _s1 e2 _s2 e3 _rb s) = (text "for") <> (char '(') <> (rJS e1) <> (char ';')
@@ -147,7 +150,7 @@ rn (JSLabelled l _c v)           = (renderJS l) <> (text ":") <> (rJS $ fixSourc
 
 rn (JSObjectLiteral _lb xs _rb)  = (text "{") <> (rJS xs) <> (text "}")
 rn (JSPropertyAccessor s n _lb1 ps _rb1 b) = (renderJS s) <+> (renderJS n) <> (char '(') <> (rJS ps) <> (text ")") <> (renderJS $ fixFnBlock b)
-rn (JSPropertyNameandValue n _c vs) = (renderJS n) <> (text ":") <> (rJS $ fixNew vs)
+rn (JSPropertyNameandValue n _c vs) = (renderJS n) <> (text ":") <> (rJS vs)
 
 rn (JSReturn _r []                         _as) = (text "return")
 rn (JSReturn _r [(NT (JSLiteral ";") _ _)] _as) = (text "return;++foobar+will_never_happen++") -- ++AZ++ get rid of this
@@ -160,7 +163,7 @@ rn (JSSwitch _s _lb e _rb x)     = (text "switch") <> (char '(') <> (renderJS e)
 rn (JSTry _t e xs)               = (text "try") <> (renderJS $ fixFnBlock e) <> (rJS xs)
 
 rn (JSVarDecl i [])              = (renderJS i)
-rn (JSVarDecl i xs)              = (renderJS i) <> (rJS $ fixNew xs)
+rn (JSVarDecl i xs)              = (renderJS i) <> (rJS xs)
 
 rn (JSVariables kw xs _as)       = (renderJS kw) <+> (rJS xs)
 
@@ -209,16 +212,18 @@ fixTop xs = if (n == (JSLiteral ";")) then (init xs) else (xs)
   where
     n = extractNode $ last xs
 
+{-
 -- The "new" literal always need a space after it
 fixNew :: [JSNode] -> [JSNode]
 fixNew []                               = []
 fixNew ((NT (JSLiteral "new") p cs):xs) = (NT (JSLiteral "new ") p cs) : fixNew xs
 fixNew (x                          :xs) = x                            : fixNew xs
+-}
 
 -- Fix semicolons in output of sourceelements and statementlist
 
 fixSourceElements :: [JSNode] -> [JSNode]
-fixSourceElements xs = fixSemis $ myFix $ fixNew xs
+fixSourceElements xs = fixSemis $ myFix xs
 
 myFix :: [JSNode] -> [JSNode]
 myFix []      = []

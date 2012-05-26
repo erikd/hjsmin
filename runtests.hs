@@ -41,6 +41,7 @@ testSuite = testGroup "Text.Jasmine.Parse"
     , testCase "If3"              caseIf3
     , testCase "BootstrapDropdown" caseBootstrapDropdown
     , testCase "Issue8"           caseIssue8
+    , testCase "Issue9"           caseIssue9
     ]
 
 testSuiteMin :: Test
@@ -68,6 +69,7 @@ testSuiteMin = testGroup "Text.Jasmine.Pretty Min"
     , testCase "MinIf3"           caseMinIf3
     , testCase "MinBootstrapDropdown" caseMinBootstrapDropdown
     , testCase "MinIssue8"        caseMinIssue8
+    , testCase "MinIssue9"        caseMinIssue9
 
     ]
 
@@ -305,7 +307,6 @@ caseBootstrapDropdown =
   "Right (JSSourceElementsTop [JSExpression [JSIdentifier \"clearMenus\",JSArguments []],JSExpression [JSExpressionBinary \"&&\" [JSUnary \"!\",JSIdentifier \"isActive\"] [JSMemberDot [JSIdentifier \"$parent\"] (JSIdentifier \"toggleClass\"),JSArguments [JSStringLiteral '\\'' \"open\"]]],JSLiteral \"\"])"
   @=? (showStrippedMaybe $ parseProgram srcBootstrapDropdown)
 caseMinBootstrapDropdown =
-  -- Note: jsmin preserves the \n, rather than the semi. A matter of taste, it is the same number of chars.
   testMinify "clearMenus();!isActive&&$parent.toggleClass('open')" srcBootstrapDropdown
 
 
@@ -314,8 +315,14 @@ caseIssue8 =
   "Right (JSSourceElementsTop [JSExpression [JSExpressionParen (JSExpression [JSFunctionExpression [] [] (JSBlock ([JSExpression [JSMemberDot [JSLiteral \"new\",JSIdentifier \"nicEditor\",JSArguments [JSObjectLiteral [JSPropertyNameandValue (JSIdentifier \"fullPanel\") [JSLiteral \"true\"]]]] (JSIdentifier \"panelInstance\"),JSArguments [JSStringLiteral '\\'' \"h4\"]]]))]),JSArguments []],JSLiteral \";\",JSLiteral \"\"])"
   @=? (showStrippedMaybe $ parseProgram srcIssue8)
 caseMinIssue8 =
-  -- Note: jsmin preserves the \n, rather than the semi. A matter of taste, it is the same number of chars.
   testMinify "(function(){new nicEditor({fullPanel:true}).panelInstance('h4')})()" srcIssue8
+
+srcIssue9 = "var x = [new friend(5)];"
+caseIssue9 =
+  "Right (JSSourceElementsTop [JSVariables JSLiteral \"var\" [JSVarDecl (JSIdentifier \"x\") [JSLiteral \"=\",JSArrayLiteral [JSLiteral \"new\",JSIdentifier \"friend\",JSArguments [JSDecimal \"5\"]]]],JSLiteral \"\"])"
+  @=? (showStrippedMaybe $ parseProgram srcIssue9)
+caseMinIssue9 =
+  testMinify "var x=[new friend(5)]" srcIssue9
 
 -- ---------------------------------------------------------------------
 -- utilities
