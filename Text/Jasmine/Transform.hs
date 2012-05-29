@@ -3,6 +3,9 @@
 module Text.Jasmine.Transform
     (
     transformJS
+    -- For debug stuff
+    , literalAnnotation
+    , literal
     ) where
 
 import Data.Char

@@ -10,3 +10,10 @@
 /dist/*
 /runbench.o
 
+/Text/Jasmine/Transform.hi
+/Text/Jasmine/Transform.o
+/testgen
+/testgen.hi
+/testgen.hs
+/testgen.o
+/testgen.prof
