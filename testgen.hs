@@ -137,7 +137,7 @@ instance Arbitrary JSNode where
 
 -- TODO: 4 is an arbitrary number
 instance Arbitrary JSBlock where
-  arbitrary = liftM mkBlock (resize 4 $ arbitrary :: Gen [JSStatement])
+  arbitrary = liftM mkBlock (resize 3 $ arbitrary :: Gen [JSStatement])
     where
       mkBlock xs = JSBlock JSNoAnnot xs JSNoAnnot
 
