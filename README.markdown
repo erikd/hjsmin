@@ -28,6 +28,8 @@ Running the tests
 Changes
 -------
 
+0.1.3 - Update version ranges for GHC 7.6.1, courtesy of @mietek 
+
 0.1.2 - More general fix to the space after 'new' keyword, for issue #8 & #9
 
 0.1.1 - Fixed problem with missing space after 'new' keyword, in issue #8.
