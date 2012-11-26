@@ -16,7 +16,11 @@ homepage:        http://github.com/alanz/hjsmin
 bug-reports:     http://github.com/alanz/hjsmin/issues
 
 Extra-source-files:
-  TODO.txt, README.markdown, buildall.sh
+   TODO.txt
+ , README.markdown
+ , buildall.sh
+ , test/pminified/*.js
+ , test/parsingonly/*.js
 
 
 library
