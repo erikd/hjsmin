@@ -1,6 +1,8 @@
 hjsmin
 ======
 
+[![Build Status](https://secure.travis-ci.org/alanz/hjsmin.png?branch=master)](http://travis-ci.org/alanz/hjsmin)
+
 Haskell implementation of a javascript minifier
 
 It is intended to be used in conjunction with Hamlet, part of Yesod.
@@ -27,6 +29,8 @@ Running the tests
 
 Changes
 -------
+
+0.1.4.1 - Bump upper bound for containers to < 0.6 for the tests as well as the library
 
 0.1.4 - Include test assets in cabal to allow cabal test to pass. Courtesy of @snoyberg
 

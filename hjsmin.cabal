@@ -1,5 +1,5 @@
 name:            hjsmin
-version:         0.1.4
+version:         0.1.4.1
 license:         BSD3
 license-file:    LICENSE
 author:          Alan Zimmerman <alan.zimm@gmail.com>
@@ -47,7 +47,7 @@ Test-Suite test-hjsmin
                  , bytestring          >= 0.9     && < 0.11
                  , blaze-builder       >= 0.2     && < 1
                  , text                >= 0.8     && < 1
-                 , containers          >= 0.2     && < 0.5
+                 , containers          >= 0.2     && < 0.6
                  , language-javascript >= 0.5.4   && < 0.6
 
 source-repository head
