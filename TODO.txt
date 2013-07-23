@@ -1,6 +1,6 @@
 Testing:
 
-The following Lint has a sctrict parser
+The following Lint has a strict parser
   http://www.javascriptlint.com/online_lint.php
 
 This one does not
