@@ -332,9 +332,7 @@ caseIssue14 =
   "Right (JSSourceElementsTop [JSVariables JSLiteral \"var\" [JSVarDecl (JSIdentifier \"settings\") [JSLiteral \"=\",JSObjectLiteral [JSPropertyNameandValue (JSIdentifier \"start\") [JSLiteral \"new\",JSIdentifier \"Date\",JSArguments [JSDecimal \"2012\",JSLiteral \",\",JSOctal \"01\",JSLiteral \",\",JSDecimal \"27\"]]]]],JSLiteral \"\"])"
   @=? (showStrippedMaybe $ parseProgram srcIssue14)
 caseMinIssue14 =
-  testMinify "var x=[new friend(5)]" srcIssue14
-
-
+  testMinify "var settings={start:new Date(2012,01,27)}" srcIssue14
 
 
 -- ---------------------------------------------------------------------

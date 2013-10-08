@@ -50,6 +50,7 @@ rn :: Node -> BB.Builder
 -- Terminals
 rn (JSIdentifier s)        = text s
 rn (JSDecimal i)           = text i
+rn (JSOctal o)             = text o
 
 rn (JSLiteral "new")       = (text "new ")
 rn (JSLiteral l)           = (text l)
