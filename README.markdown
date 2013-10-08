@@ -30,6 +30,8 @@ Running the tests
 Changes
 -------
 
+0.1.4.3 - make sure all missing cases are covered
+
 0.1.4.2 - minify octal literals too
 
 0.1.4.1 - Bump upper bound for containers to < 0.6 for the tests as well as the library

@@ -4,9 +4,9 @@ module Text.Jasmine.Pretty
     ) where
 
 import Data.Char
-import Data.List
+-- import Data.List
 import Data.Monoid (Monoid, mappend, mempty, mconcat)
-import Language.JavaScript.Parser (JSNode(..),Node(..),tokenPosnEmpty,readJs,CommentAnnotation(..),TokenPosn(..))
+import Language.JavaScript.Parser (JSNode(..),Node(..),tokenPosnEmpty)
 import qualified Blaze.ByteString.Builder as BB
 import qualified Blaze.ByteString.Builder.Char.Utf8 as BS
 import qualified Data.ByteString.Lazy as LB
@@ -32,11 +32,11 @@ text s = BS.fromString s
 char :: Char -> BB.Builder
 char c = BS.fromChar c
 
-comma :: BB.Builder
-comma = BS.fromChar ','
+-- comma :: BB.Builder
+-- comma = BS.fromChar ','
 
-punctuate :: a -> [a] -> [a]
-punctuate p xs = intersperse p xs
+-- punctuate :: a -> [a] -> [a]
+-- punctuate p xs = intersperse p xs
 
 -- ---------------------------------------------------------------------
 
@@ -85,15 +85,20 @@ rn (JSArguments _lb xs _rb) = (text "(") <> (rJS $ fixLiterals xs) <> (text ")")
 
 rn (JSBlock lb xs rb)            = (rJS lb) <> (rJS xs) <> (rJS rb)
 
-rn (JSIf _i _lb c _rb [(NT (JSLiteral ";") _ _)] [])     = (text "if") <> (text "(") <> (renderJS c) <> (text ")")
---rn (JSIf _i _lb c _rb t                        [])     = (text "if") <> (text "(") <> (renderJS c) <> (text ")") <> (renderJS $ fixBlock t)
 
-rn (JSIf _i _lb c _rb t                        [])     = (text "if") <> (text "(") <> (renderJS c) <> (text ")") <> (rJS $ fixSourceElements $ map fixBlock t)
 
-rn (JSIf _i _lb c _rb t [_e,(NT (JSLiteral ";") _ _)]) = (text "if") <> (text "(") <> (renderJS c) <> (text ")") <> (rJS $ fixIfBlock t)
-                                                         <> (text "else")
-rn (JSIf _i _lb c _rb t [_e,e])                        = (text "if") <> (text "(") <> (renderJS c) <> (text ")") <> (rJS $ fixIfElse $ fixSourceElements t)
+rn (JSIf _i _lb c _rb [(NT (JSLiteral ";") _ _)] [])   = (text "if") <> (text "(") <> (renderJS c) <> (text ")")
+
+rn (JSIf _i _lb c _rb t                          [])   = (text "if") <> (text "(") <> (renderJS c) <> (text ")")
+                                                          <> (rJS $ fixSourceElements $ map fixBlock t)
+
+rn (JSIf _i _lb c _rb t [_e,(NT (JSLiteral ";") _ _)]) = (text "if") <> (text "(") <> (renderJS c) <> (text ")")
+                                                         <> (rJS $ fixIfBlock t) <> (text "else")
+rn (JSIf _i _lb c _rb t [_e,e])                        = (text "if") <> (text "(") <> (renderJS c) <> (text ")")
+                                                         <> (rJS $ fixIfElse $ fixSourceElements t)
                                                          <> (text "else") <> (spaceOrBlock $ fixBlock e)
+rn (JSIf _i _lb _c _rb _t                      _xs)    = error $ "malformed JSIf, else clause should be either [] or [else,expr]"
+
 
 
 
@@ -102,8 +107,8 @@ rn (JSMemberSquare xs _lb x _rb)  = (rJS $ fixLiterals xs) <> (text "[") <> (ren
 rn (JSUnary l _s )                = text l
 rn (JSArrayLiteral _lb xs _rb)    = (text "[") <> (rJS xs) <> (text "]")
 
-rn (JSBreak _b [] as)           = (text "break") -- <> (renderJS as)
-rn (JSBreak _b is as)           = (text "break") <+> (rJS $ fixSourceElements $ map fixFnBlock is) -- <> (renderJS as)
+rn (JSBreak _b [] _as)           = (text "break") -- <> (renderJS as)
+rn (JSBreak _b is _as)           = (text "break") <+> (rJS $ fixSourceElements $ map fixFnBlock is) -- <> (renderJS as)
 
 rn (JSCallExpression "()" _os xs _cs) = (rJS xs)
 rn (JSCallExpression   t  _os xs _cs) = (char $ head t) <> (rJS xs) <> (if ((length t) > 1) then (char $ last t) else empty)
@@ -124,7 +129,7 @@ rn (JSCatch _c _lb i  c _rb s)  = (text "catch") <> (char '(') <> (renderJS i) <
 rn (JSContinue _c is _as)  = (text "continue") <> (rJS is) -- <> (char ';')
 rn (JSDefault _d _c xs)    = (text "default") <> (char ':') <> (rJS $ fixSourceElements xs)
 
-rn (JSDoWhile _d s _w _lb e _rb as)     = (text "do") <> (renderJS $ fixFnBlock s) <> (text "while") <> (char '(') <> (renderJS e) <> (char ')') -- <> (renderJS as)
+rn (JSDoWhile _d s _w _lb e _rb _as)     = (text "do") <> (renderJS $ fixFnBlock s) <> (text "while") <> (char '(') <> (renderJS e) <> (char ')') -- <> (renderJS as)
 
 
 --rn (JSElementList xs)      = rJS xs
@@ -155,7 +160,7 @@ rn (JSPropertyNameandValue n _c vs) = (renderJS n) <> (text ":") <> (rJS vs)
 
 rn (JSReturn _r []                         _as) = (text "return")
 rn (JSReturn _r [(NT (JSLiteral ";") _ _)] _as) = (text "return;++foobar+will_never_happen++") -- ++AZ++ get rid of this
-rn (JSReturn _r xs                          as) = (text "return") <> (if (spaceNeeded xs) then (text " ") else (empty)) <> (rJS $ fixSourceElements xs) -- <> (renderJS as)
+rn (JSReturn _r xs                         _as) = (text "return") <> (if (spaceNeeded xs) then (text " ") else (empty)) <> (rJS $ fixSourceElements xs) -- <> (renderJS as)
 
 rn (JSThrow _t e)                 = (text "throw") <+> (renderJS $ fixBlock e)
 
@@ -177,9 +182,9 @@ rn (JSWith _w _lb e _rb s)                  = (text "with") <> (char '(') <> (re
 rJS :: [JSNode] -> BB.Builder
 rJS xs = hcat $ map renderJS xs
 
-commaList :: [JSNode] -> BB.Builder
-commaList [] = empty
-commaList xs = rJS xs
+-- commaList :: [JSNode] -> BB.Builder
+-- commaList [] = empty
+-- commaList xs = rJS xs
 
 extractNode :: JSNode -> Node
 extractNode (NT x _ _) = x
@@ -188,8 +193,8 @@ extractNode (NN x    ) = x
 --commaListList :: [[JSNode]] -> BB.Builder
 --commaListList xs = (hcat $ punctuate comma $ map rJS xs)
 
-toDoc :: [JSNode] -> [BB.Builder]
-toDoc xs = map renderJS xs
+-- toDoc :: [JSNode] -> [BB.Builder]
+-- toDoc xs = map renderJS xs
 
 spaceOrBlock :: JSNode -> BB.Builder
 spaceOrBlock (NN (JSBlock lb xs rb)) = rn (JSBlock lb xs rb)
@@ -326,11 +331,13 @@ fixFnBlock x = fixBlock x
 fixIfBlock :: [JSNode] -> [JSNode]
 fixIfBlock xs =
   case xs' of
-    [(NT (JSLiteral ";") p cs)]   -> [] -- rely on fixSemis to add this again [(NT (JSLiteral ";") p cs)]
-    [(NN (JSBlock lb [] rb))]     -> [] -- rely on fixSemis to add this again [(NT (JSLiteral ";") tokenPosnEmpty [])]
+    [(NT (JSLiteral ";") _p _cs)]   -> [] -- rely on fixSemis to add this again [(NT (JSLiteral ";") p cs)]
+    [(NN (JSBlock _lb [] _rb))]     -> [] -- rely on fixSemis to add this again [(NT (JSLiteral ";") tokenPosnEmpty [])]
     -- [(NN (JSBlock lb [y] rb))]    -> [fixBlock y]
     [(NN (JSBlock lb x2s rb))]    -> [(NN (JSBlock lb ((fixSourceElements $ map fixBlock x2s)) rb))]
     [x]                           -> fixSourceElements [x]
+    []                            -> []
+    xs''                          -> fixSourceElements xs''
   where xs' = stripSemis xs
 
 -- Remove extraneous braces around blocks
