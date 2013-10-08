@@ -30,11 +30,13 @@ Running the tests
 Changes
 -------
 
+0.1.4.2 - minify octal literals too
+
 0.1.4.1 - Bump upper bound for containers to < 0.6 for the tests as well as the library
 
 0.1.4 - Include test assets in cabal to allow cabal test to pass. Courtesy of @snoyberg
 
-0.1.3 - Update version ranges for GHC 7.6.1, courtesy of @mietek 
+0.1.3 - Update version ranges for GHC 7.6.1, courtesy of @mietek
 
 0.1.2 - More general fix to the space after 'new' keyword, for issue #8 & #9
 
