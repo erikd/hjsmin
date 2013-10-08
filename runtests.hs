@@ -42,6 +42,7 @@ testSuite = testGroup "Text.Jasmine.Parse"
     , testCase "BootstrapDropdown" caseBootstrapDropdown
     , testCase "Issue8"           caseIssue8
     , testCase "Issue9"           caseIssue9
+    , testCase "Issue14"          caseIssue14
     ]
 
 testSuiteMin :: Test
@@ -70,6 +71,7 @@ testSuiteMin = testGroup "Text.Jasmine.Pretty Min"
     , testCase "MinBootstrapDropdown" caseMinBootstrapDropdown
     , testCase "MinIssue8"        caseMinIssue8
     , testCase "MinIssue9"        caseMinIssue9
+    , testCase "MinIssue14"       caseMinIssue14
 
     ]
 
@@ -323,6 +325,17 @@ caseIssue9 =
   @=? (showStrippedMaybe $ parseProgram srcIssue9)
 caseMinIssue9 =
   testMinify "var x=[new friend(5)]" srcIssue9
+
+
+srcIssue14 = "var settings = {start : new Date(2012, 01, 27)};"
+caseIssue14 =
+  "Right (JSSourceElementsTop [JSVariables JSLiteral \"var\" [JSVarDecl (JSIdentifier \"settings\") [JSLiteral \"=\",JSObjectLiteral [JSPropertyNameandValue (JSIdentifier \"start\") [JSLiteral \"new\",JSIdentifier \"Date\",JSArguments [JSDecimal \"2012\",JSLiteral \",\",JSOctal \"01\",JSLiteral \",\",JSDecimal \"27\"]]]]],JSLiteral \"\"])"
+  @=? (showStrippedMaybe $ parseProgram srcIssue14)
+caseMinIssue14 =
+  testMinify "var x=[new friend(5)]" srcIssue14
+
+
+
 
 -- ---------------------------------------------------------------------
 -- utilities
