@@ -30,6 +30,8 @@ Running the tests
 Changes
 -------
 
+0.1.4.4 - relax upper bound in text to support 1.0
+
 0.1.4.3 - make sure all missing cases are covered
 
 0.1.4.2 - minify octal literals too
