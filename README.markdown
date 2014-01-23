@@ -30,6 +30,10 @@ Running the tests
 Changes
 -------
 
+0.1.4.5 - relax upper bound in text to support 1.1
+        - introduce CLI wrapper for minifying files from the
+          commandline, courtesy of @CodeBlock
+
 0.1.4.4 - relax upper bound in text to support 1.0
 
 0.1.4.3 - make sure all missing cases are covered
@@ -60,7 +64,5 @@ Changes
 0.0.11 - Worked in language-javascript 0.4.*, with source locations in the AST
          Worked in processing of property get/set in object literals
 0.0.10 - Removed attoparsec dependency and historical Parse/Token
-
-
 
 
