@@ -26,7 +26,7 @@ main = execParser opts >>= minify'
     opts = info (helper <*> options)
       ( fullDesc
      <> progDesc "Minify JavaScript files."
-     <> header "hjsmi - a simple command-line interface to the 'hjsmin' library" )
+     <> header "hjsmin - a simple command-line interface to the 'hjsmin' library" )
 
 minify' :: Options -> IO ()
 minify' o = do
