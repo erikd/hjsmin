@@ -1,5 +1,5 @@
 name:            hjsmin
-version:         0.1.4.5
+version:         0.1.4.6
 license:         BSD3
 license-file:    LICENSE
 author:          Alan Zimmerman <alan.zimm@gmail.com>
@@ -44,7 +44,7 @@ executable hjsmin
                  , text                 >= 0.8     && < 1.2
                  , containers           >= 0.2     && < 0.6
                  , language-javascript  >= 0.5.1   && < 0.6
-                 , optparse-applicative >= 0.7     && < 0.8
+                 , optparse-applicative >= 0.7     && < 0.9
 
 Test-Suite test-hjsmin
   Type: exitcode-stdio-1.0
