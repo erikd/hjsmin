@@ -44,7 +44,7 @@ executable hjsmin
                  , text                 >= 0.8     && < 1.2
                  , containers           >= 0.2     && < 0.6
                  , language-javascript  >= 0.5.1   && < 0.6
-                 , optparse-applicative >= 0.7     && < 0.9
+                 , optparse-applicative >= 0.7     && < 1.0
 
 Test-Suite test-hjsmin
   Type: exitcode-stdio-1.0
