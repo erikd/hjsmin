@@ -1,5 +1,5 @@
 name:            hjsmin
-version:         0.1.4.6
+version:         0.1.4.7
 license:         BSD3
 license-file:    LICENSE
 author:          Alan Zimmerman <alan.zimm@gmail.com>
@@ -24,12 +24,12 @@ Extra-source-files:
 
 
 library
-    build-depends:   base                >= 4       && < 5
-                   , bytestring          >= 0.9     && < 0.11
-                   , blaze-builder       >= 0.2     && < 1
-                   , text                >= 0.8     && < 1.2
-                   , containers          >= 0.2     && < 0.6
-                   , language-javascript >= 0.5.1   && < 0.6
+    build-depends:   base                >= 4
+                   , bytestring          >= 0.9
+                   , blaze-builder       >= 0.2
+                   , text                >= 0.8
+                   , containers          >= 0.2
+                   , language-javascript >= 0.5.1
     exposed-modules: Text.Jasmine
     other-modules:   Text.Jasmine.Pretty
     ghc-options:     -Wall
@@ -39,27 +39,27 @@ executable hjsmin
 
   ghc-options:         -Wall -threaded
   build-depends:   base                 >= 4       && < 5
-                 , bytestring           >= 0.9     && < 0.11
-                 , blaze-builder        >= 0.2     && < 1
-                 , text                 >= 0.8     && < 1.2
-                 , containers           >= 0.2     && < 0.6
-                 , language-javascript  >= 0.5.1   && < 0.6
-                 , optparse-applicative >= 0.7     && < 0.9
+                 , bytestring           >= 0.9
+                 , blaze-builder        >= 0.2
+                 , text                 >= 0.8
+                 , containers           >= 0.2
+                 , language-javascript  >= 0.5.1
+                 , optparse-applicative >= 0.7
 
 Test-Suite test-hjsmin
   Type: exitcode-stdio-1.0
   Main-is: runtests.hs
   build-depends: Cabal >= 1.9.2
-                 , QuickCheck >= 2 && < 3
+                 , QuickCheck >= 2
                  , HUnit
                  , test-framework
                  , test-framework-hunit
                  , base                >= 4       && < 5
-                 , bytestring          >= 0.9     && < 0.11
-                 , blaze-builder       >= 0.2     && < 1
-                 , text                >= 0.8     && < 1.2
-                 , containers          >= 0.2     && < 0.6
-                 , language-javascript >= 0.5.4   && < 0.6
+                 , bytestring          >= 0.9
+                 , blaze-builder       >= 0.2
+                 , text                >= 0.8
+                 , containers          >= 0.2
+                 , language-javascript >= 0.5.4
 
 source-repository head
   type:     git

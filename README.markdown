@@ -30,6 +30,8 @@ Running the tests
 Changes
 -------
 
+0.1.4.7 - remove upper bounds in cabal file
+
 0.1.4.6 - relax upper bound in optparse-applicative
 
 0.1.4.5 - relax upper bound in text to support 1.1
