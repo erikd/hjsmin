@@ -28,3 +28,4 @@
 /Text/Jasmine/Token.o
 /runbench.hs~
 /runbench.o
+cabal.sandbox.config
