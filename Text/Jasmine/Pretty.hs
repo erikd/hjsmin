@@ -126,6 +126,7 @@ rn (JSCatch _c _lb i [] _rb s)  = (text "catch") <> (char '(') <> (renderJS i) <
 rn (JSCatch _c _lb i  c _rb s)  = (text "catch") <> (char '(') <> (renderJS i) <>
                                   (text " if ") <> (rJS $ tail c) <> (char ')') <> (renderJS $ fixFnBlock s)
 
+rn (JSContinue _c is@[NT (JSIdentifier _) _ _] _as)  = (text "continue") <+> (rJS is)
 rn (JSContinue _c is _as)  = (text "continue") <> (rJS is) -- <> (char ';')
 rn (JSDefault _d _c xs)    = (text "default") <> (char ':') <> (rJS $ fixSourceElements xs)
 

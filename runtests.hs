@@ -93,6 +93,7 @@ testSuiteFiles = testGroup "Text.Jasmine.Pretty files"
   , testCase "15_literals.js"   (testFile "./test/pminified/15_literals.js")
   , testCase "16_literals.js"   (testFile "./test/pminified/16_literals.js")
   , testCase "20_statements.js" (testFile "./test/pminified/20_statements.js")
+  , testCase "20_continue_loop.js" (testFile "./test/pminified/20_continue_loop.js")
   , testCase "25_trycatch.js"   (testFile "./test/pminified/25_trycatch.js")
   , testCase "40_functions.js"  (testFile "./test/pminified/40_functions.js")
   , testCase "67_bob.js"        (testFile "./test/pminified/67_bob.js")
