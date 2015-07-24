@@ -3,7 +3,7 @@ version:         0.1.4.7
 license:         BSD3
 license-file:    LICENSE
 author:          Alan Zimmerman <alan.zimm@gmail.com>
-maintainer:      Alan Zimmerman <alan.zimm@gmail.com>
+maintainer:      Erik de Castro Lopo <erikd@mega-nerd.com>
 synopsis:        Haskell implementation of a javascript minifier
 description:
    Reduces size of javascript files by stripping out extraneous whitespace and
@@ -12,8 +12,8 @@ category:        Web
 stability:       unstable
 cabal-version:   >= 1.9.2
 build-type:      Simple
-homepage:        http://github.com/alanz/hjsmin
-bug-reports:     http://github.com/alanz/hjsmin/issues
+homepage:        http://github.com/erikd/hjsmin
+bug-reports:     http://github.com/erikd/hjsmin/issues
 
 Extra-source-files:
    TODO.txt
@@ -63,4 +63,4 @@ Test-Suite test-hjsmin
 
 source-repository head
   type:     git
-  location: git://github.com/alanz/hjsmin.git
+  location: https://github.com/erikd/hjsmin.git
