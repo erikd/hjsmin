@@ -1,36 +1,41 @@
 module Main where
 
-import qualified Data.ByteString.Lazy as B
-import qualified Data.ByteString.Lazy.Char8 as C8
 import Options.Applicative
 import Text.Jasmine
 
-data Options = Options {
-    inputFile :: String
-  , outputFile :: Maybe String
-  }
+import qualified Data.ByteString.Lazy as B
+import qualified Data.ByteString.Lazy.Char8 as C8
 
-options :: Parser Options
-options = Options 
-      <$> argument str (metavar "INPUT_FILE"
-                     <> help "The unminified, original JavaScript file")
-      <*> optional (
-            strOption (long "output-file"
-                    <> short 'o'
-                    <> metavar "OUTPUT_FILE"
-                    <> help "The minified output file. Default: stdout"))
+
+data Options = Options
+    { inputFile :: String
+    , outputFile :: Maybe String
+    }
 
 main :: IO ()
-main = execParser opts >>= minify'
+main =
+    execParser opts >>= minify'
   where
     opts = info (helper <*> options)
-      ( fullDesc
-     <> progDesc "Minify JavaScript files."
-     <> header "hjsmin - a simple command-line interface to the 'hjsmin' library" )
+        ( fullDesc
+            <> progDesc "Minify JavaScript files."
+            <> header "hjsmin - a simple command-line interface to the 'hjsmin' library"
+            )
+
+options :: Parser Options
+options = Options
+      <$> argument str (metavar "INPUT_FILE"
+                     <> help "The unminified, original JavaScript file")
+      <*> optional
+            ( strOption (long "output-file"
+                    <> short 'o'
+                    <> metavar "OUTPUT_FILE"
+                    <> help "The minified output file. Default: stdout")
+                    )
 
 minify' :: Options -> IO ()
 minify' o = do
-  minified <- minifyFile (inputFile o)
-  case outputFile o of
-    Nothing -> C8.putStrLn $ minified
-    Just f  -> B.writeFile f minified
+    minified <- minifyFile (inputFile o)
+    case outputFile o of
+        Nothing -> C8.putStrLn minified
+        Just f  -> B.writeFile f minified
