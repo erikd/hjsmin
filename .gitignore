@@ -29,3 +29,4 @@
 /runbench.hs~
 /runbench.o
 cabal.sandbox.config
+.cabal-sandbox
