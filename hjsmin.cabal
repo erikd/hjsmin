@@ -29,7 +29,7 @@ library
                    , blaze-builder       >= 0.2
                    , text                >= 0.8
                    , containers          >= 0.2
-                   , language-javascript >= 0.5.14
+                   , language-javascript >= 0.5.14 && < 0.6
     exposed-modules: Text.Jasmine
     other-modules:   Text.Jasmine.Pretty
     ghc-options:     -Wall
