@@ -1,7 +1,7 @@
 hjsmin
 ======
 
-[![Build Status](https://secure.travis-ci.org/alanz/hjsmin.png?branch=master)](http://travis-ci.org/alanz/hjsmin)
+[![Build Status](https://secure.travis-ci.org/erikd/hjsmin.png?branch=master)](http://travis-ci.org/erikd/hjsmin)
 
 Haskell implementation of a javascript minifier
 
