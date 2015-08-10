@@ -17,8 +17,7 @@ bug-reports:     http://github.com/erikd/hjsmin/issues
 
 Extra-source-files:
    TODO.txt
- , README.markdown
- , buildall.sh
+ , Readme.md
  , test/pminified/*.js
  , test/parsingonly/*.js
 
