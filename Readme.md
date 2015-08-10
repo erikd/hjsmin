@@ -21,11 +21,11 @@ cabal clean && cabal configure && cabal build
 
 Tests:
 
-cabal clean && cabal configure -fbuildtests && cabal build
+    cabal clean && cabal configure --enable-tests && cabal build
 
 Running the tests
 
-./dist/build/runtests/runtests
+    dist/build/test-hjsmin/test-hjsmin
 
 Changes
 -------
