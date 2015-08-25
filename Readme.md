@@ -30,6 +30,8 @@ Running the tests
 Changes
 -------
 
+0.1.5.1 - fix if/else/if minify issue
+
 0.1.5.0 - fix tests to work with language-javascript >= 0.5.14
 
 0.1.4.7 - remove upper bounds in cabal file
