@@ -94,6 +94,11 @@ rn (JSIf _i _lb c _rb t                          [])   = (text "if") <> (text "(
 
 rn (JSIf _i _lb c _rb t [_e,(NT (JSLiteral ";") _ _)]) = (text "if") <> (text "(") <> (renderJS c) <> (text ")")
                                                          <> (rJS $ fixIfBlock t) <> (text "else")
+
+rn (JSIf _i _lb c _rb [NT (JSLiteral ";") _ _] [_e,e]) = (text "if") <> (text "(") <> (renderJS c) <> (text ")")
+                                                         <> text ";"
+                                                         <> (text "else") <> (spaceOrBlock $ fixBlock e)
+
 rn (JSIf _i _lb c _rb t [_e,e])                        = (text "if") <> (text "(") <> (renderJS c) <> (text ")")
                                                          <> (rJS $ fixIfElse $ fixSourceElements t)
                                                          <> (text "else") <> (spaceOrBlock $ fixBlock e)

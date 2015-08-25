@@ -56,6 +56,7 @@ testSuiteMin = testGroup "Text.Jasmine.Pretty Min"
     , testCase "simpleAssignment" caseMinSimpleAssignment
     , testCase "ifelse1"          caseMinIfElse1
     , testCase "ifelse2"          caseMinIfElse2
+    , testCase "ifelse3"          caseMinIfElse3
     , testCase "0_f.js"           caseMin0_f
     , testCase "01_semi1.js"      caseMin01_semi1
     , testCase "min_100_animals"  caseMin_min_100_animals
@@ -195,6 +196,10 @@ caseIfElse2 =
         @=? showStrippedMaybe (parseProgram srcIfElse2)
 caseMinIfElse2 =
     testMinify "if(a){b=1}else{c=2;d=4}" srcIfElse2
+
+srcIfElse3 = "if (1)\n;\nelse if(2)\n{3;}"
+caseMinIfElse3 =
+    testMinify "if(1);else if(2)3" srcIfElse3
 
 src0_f = "function Hello(a) {ExprArray(1,1);}"
 case0_f =
