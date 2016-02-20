@@ -47,6 +47,7 @@ testSuite = testGroup "Text.Jasmine.Parse"
     , testCase "Issue8"           caseIssue8
     , testCase "Issue9"           caseIssue9
     , testCase "Issue14"          caseIssue14
+    , testCase "Issue22"          caseIssue22
     ]
 
 testSuiteMin :: Test
@@ -77,6 +78,7 @@ testSuiteMin = testGroup "Text.Jasmine.Pretty Min"
     , testCase "MinIssue8"        caseMinIssue8
     , testCase "MinIssue9"        caseMinIssue9
     , testCase "MinIssue14"       caseMinIssue14
+    , testCase "MinIssue22"       caseMinIssue22
 
     ]
 
@@ -342,6 +344,15 @@ caseIssue14 =
 
 caseMinIssue14 =
     testMinify "var settings={start:new Date(2012,01,27)}" srcIssue14
+
+srcIssue22 = "0xe0+'0x30'"
+
+caseIssue22 =
+    "Right (JSSourceElementsTop [JSExpression [JSExpressionBinary \"+\" [JSHexInteger \"0xe0\"] [JSStringLiteral '\\'' \"0x30\"]],JSLiteral \"\"])"
+    @=? showStrippedMaybe (parseProgram srcIssue22)
+
+caseMinIssue22 =
+    testMinify srcIssue22 srcIssue22
 
 
 -- ---------------------------------------------------------------------
