@@ -55,7 +55,7 @@ rn (JSOctal o)             = text o
 rn (JSLiteral "new")       = (text "new ")
 rn (JSLiteral l)           = (text l)
 
-rn (JSHexInteger i)        = (text $ show i) -- TODO: need to tweak this
+rn (JSHexInteger i)        = (text i)
 rn (JSStringLiteral s l)   = empty <> (char s) <> (text l) <> (char s)
 rn (JSRegEx s)             = (text s)
 
