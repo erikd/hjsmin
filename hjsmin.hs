@@ -1,4 +1,7 @@
+{-# LANGUAGE CPP #-}
 module Main where
+
+#include "cabal_macros.h"
 
 import Options.Applicative
 import Text.Jasmine
@@ -18,7 +21,10 @@ main =
   where
     opts = info (helper <*> options)
         ( fullDesc
-            <> progDesc "Minify JavaScript files."
+            <> progDesc
+                ( "Minify JavaScript files (using language-javascript version "
+                ++ languageJavascriptVersion ++ ")."
+                )
             <> header "hjsmin - a simple command-line interface to the 'hjsmin' library"
             )
 
@@ -39,3 +45,7 @@ minify' o = do
     case outputFile o of
         Nothing -> C8.putStrLn minified
         Just f  -> B.writeFile f minified
+
+
+languageJavascriptVersion :: String
+languageJavascriptVersion = VERSION_language_javascript
