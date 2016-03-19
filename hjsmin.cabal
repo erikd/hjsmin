@@ -28,7 +28,7 @@ library
                    , blaze-builder       >= 0.2
                    , text                >= 0.8
                    , containers          >= 0.2
-                   , language-javascript >= 0.5.14 && < 0.6
+                   , language-javascript >= 0.6 && < 0.7
     exposed-modules: Text.Jasmine
     other-modules:   Text.Jasmine.Pretty
     ghc-options:     -Wall
@@ -42,7 +42,7 @@ executable hjsmin
                  , blaze-builder        >= 0.2
                  , text                 >= 0.8
                  , containers           >= 0.2
-                 , language-javascript  >= 0.5.14
+                 , language-javascript  >= 0.6
                  , optparse-applicative >= 0.7
 
 Test-Suite test-hjsmin
@@ -58,7 +58,7 @@ Test-Suite test-hjsmin
                  , blaze-builder       >= 0.2
                  , text                >= 0.8
                  , containers          >= 0.2
-                 , language-javascript >= 0.5.14
+                 , language-javascript >= 0.6
 
 source-repository head
   type:     git
