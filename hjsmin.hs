@@ -3,6 +3,7 @@ module Main where
 
 #include "cabal_macros.h"
 
+import Data.Monoid ((<>))
 import Options.Applicative
 import Text.Jasmine
 
