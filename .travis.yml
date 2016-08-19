@@ -3,37 +3,25 @@
 # See http://www.reddit.com/r/haskell/comments/1os3f6/how_to_use_travisci_with_multiple_ghc_versions/
 
 env:
- # - GHCVER=6.12.3
- # - GHCVER=7.0.1
- # - GHCVER=7.0.2
- # - GHCVER=7.0.3
- # - GHCVER=7.0.4
- # - GHCVER=7.2.1
- # - GHCVER=7.2.2
- # - GHCVER=7.4.1
- # - GHCVER=7.4.2
- # - GHCVER=7.6.1
- # - GHCVER=7.6.2
  - GHCVER=7.6.3
  - GHCVER=7.8.4
  - GHCVER=7.10.3
+ - GHCVER=8.0.1
 
 before_install:
  - sudo add-apt-repository -y ppa:hvr/ghc
  - sudo apt-get update
- - sudo apt-get install cabal-install-1.22 ghc-$GHCVER
- - export PATH=/opt/ghc/$GHCVER/bin:$PATH
+ - sudo apt-get install alex-3.1.7 happy-1.19.5 cabal-install-1.24 ghc-$GHCVER
+ - export PATH=/opt/ghc/$GHCVER/bin:/opt/alex/3.1.7/bin:/opt/happy/1.19.5/bin:$PATH
 
 install:
- - cabal-1.22 update
- - cabal-1.22 install happy
- - cabal-1.22 install alex
- - cabal-1.22 install --only-dependencies --enable-tests;
+ - cabal-1.24 update
+ - cabal-1.24 install --only-dependencies --enable-tests
 
 script:
- - cabal-1.22 configure --enable-tests
- - cabal-1.22 build
- - cabal-1.22 check
- - cabal-1.22 haddock
- - cabal-1.22 sdist
+ - cabal-1.24 configure --enable-tests
+ - cabal-1.24 build
+ - cabal-1.24 check
+ - cabal-1.24 haddock
+ - cabal-1.24 sdist
 
