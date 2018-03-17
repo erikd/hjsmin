@@ -1,1 +1,0 @@
-function execute(n,x){switch(n.type){case CONST:for(i=0,j=n.length;i<j;i++){u=n[i].initializer;if(!u)continue;t=n[i].name;for(s=x.scope;s;s=s.parent)if(hasDirectProperty(s.object,t))break;u=getValue(execute(u,x));if(n.type==CONST){s.object.__defineProperty__(t,u,x.type!=EVAL_CODE,true)}else s.object[t]=u};break}}
