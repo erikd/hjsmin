@@ -4,56 +4,77 @@
 
 import qualified Data.ByteString.Lazy.Char8 as LBS
 import           Data.Monoid ((<>))
-import           Options.Applicative
-import           Text.Jasmine
+import           Options.Applicative (Parser, ParserInfo, ParserPrefs)
+import qualified Options.Applicative as Opt
+import           Text.Jasmine (minify)
 
 import           System.IO (hPutStrLn, stderr)
 import           System.Exit (exitFailure)
 
-data Options = Options
-    { inputFile :: String
-    , outputFile :: Maybe String
-    }
+data Command
+  = Process FilePath (Maybe FilePath)
 
 main :: IO ()
 main =
-    execParser opts >>= minify'
+  Opt.customExecParser p opts >>= processFile
   where
-    opts = info (helper <*> options)
-        ( fullDesc
-            <> progDesc
-                ( "Minify JavaScript files (using language-javascript version "
-                ++ languageJavascriptVersion ++ ")."
-                )
-            <> header "hjsmin - a simple command-line interface to the 'hjsmin' library"
-            )
+    opts :: ParserInfo Command
+    opts = Opt.info (Opt.helper <*> pVersion <*> pProcess)
+      ( Opt.fullDesc
+      <> Opt.header "hjsmin - Haskell implementation of a Javascript and JSON minifier"
+      )
 
-options :: Parser Options
-options = Options
-      <$> argument str (metavar "INPUT_FILE"
-                     <> help "The unminified, original JavaScript file")
-      <*> optional
-            ( strOption (long "output-file"
-                    <> short 'o'
-                    <> metavar "OUTPUT_FILE"
-                    <> help "The minified output file. Default: stdout")
-                    )
+    p :: ParserPrefs
+    p = Opt.prefs Opt.showHelpOnEmpty
 
-minify' :: Options -> IO ()
-minify' o = do
-  lbs <- LBS.readFile $ inputFile o
+pVersion :: Parser (a -> a)
+pVersion =
+  Opt.infoOption versionString
+    (  Opt.long "version"
+    <> Opt.short 'v'
+    <> Opt.help "Print the version and exit"
+    )
+
+pProcess :: Parser Command
+pProcess =
+  Process <$> pInputFile <*> pMaybeOutputFile
+  where
+    pInputFile =
+      Opt.strOption
+        (  Opt.long "input"
+        <> Opt.short 'i'
+        <> Opt.metavar "INPUT_FILE"
+        <> Opt.help "The original JavaScript file"
+        )
+
+    pMaybeOutputFile =
+      Opt.optional $ Opt.strOption
+        (  Opt.long "output"
+        <> Opt.short 'o'
+        <> Opt.metavar "OUTPUT_FILE"
+        <> Opt.help "The minified output file. Default: stdout"
+        )
+
+
+processFile :: Command -> IO ()
+processFile (Process inputFile outputFile) = do
+  lbs <- LBS.readFile inputFile
   if LBS.null lbs
     then emptyFileError
     else do
       let minified = minify lbs
-      case outputFile o of
+      case outputFile of
         Nothing -> LBS.putStrLn minified
         Just f  -> LBS.writeFile f minified
   where
     emptyFileError = do
-      hPutStrLn stderr $ "Error: input file '" ++ inputFile o ++ "' is empty."
+      hPutStrLn stderr $ "Error: input file '" ++ inputFile ++ "' is empty."
       exitFailure
 
 
-languageJavascriptVersion :: String
-languageJavascriptVersion = VERSION_language_javascript
+versionString :: String
+versionString =
+  concat
+    [ "hjsmin version ", VERSION_hjsmin
+    , " (using language-javascript version ", VERSION_language_javascript, ")"
+    ]
