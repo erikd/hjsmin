@@ -1,0 +1,27 @@
+#!/bin/sh -eu
+
+. $(dirname $0)/../core/runner
+
+testname="empty-input"
+
+banner "${testname}"
+#----------
+
+OUTPUT_DIR=${TEST}
+
+mkdir -p ${OUTPUT_DIR}
+
+INPUT_FILE=${OUTPUT_DIR}/empty
+OUTPUT_FILE=${OUTPUT_DIR}/output
+
+# Create a zero length file
+touch ${INPUT_FILE}
+
+retcode=0
+${HJSMIN} ${INPUT_FILE} > ${OUTPUT_FILE} 2>/dev/null || retcode=1
+
+if test ${retcode} -eq 0 ; then
+  fail_test
+else
+  pass_test
+fi

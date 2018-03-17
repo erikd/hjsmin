@@ -1,15 +1,14 @@
 {-# LANGUAGE CPP #-}
-module Main where
 
 #include "cabal_macros.h"
 
-import Data.Monoid ((<>))
-import Options.Applicative
-import Text.Jasmine
+import qualified Data.ByteString.Lazy.Char8 as LBS
+import           Data.Monoid ((<>))
+import           Options.Applicative
+import           Text.Jasmine
 
-import qualified Data.ByteString.Lazy as B
-import qualified Data.ByteString.Lazy.Char8 as C8
-
+import           System.IO (hPutStrLn, stderr)
+import           System.Exit (exitFailure)
 
 data Options = Options
     { inputFile :: String
@@ -42,10 +41,18 @@ options = Options
 
 minify' :: Options -> IO ()
 minify' o = do
-    minified <- minifyFile (inputFile o)
-    case outputFile o of
-        Nothing -> C8.putStrLn minified
-        Just f  -> B.writeFile f minified
+  lbs <- LBS.readFile $ inputFile o
+  if LBS.null lbs
+    then emptyFileError
+    else do
+      let minified = minify lbs
+      case outputFile o of
+        Nothing -> LBS.putStrLn minified
+        Just f  -> LBS.writeFile f minified
+  where
+    emptyFileError = do
+      hPutStrLn stderr $ "Error: input file '" ++ inputFile o ++ "' is empty."
+      exitFailure
 
 
 languageJavascriptVersion :: String
