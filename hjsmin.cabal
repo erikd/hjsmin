@@ -16,8 +16,7 @@ homepage:        http://github.com/erikd/hjsmin
 bug-reports:     http://github.com/erikd/hjsmin/issues
 
 Extra-source-files:
-   TODO.txt
- , Readme.md
+  Readme.md
 
 
 library
