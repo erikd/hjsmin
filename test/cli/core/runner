@@ -1,0 +1,60 @@
+HJSMIN="$(pwd)/${1:-./dist/build/hjsmin/hjsmin}"
+
+DIFF=${USE_DIFF:-diff -u}
+
+# Failure is the default!
+RESULT="FAILED"
+
+type "$HJSMIN" > /dev/null 2>&1 || {
+    echo "No hjsmin executable specified on command line or on path."
+    exit 1
+}
+
+ROOT=$(dirname "$0")/../../..
+ROOT=$(cd "$ROOT" > /dev/null 2>&1 && pwd)
+TMP=${ROOT}/tmp
+TEST=${TMP}/test/$$
+mkdir -p ${TEST}
+
+cleanup () {
+    echo "Cleaning up (${TEST})"
+    rm -rf "${TEST}"
+    echo ${RESULT}
+    echo
+}
+
+trap cleanup EXIT
+
+banner () {
+    echo
+    echo == "$*" ==
+    echo == "Running in ${TEST}" ==
+}
+
+assert_file_exists () {
+    if test ! -f "$1" ; then
+        echo "Output file '$1' is missing."
+        fail_test
+    fi
+}
+
+pass_test () {
+    RESULT="PASSED [ ${testname} ]"
+    exit 0
+}
+
+
+fail_test () {
+    RESULT="FAILED [ ${testname} ]"
+    exit 1
+}
+
+sort_diff () {
+    EXP="$1"
+    ACTUAL="$2"
+    EXPECTED_SORTED=${OUTPUT_DIR}/sort_diff.expected.$(basename $EXP)
+    ACTUAL_SORTED=${OUTPUT_DIR}/sort_diff.actual.$(basename $ACTUAL)
+    sort ${EXP} > ${EXPECTED_SORTED}
+    sort ${ACTUAL} > ${ACTUAL_SORTED}
+    diff ${EXPECTED_SORTED} ${ACTUAL_SORTED}
+}
