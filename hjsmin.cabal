@@ -56,7 +56,10 @@ test-suite test-cli
 
   build-depends:        base
                       , directory
+                      , extra
+                      , filepath
                       , process
+                      , unix
 
 source-repository head
   type:     git
