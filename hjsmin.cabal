@@ -17,6 +17,9 @@ bug-reports:     http://github.com/erikd/hjsmin/issues
 
 Extra-source-files:
   Readme.md
+  test/cli/core/runner
+  test/cli/empty-input/run
+  test/cli/minimal-input/run
 
 
 library
