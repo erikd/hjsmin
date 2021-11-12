@@ -30,7 +30,7 @@ library
   exposed-modules:      Text.Jasmine
 
   build-depends:        base                    >= 4.8          && < 5
-                      , bytestring              == 0.10.*
+                      , bytestring              >= 0.10         && < 0.12
                       , language-javascript     >= 0.6          && < 0.8
                       , text                    == 1.2.*
 
@@ -45,7 +45,7 @@ executable hjsmin
   other-modules:        Text.Jasmine
 
   build-depends:        base                    >= 4.8          && < 5
-                      , bytestring              == 0.10.*
+                      , bytestring
                       , language-javascript
                       , optparse-applicative    >= 0.7
                       , text
@@ -63,6 +63,8 @@ test-suite test-cli
                       , filepath
                       , process
                       , unix
+
+  build-tool-depends:   hjsmin:hjsmin
 
 source-repository head
   type:     git
