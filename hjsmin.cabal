@@ -29,10 +29,10 @@ library
 
   exposed-modules:      Text.Jasmine
 
-  build-depends:        base                    >= 4.8          && < 5
-                      , bytestring              == 0.10.*
+  build-depends:        base                    >= 4.9          && < 5
+                      , bytestring              >= 0.11
                       , language-javascript     >= 0.6          && < 0.8
-                      , text                    == 1.2.*
+                      , text                    >= 2
 
 
 executable hjsmin
@@ -44,8 +44,8 @@ executable hjsmin
   -- Need this here because the library and the executable have the same name.
   other-modules:        Text.Jasmine
 
-  build-depends:        base                    >= 4.8          && < 5
-                      , bytestring              == 0.10.*
+  build-depends:        base
+                      , bytestring
                       , language-javascript
                       , optparse-applicative    >= 0.7
                       , text

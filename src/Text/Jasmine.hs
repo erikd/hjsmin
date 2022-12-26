@@ -5,8 +5,6 @@ module Text.Jasmine
     , minifyFile
     ) where
 
-import           Control.Applicative ((<$>))
-
 import           Data.ByteString.Builder (Builder)
 import qualified Data.ByteString.Builder as Builder
 import qualified Data.ByteString.Lazy.Char8 as LBS

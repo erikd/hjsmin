@@ -3,7 +3,6 @@
 #include "cabal_macros.h"
 
 import qualified Data.ByteString.Lazy.Char8 as LBS
-import           Data.Monoid ((<>))
 import           Options.Applicative (Parser, ParserInfo, ParserPrefs)
 import qualified Options.Applicative as Opt
 import           Text.Jasmine (minify)
